@@ -36,7 +36,7 @@ namespace Content.Shared._Sunrise.MentorHelp
     public struct MentorHelpStatistics
     {
         public Guid MentorUserId { get; set; }
-        public int TicketsClaimed { get; set; }
+        public int TicketsClosed { get; set; }
         public int MessagesCount { get; set; }
     }
 
@@ -44,134 +44,85 @@ namespace Content.Shared._Sunrise.MentorHelp
     /// Message to create a new mentor help ticket
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpCreateTicketMessage : EntityEventArgs
+    public sealed class MentorHelpCreateTicketMessage(string subject, string message) : EntityEventArgs
     {
-        public string Subject { get; }
-        public string Message { get; }
-
-        public MentorHelpCreateTicketMessage(string subject, string message)
-        {
-            Subject = subject;
-            Message = message;
-        }
+        public readonly string Subject = subject;
+        public readonly string Message = message;
     }
 
     /// <summary>
     /// Message to claim a mentor help ticket
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpClaimTicketMessage : EntityEventArgs
+    public sealed class MentorHelpClaimTicketMessage(int ticketId) : EntityEventArgs
     {
-        public int TicketId { get; }
-
-        public MentorHelpClaimTicketMessage(int ticketId)
-        {
-            TicketId = ticketId;
-        }
+        public readonly int TicketId = ticketId;
     }
 
     /// <summary>
     /// Message to reply to a mentor help ticket
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpReplyMessage : EntityEventArgs
+    public sealed class MentorHelpReplyMessage(int ticketId, string message, bool isStaffOnly = false) : EntityEventArgs
     {
-        public int TicketId { get; }
-        public string Message { get; }
-        public bool IsStaffOnly { get; }
-
-        public MentorHelpReplyMessage(int ticketId, string message, bool isStaffOnly = false)
-        {
-            TicketId = ticketId;
-            Message = message;
-            IsStaffOnly = isStaffOnly;
-        }
+        public readonly int TicketId = ticketId;
+        public readonly string Message = message;
+        public readonly bool IsStaffOnly = isStaffOnly;
     }
 
     /// <summary>
     /// Message to unassign a mentor help ticket
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpUnassignTicketMessage : EntityEventArgs
+    public sealed class MentorHelpUnassignTicketMessage(int ticketId) : EntityEventArgs
     {
-        public int TicketId { get; }
-
-        public MentorHelpUnassignTicketMessage(int ticketId)
-        {
-            TicketId = ticketId;
-        }
+        public readonly int TicketId = ticketId;
     }
 
     /// <summary>
     /// Message to close a mentor help ticket
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpCloseTicketMessage : EntityEventArgs
+    public sealed class MentorHelpCloseTicketMessage(int ticketId) : EntityEventArgs
     {
-        public int TicketId { get; }
-
-        public MentorHelpCloseTicketMessage(int ticketId)
-        {
-            TicketId = ticketId;
-        }
+        public readonly int TicketId = ticketId;
     }
 
     /// <summary>
     /// Message to request tickets (from client)
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpRequestTicketsMessage : EntityEventArgs
+    public sealed class MentorHelpRequestTicketsMessage(bool onlyMine = false) : EntityEventArgs
     {
-        public bool OnlyMine { get; }
-
-        public MentorHelpRequestTicketsMessage(bool onlyMine = false)
-        {
-            OnlyMine = onlyMine;
-        }
+        public readonly bool OnlyMine = onlyMine;
     }
 
     /// <summary>
     /// Message with ticket update (to client)
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpTicketUpdateMessage : EntityEventArgs
+    public sealed class MentorHelpTicketUpdateMessage(MentorHelpTicketData ticket) : EntityEventArgs
     {
-        public MentorHelpTicketData Ticket { get; }
-
-        public MentorHelpTicketUpdateMessage(MentorHelpTicketData ticket)
-        {
-            Ticket = ticket;
-        }
+        public readonly MentorHelpTicketData Ticket = ticket;
     }
 
     /// <summary>
     /// Message with tickets list (to client)
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpTicketsListMessage : EntityEventArgs
+    public sealed class MentorHelpTicketsListMessage(List<MentorHelpTicketData> tickets) : EntityEventArgs
     {
-        public List<MentorHelpTicketData> Tickets { get; }
-
-        public MentorHelpTicketsListMessage(List<MentorHelpTicketData> tickets)
-        {
-            Tickets = tickets;
-        }
+        public readonly List<MentorHelpTicketData> Tickets = tickets;
     }
 
     /// <summary>
     /// Message with ticket messages (to client)
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpTicketMessagesMessage : EntityEventArgs
+    public sealed class MentorHelpTicketMessagesMessage(int ticketId, List<MentorHelpMessageData> messages) : EntityEventArgs
     {
-        public int TicketId { get; }
-        public List<MentorHelpMessageData> Messages { get; }
-
-        public MentorHelpTicketMessagesMessage(int ticketId, List<MentorHelpMessageData> messages)
-        {
-            TicketId = ticketId;
-            Messages = messages;
-        }
+        public readonly int TicketId = ticketId;
+        public readonly List<MentorHelpMessageData> Messages = messages;
     }
 
     /// <summary>
@@ -180,20 +131,20 @@ namespace Content.Shared._Sunrise.MentorHelp
     [Serializable, NetSerializable]
     public sealed class MentorHelpTicketData
     {
-        public int Id { get; set; }
-        public NetUserId PlayerId { get; set; }
-        public string PlayerName { get; set; } = string.Empty;
-        public NetUserId? AssignedToUserId { get; set; }
-        public string? AssignedToName { get; set; }
-        public string Subject { get; set; } = string.Empty;
-        public MentorHelpTicketStatus Status { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public DateTime? ClosedAt { get; set; }
-        public NetUserId? ClosedByUserId { get; set; }
-        public string? ClosedByName { get; set; }
-        public int? RoundId { get; set; }
-        public bool HasUnreadMessages { get; set; }
+        public int Id { get; init; }
+        public NetUserId PlayerId { get; init; }
+        public string PlayerName { get; init; } = string.Empty;
+        public NetUserId? AssignedToUserId { get; init; }
+        public string? AssignedToName { get; init; }
+        public string Subject { get; init; } = string.Empty;
+        public MentorHelpTicketStatus Status { get; init; }
+        public DateTime CreatedAt { get; init; }
+        public DateTime UpdatedAt { get; init; }
+        public DateTime? ClosedAt { get; init; }
+        public NetUserId? ClosedByUserId { get; init; }
+        public string? ClosedByName { get; init; }
+        public int? RoundId { get; init; }
+        public bool HasUnreadMessages { get; init; }
     }
 
     /// <summary>
@@ -219,7 +170,7 @@ namespace Content.Shared._Sunrise.MentorHelp
     public sealed class MentorHelpStatisticsData
     {
         public string MentorName { get; set; } = string.Empty;
-        public int TicketsClaimed { get; set; }
+        public int TicketsClosed { get; set; }
         public int MessagesCount { get; set; }
     }
 
@@ -236,27 +187,23 @@ namespace Content.Shared._Sunrise.MentorHelp
     /// Сообщение с результатами статистики по менторам
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpStatisticsMessage : EntityEventArgs
+    public sealed class MentorHelpStatisticsMessage(
+        List<MentorHelpStatisticsData> weekStatistics,
+        List<MentorHelpStatisticsData> monthStatistics,
+        List<MentorHelpStatisticsData> allTimeStatistics) : EntityEventArgs
     {
-        public List<MentorHelpStatisticsData> Statistics { get; }
-        public MentorHelpStatisticsMessage(List<MentorHelpStatisticsData> statistics)
-        {
-            Statistics = statistics;
-        }
+        public readonly List<MentorHelpStatisticsData> WeekStatistics = weekStatistics;
+        public readonly List<MentorHelpStatisticsData> MonthStatistics = monthStatistics;
+        public readonly List<MentorHelpStatisticsData> AllTimeStatistics = allTimeStatistics;
     }
 
     /// <summary>
     /// Message to request messages for a specific ticket (from client)
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpRequestTicketMessagesMessage : EntityEventArgs
+    public sealed class MentorHelpRequestTicketMessagesMessage(int ticketId) : EntityEventArgs
     {
-        public int TicketId { get; }
-
-        public MentorHelpRequestTicketMessagesMessage(int ticketId)
-        {
-            TicketId = ticketId;
-        }
+        public readonly int TicketId = ticketId;
     }
 
     /// <summary>
@@ -264,13 +211,24 @@ namespace Content.Shared._Sunrise.MentorHelp
     /// This is used immediately after creating a ticket so the creating player sees their new ticket.
     /// </summary>
     [Serializable, NetSerializable]
-    public sealed class MentorHelpOpenTicketMessage : EntityEventArgs
+    public sealed class MentorHelpOpenTicketMessage(int ticketId) : EntityEventArgs
     {
-        public int TicketId { get; }
+        public readonly int TicketId = ticketId;
+    }
 
-        public MentorHelpOpenTicketMessage(int ticketId)
-        {
-            TicketId = ticketId;
-        }
+    [Serializable, NetSerializable]
+    public sealed class MentorHelpClientTypingUpdated(int ticketId, bool typing) : EntityEventArgs
+    {
+        public readonly int TicketId = ticketId;
+        public readonly bool Typing = typing;
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class MentorHelpPlayerTypingUpdated(int ticketId, NetUserId userId, string playerName, bool typing) : EntityEventArgs
+    {
+        public readonly int TicketId = ticketId;
+        public readonly NetUserId UserId = userId;
+        public readonly string PlayerName = playerName;
+        public readonly bool Typing = typing;
     }
 }

@@ -14,7 +14,7 @@
     sprite: _Starlight/Objects/Weapons/Guns/Shotguns/riot.rsi
   - type: GunRequiresWield
   - type: BallisticAmmoProvider
-    capacity: 7
+    capacity: 8
   - type: Construction
     graph: ShotgunRiotSawn
     node: start
@@ -25,7 +25,7 @@
 
 - type: entity
   name: sawn-off riot shotgun
-  parent: [BaseWeaponShotgunPump, BaseGunWieldable, BaseSecurityContraband]
+  parent: [BaseWeaponShotgunPump, BaseSecurityContraband]
   id: WeaponShotgunRiotSawn
   description: Come with me if you want to live.
   components:
@@ -35,19 +35,20 @@
     sprite: _Starlight/Objects/Weapons/Guns/Shotguns/riot_sawn.rsi
   - type: Item
     size: Small
+    shape:
+    - 0,0,2,0
     sprite: _Starlight/Objects/Weapons/Guns/Shotguns/riot_sawn_inhands_64x.rsi
   - type: Gun
     spread: 30
-  - type: GunRequiresWield
   - type: BallisticAmmoProvider
-    capacity: 4
+    capacity: 5
   - type: Construction
     graph: ShotgunRiotSawn
     node: shotgunsawn
     deconstructionTarget: null
 
 - type: entity
-  parent: [WeaponShotgunRiotSawn, BaseSecurityContraband]
+  parent: WeaponShotgunRiotSawn
   id: WeaponShotgunRiotSawnEmpty
   suffix: Empty
   components:
@@ -147,6 +148,8 @@
     fireRate: 2
     availableModes:
     - SemiAuto
+  - type: GunSpreadModifier # Sunrise-Add
+    spread: 1.4
   - type: BallisticAmmoProvider
     capacity: 3
   - type: RevolverAmmoProvider
@@ -160,6 +163,10 @@
     ammoSlots: [ null, null, null ]
     soundInsert:
       path: /Audio/Weapons/Guns/MagIn/shotgun_insert.ogg
+  - type: ContainerContainer
+    containers:
+      ballistic-ammo: !type:Container
+      revolver-ammo: !type:Container
   - type: KnockbackByUserTag
     doestContain:
       Resomi:
@@ -205,7 +212,7 @@
     slots:
       gun_magazine:
         name: Magazine
-        startingItem: MagazineShotgun
+        startingItem: MagazineShotgunXL
         priority: 2
         whitelist:
           tags:
@@ -250,7 +257,7 @@
 
 - type: entity
   name: makeshift shotgun
-  parent: [WeaponFlareGunSecurity, BaseMinorContraband]
+  parent: [WeaponFlareGunSecurity, BaseMinorContraband, BaseGunShotgunSound] # Sunrise edit - shotgun handling sounds
   id: WeaponShotgunMakeshift
   description: A small hand-cannon that fires .50 shotgun shells. Has no cloth to hold it together, so it has a high chance of falling apart with every shot.
   components:

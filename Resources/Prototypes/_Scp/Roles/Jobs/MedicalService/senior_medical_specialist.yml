@@ -3,13 +3,19 @@
   name: job-name-senior-medical-specialist
   description: job-description-senior-medical-specialist
   playTimeTracker: JobSeniorMedicalSpecialist
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-  - !type:OverallPlaytimeRequirement
-    time: 54000 # 15 часов
-  startingGear: SeniorMedicalSpecialistGear
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: MedicalService
+    time: 36000
+  - !type:AgeRequirement
+    requiredAge: 30
+  - !type:AgeRequirement
+    requiredAge: 75
+    inverted: true
   icon: JobSeniorMedicalSpecialist
   supervisors: job-supervisors-head-of-medical-sector
   displayWeight: 35
+  weight: 780
   accessGroups:
   - SeniorMedicalSpecialist
   special:
@@ -23,13 +29,23 @@
       phobias:
       - Exoremophobia
       # Врачи не пугаются трупов, у них не будет некрофобии
+    - type: ShowScp096FaceDamageHud
 
 - type: startingGear
   id: SeniorMedicalSpecialistGear
   equipment:
+    head: ClothingHeadHatBeretParamedic
+    eyes: ClothingEyesHudMedical
+    mask: ClothingMaskSterileBlack
+    neck: ClothingNeckScarfStripedBlack
+    outerClothing: ClothingOuterCoatLab
+    jumpsuit: ClothingUniformJumpsuitSeniorPhysician
+    gloves: ClothingHandsGlovesLatex
+    shoes: ClothingShoesColorBrown
+    back: ClothingBackpackMedical
     id: KeyCardSeniorMedicalSpecialist
-    ears: ClothingHeadsetMedical
-    eyes: ClothingHeadsetMedicalService
+    ears: ClothingHeadsetMedicalService
+    belt: ClothingBeltMedicalFilled
     pocket2: ScpMedicalPDA
   storage:
     back:

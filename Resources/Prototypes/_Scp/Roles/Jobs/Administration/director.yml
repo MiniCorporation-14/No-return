@@ -3,10 +3,13 @@
   name: job-name-director
   description: job-description-director
   playTimeTracker: JobDirector
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-  - !type:OverallPlaytimeRequirement
-    time: 180000 # 50 часов
-  weight: 5
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: Administration
+    time: 54000
+  - !type:AgeRequirement
+    requiredAge: 35
+  weight: 965
   icon: JobDirector
   joinNotifyCrew: true
   supervisors: job-supervisors-O5-command
@@ -25,11 +28,17 @@
       class: B
     - type: AccessLevel
       level: Four
+    - type: ScpAnnounceOnSpawn
+      text: head-announce-on-spawn
+      channels:
+      - Administration
+      includeJobName: true
 
 - type: startingGear
   id: DirectorGear
   equipment:
     head: ClothingHeadHatDirector
+    eyes: ClothingEyesGlassesSunglasses
     neck: ClothingNeckTieDet
     jumpsuit: ClothingUniformJumpsuitDirector
     outerClothing: ClothingOuterCoatDirectorTrench
@@ -39,7 +48,3 @@
     id: KeyCardDirector
     ears: ClothingHeadsetAltAdministration
     pocket2: DirectorPDA
-  storage:
-    back:
-    - Flash
-    - Telebaton

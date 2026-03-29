@@ -21,7 +21,7 @@ namespace Content.Server.Database.Migrations.Postgres
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.1")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -145,10 +145,6 @@ namespace Content.Server.Database.Migrations.Postgres
                     b.Property<int>("Id")
                         .HasColumnType("integer")
                         .HasColumnName("admin_log_id");
-
-                    b.Property<long>("CurTime")
-                        .HasColumnType("bigint")
-                        .HasColumnName("cur_time");
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone")
@@ -787,6 +783,9 @@ namespace Content.Server.Database.Migrations.Postgres
                     b.HasIndex("TicketId")
                         .HasDatabaseName("IX_mentor_help_messages_ticket_id");
 
+                    b.HasIndex("SentAt", "SenderUserId")
+                        .HasDatabaseName("IX_mentor_help_messages_sent_at_sender_user_id");
+
                     b.ToTable("mentor_help_messages", (string)null);
                 });
 
@@ -852,6 +851,9 @@ namespace Content.Server.Database.Migrations.Postgres
 
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_mentor_help_tickets_status");
+
+                    b.HasIndex("ClosedAt", "AssignedToUserId")
+                        .HasDatabaseName("IX_mentor_help_tickets_closed_at_assigned_to_user_id");
 
                     b.ToTable("mentor_help_tickets", (string)null);
                 });

@@ -2,7 +2,7 @@
   id: WeaponEnergyGunMultiphase
   name: steal-target-groups-multiphase # x-01 multiphase energy gun
   sprite:
-    sprite: _Sunrise/Objects/Weapons/Guns/Battery/multiphase_energygun.rsi
+    sprite: _Starlight/Objects/Weapons/Guns/Battery/multiphase_gun.rsi
     state: base
 
 - type: stealTargetGroup
@@ -24,4 +24,11 @@
   name: objective-condition-steal-handheld-fax #handheld fax
   sprite:
     sprite: _Sunrise/Objects/Devices/handled_fax.rsi
+    state: icon
+
+- type: stealTargetGroup
+  id: JetpackChiefEngineerFilled
+  name: steal-target-groups-jetpack-ce
+  sprite:
+    sprite: _Sunrise/Objects/Tanks/Jetpacks/ce_void.rsi
     state: icon

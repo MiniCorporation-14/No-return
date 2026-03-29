@@ -6,9 +6,6 @@
   components:
   - type: Sprite
     sprite: _Scp/Structures/Doors/Shutters/blastdoor.rsi
-    layers:
-    - state: closed
-      map: ["enum.DoorVisualLayers.Base"]
 
 - type: entity
   id: ScpBlastDoorOpen
@@ -68,3 +65,12 @@
     node: frame1
   placement:
     mode: SnapgridCenter
+
+# Bunker Blast Door
+- type: entity
+  id: ScpBunkerBlastDoor
+  parent: ScpBlastDoor
+  name: bunker blast door
+  description: This one says 'BLAST DONGER'.
+  components:
+  - type: BunkerMarker

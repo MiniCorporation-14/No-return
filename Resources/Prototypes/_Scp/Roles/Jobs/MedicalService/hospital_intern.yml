@@ -3,11 +3,17 @@
   name: job-name-hospital-intern
   description: job-description-hospital-intern
   playTimeTracker: JobHospitalIntern
-  startingGear: HospitalInternGear
+  requirements:
+  - !type:AgeRequirement
+    requiredAge: 25
+  - !type:AgeRequirement
+    requiredAge: 45
+    inverted: true
   icon: JobHospitalIntern
   supervisors: job-supervisors-head-of-medical-sector
   canBeAntag: true
   displayWeight: 0
+  weight: 760
   accessGroups:
   - CommonMedicalJob
   special:
@@ -22,9 +28,17 @@
 - type: startingGear
   id: HospitalInternGear
   equipment:
+    head: ClothingHeadHatRedsoft
+    eyes: ClothingEyesHudMedical
+    mask: ClothingMaskSterileRed
+    neck: ClothingNeckScarfStripedRed
+    jumpsuit: ClothingUniformJumpsuitColorWhite
+    outerClothing: ClothingOuterCoatLab
+    gloves: ClothingHandsGlovesLatex
+    shoes: ClothingShoesColorWhite
+    back: ClothingBackpackMedical
     id: KeyCardHospitalIntern
     ears: ClothingHeadsetMedicalService
     belt: ClothingBeltMedicalFilled
-    eyes: ClothingEyesHudMedical
     pocket1: BookMedicalReferenceBook
     pocket2: ScpMedicalPDA

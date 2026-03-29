@@ -10,6 +10,8 @@ ui-options-grain-strength = Grain shader strength
 ui-options-grain-strength-tooltip =
     Determines the intensity of the grain shader effects.
     The higher the value, the more "noise" there will be on the screen
+ui-options-field-of-view-blur-enabled = Enable FOV blur
+ui-options-field-of-view-blur-enabled-tooltip = Blurs the area outside your field of view. Disable for better performance or if you find it distracting.
 ui-options-field-of-view-blur-scale = Blur texture quality
 ui-options-field-of-view-blur-scale-tooltip =
     Determines the quality of the blur texture. The larger, the more resource-intensive the texture
@@ -30,7 +32,3 @@ ui-options-scp-audio-muffling-enabled = Sound muffling
 ui-options-scp-audio-muffling-enabled-tooltip =
     Depending on the location of the source, makes the sound muffled or quiet.
     May cause performance issues on weak systems.
-ui-options-scp-audio-muffling-use-high-frequency-update = Use frequent sound muffling calculation
-ui-options-scp-audio-muffling-use-high-frequency-update-tooltip =
-    Determines the frequency of checks for the sound muffling system, with the option enabled ~2-3 times more often than usual.
-    Extremely not recommended for performance issues, guaranteed to cause FPS drops

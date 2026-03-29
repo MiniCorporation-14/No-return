@@ -5,11 +5,11 @@
         <ScrollContainer VerticalExpand="True">
             <BoxContainer Orientation="Vertical" Margin="8 8 8 8">
 
-                <Label Text="{Loc ui-options-tab-hover-to-see-details}" StyleClasses="LabelSecondaryColor"/>
+                <Label Text="{Loc ui-options-tab-hover-to-see-details}" StyleClasses="LabelWeak"/>
 
                 <!-- ГРАФИКА -->
                 <Label Text="{Loc ui-options-scp-graphics}" StyleClasses="LabelKeyText"/>
-                <Label Text="{Loc ui-options-fps-impact-attention}" StyleClasses="LabelSecondaryColor"/>
+                <Label Text="{Loc ui-options-fps-impact-attention}" StyleClasses="LabelWeak"/>
 
                 <!-- Зернистость -->
                 <CheckBox Name="GrainToggleOverlayCheckBox"
@@ -20,6 +20,9 @@
                                  ToolTip="{Loc ui-options-grain-strength-tooltip}"/>
 
                 <!-- Поле зрения -->
+                <CheckBox Name="FieldOfViewBlurEnabled"
+                          Text="{Loc ui-options-field-of-view-blur-enabled}"
+                          ToolTip="{Loc ui-options-field-of-view-blur-enabled-tooltip}"/>
                 <ui:OptionSlider Name="FieldOfViewBlurScale"
                                  Title="{Loc ui-options-field-of-view-blur-scale}"
                                  ToolTip="{Loc ui-options-field-of-view-blur-scale-tooltip}"/>
@@ -69,9 +72,6 @@
                 <CheckBox Name="AudioMufflingEnabled"
                           Text="{Loc ui-options-scp-audio-muffling-enabled}"
                           ToolTip="{Loc ui-options-scp-audio-muffling-enabled-tooltip}" />
-                <CheckBox Name="AudioMufflingHighFrequencyUpdate"
-                          Text="{Loc ui-options-scp-audio-muffling-use-high-frequency-update}"
-                          ToolTip="{Loc ui-options-scp-audio-muffling-use-high-frequency-update-tooltip}" />
 
                 <!-- ИГРА -->
                 <Label Text="{Loc ui-options-scp-game}" StyleClasses="LabelKeyText"/>

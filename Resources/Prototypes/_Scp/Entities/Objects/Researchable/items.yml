@@ -17,7 +17,6 @@
     firstBlinkingBonusTime: 30
     otherBlinkingBonusTime: 120
     otherBlinkingBonusDuration: 7
-    # TODO: Добавить звук использования
   - type: UseDelay
     delay: 3
 
@@ -30,14 +29,24 @@
   - type: Clothing
     sprite: _Scp/Clothing/Head/Scp096/scp096_bag-equipped.rsi
     equipDelay: 3
-    unequipDelay: 3
+    unequipDelay: 10
   - type: Item
     size: Normal
     storedRotation: -90
+  - type: MeleeWeapon
+    wideAnimationRotation: 90
+    resetOnHandSelected: false
+    animation: WeaponArcDisarm
+    damage:
+      types:
+        Blunt: 0
   - type: ScpMask
     targetWhitelist:
       components:
       - Scp096
+    damageOriginWhitelist:
+      components:
+      - MobState
     tearChanceOnDamage: 0.4
   - type: ClothingAddActions
     actions:
@@ -53,6 +62,8 @@
   - type: Sprite
     sprite: _Scp/Clothing/Head/Scp096/scp096_bag-icons.rsi
     state: icon
+  - type: Clothing
+    unequipDelay: 1
   - type: ScpMask
     slots:
     - Head
@@ -150,7 +161,6 @@
 - type: entity
   parent: ClothingHeadBase
   id: ClothingHeadAwareness
-  suffix: SCP-035 Item
   components:
   - type: Sprite
     sprite: _Scp/Clothing/Head/Helmets/techno.rsi
@@ -163,6 +173,7 @@
   - type: ClothingAddComponents
     components:
     - type: Scp035MindProtection
+    - type: Scp012Protection
 
 # Пушки
 
@@ -207,7 +218,7 @@
   - type: Battery
     maxCharge: 1500
     startingCharge: 1500
-  - type: HitscanBatteryAmmoProvider
+  - type: BatteryAmmoProvider
     proto: UltraXrayLaser
     fireCost: 750
   - type: Wieldable
@@ -255,7 +266,7 @@
   - type: Battery
     maxCharge: 1500
     startingCharge: 1500
-  - type: HitscanBatteryAmmoProvider
+  - type: BatteryAmmoProvider
     proto: UltraRedHeavyLaser
     fireCost: 300
   - type: Wieldable

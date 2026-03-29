@@ -46,6 +46,13 @@
     quickEquip: false
     slots:
     - Back
+  # Sunrise start
+  - type: ClothingSpeedModifier
+    walkModifier: 0.95
+    sprintModifier: 0.95
+    requireActivated: false
+  - type: HeldSpeedModifier
+  # Sunrise end
   - type: GasTank
     outputPressure: 21.3
     air:
@@ -108,8 +115,8 @@
       volume: 5
       temperature: 293.15
       moles:
-        - 1.025689525 # oxygen
-        - 1.025689525 # nitrogen
+        Oxygen: 1.025689525 # oxygen
+        Nitrogen: 1.025689525 # nitrogen
 
 #Empty black
 - type: entity
@@ -126,6 +133,13 @@
     sprite: Objects/Tanks/Jetpacks/black.rsi
     slots:
       - Back
+  # Sunrise edit start
+  - type: ClothingSpeedModifier
+    walkModifier: 1.0
+    sprintModifier: 1.0
+    requireActivated: false
+  - type: HeldSpeedModifier
+  # Sunrise edit end
   - type: StaticPrice
     price: 1000
 
@@ -143,8 +157,8 @@
       volume: 5
       temperature: 293.15
       moles:
-        - 1.025689525 # oxygen
-        - 1.025689525 # nitrogen
+        Oxygen: 1.025689525 # oxygen
+        Nitrogen: 1.025689525 # nitrogen
 
 #Empty captain
 - type: entity
@@ -168,6 +182,13 @@
     - HighRiskItem
   - type: StealTarget
     stealGroup: JetpackCaptainFilled
+  # Sunrise edit start
+  - type: ClothingSpeedModifier
+    walkModifier: 1.0
+    sprintModifier: 1.0
+    requireActivated: false
+  - type: HeldSpeedModifier
+  # Sunrise edit end
 
 # Filled captain
 - type: entity
@@ -183,8 +204,8 @@
       volume: 5
       temperature: 293.15
       moles:
-        - 1.025689525 # oxygen
-        - 1.025689525 # nitrogen
+        Oxygen: 1.025689525 # oxygen
+        Nitrogen: 1.025689525 # nitrogen
 
 #Empty mini
 - type: entity
@@ -223,8 +244,8 @@
       volume: 1.5
       temperature: 293.15
       moles:
-        - 0.307706858 # oxygen
-        - 0.307706858 # nitrogen
+        Oxygen: 0.307706858 # oxygen
+        Nitrogen: 0.307706858 # nitrogen
 
 #Empty security
 - type: entity
@@ -255,8 +276,8 @@
       volume: 1.5
       temperature: 293.15
       moles:
-      - 0.307706858 # oxygen
-      - 0.307706858 # nitrogen
+        Oxygen: 0.307706858 # oxygen
+        Nitrogen: 0.307706858 # nitrogen
 
 #Empty void
 - type: entity
@@ -275,14 +296,6 @@
       - Back
       - suitStorage
       - Belt
-  # Sunrise-Start
-  - type: GasRegeneration
-    airRegenerate:
-      volume: 5
-      temperature: 293.15
-      moles:
-      - 0.0008
-  # Sunrise-End
 
 # Filled void
 - type: entity
@@ -298,8 +311,8 @@
       volume: 5
       temperature: 293.15
       moles:
-        - 1.025689525 # oxygen
-        - 1.025689525 # nitrogen
+        Oxygen: 1.025689525 # oxygen
+        Nitrogen: 1.025689525 # nitrogen
 
 # Infinite jetpack
 - type: entity

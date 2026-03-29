@@ -83,6 +83,9 @@
         type: GhostThemeBoundUserInterface
         requireInputValidation: false
   # Sunrise-End
+  - type: MovementSpeedModifier # Fire Edit
+    baseSprintSpeed: 12
+    baseWalkSpeed: 20
 
 # proto for player ghosts specifically
 - type: entity
@@ -91,7 +94,7 @@
   components:
   - type: Spectral
   - type: Tag
-    tags:
+    tags: # BAD: Intentional removal of inherited tag
     - AllowGhostShownByEvent
 
 - type: entity
@@ -152,8 +155,8 @@
   components:
   - type: Action
     icon:
-      sprite: Clothing/Ears/Headsets/base.rsi
+      sprite: _Sunrise/Clothing/Ears/Headsets/base.rsi # Sunrise-Edit
       state: icon
-    iconOn: Interface/Actions/ghostHearingToggled.png
+    iconOn: _Sunrise/Interface/Actions/ghostHearingToggled.png # Sunrise-Edit
   - type: InstantAction
     event: !type:ToggleGhostHearingActionEvent

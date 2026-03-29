@@ -15,7 +15,7 @@ using Robust.Shared.Audio;
 namespace Content.Client.GameTicking.Managers
 {
     [UsedImplicitly]
-    public sealed class ClientGameTicker : SharedGameTicker
+    public sealed partial class ClientGameTicker : SharedGameTicker
     {
         [Dependency] private readonly IStateManager _stateManager = default!;
         [Dependency] private readonly IClientAdminManager _admin = default!;
@@ -33,6 +33,7 @@ namespace Content.Client.GameTicking.Managers
         [ViewVariables] public string? LobbyParallax { get; private set; }
         [ViewVariables] public string? LobbyAnimation { get; private set; }
         [ViewVariables] public string? LobbyArt { get; private set; }
+        [ViewVariables] public bool HasLobbyStatus { get; private set; }
         // Sunrise-End
         [ViewVariables] public bool DisallowedLateJoin { get; private set; }
         [ViewVariables] public string? ServerInfoBlob { get; private set; }
@@ -115,6 +116,13 @@ namespace Content.Client.GameTicking.Managers
 
         private void JoinLobby(TickerJoinLobbyEvent message)
         {
+            // Sunrise added start - stale lobby data must not leak into the next lobby transition
+            HasLobbyStatus = false;
+            LobbyType = null;
+            LobbyArt = null;
+            LobbyParallax = null;
+            LobbyAnimation = null;
+            // Sunrise added end
             _stateManager.RequestStateChange<LobbyState>();
         }
 
@@ -130,6 +138,7 @@ namespace Content.Client.GameTicking.Managers
             IsGameStarted = message.IsRoundStarted;
             AreWeReady = message.YouAreReady;
             // Sunrise-Start
+            HasLobbyStatus = true;
             LobbyType = message.LobbyType;
             LobbyArt = message.LobbyArt;
             LobbyParallax = message.LobbyParallax;

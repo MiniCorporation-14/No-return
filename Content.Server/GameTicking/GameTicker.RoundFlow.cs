@@ -10,6 +10,7 @@ using Content.Server.Shuttles.Components;
 using Content.Shared.CCVar;
 using Content.Shared.Database;
 using Content.Shared.GameTicking;
+using Content.Shared.Maps;
 using Content.Shared.Mind;
 using Content.Shared.Players;
 using Content.Shared.Preferences;
@@ -412,7 +413,9 @@ namespace Content.Server.GameTicking
                 }
                 else
                 {
-                    profile = HumanoidCharacterProfile.Random();
+                    var speciesToBlacklist =
+                        new HashSet<string>(_cfg.GetCVar(CCVars.ICNewAccountSpeciesBlacklist).Split(","));
+                    profile = HumanoidCharacterProfile.Random(speciesToBlacklist);
                 }
                 readyPlayerProfiles.Add(userId, profile);
             }
@@ -445,6 +448,13 @@ namespace Content.Server.GameTicking
             if (_cfg.GetCVar(SunriseCCVars.ExcludePresets) && CurrentPreset != null)
                 AddExcludedPreset(CurrentPreset.ID);
             // Sunrise-End
+
+            // Fire edit start - для SafeTimeSystem.
+            // Иначе MapInitEvent срабатывает на сущностях раньше, чем время начала раунда установлено
+            // И система SafeTime будет брать время начала ПРЕРЫДУЩЕГО раунда.
+            // Поэтому делаем "фальшстарт" до загрузки карты, чтобы данные были плюс-минус актуальны.
+            RoundStartTimeSpan = _gameTiming.CurTime;
+            // Fire edit end
 
             // MapInitialize *before* spawning players, our codebase is too shit to do it afterwards...
             _map.InitializeMap(DefaultMap);
@@ -634,6 +644,9 @@ namespace Content.Server.GameTicking
                 sound
             );
             RaiseNetworkEvent(roundEndMessageEvent);
+            // Sunrise added start - scoreboard music is separate from round-restart sounds.
+            RaiseRoundEndMusicEvent(roundDuration);
+            // Sunrise added end
             RaiseLocalEvent(roundEndMessageEvent);
             RaiseLocalEvent(new RoundEndedEvent(RoundId, roundDuration));
 
@@ -710,6 +723,11 @@ namespace Content.Server.GameTicking
             // Sunrise-End
             ResettingCleanup();
             IncrementRoundNumber();
+
+            // Sunrise added start - let systems send fresh lobby-only state after cleanup finishes.
+            RaiseRoundLobbyReadyEvent();
+            // Sunrise added end
+
             SendRoundStartingDiscordMessage();
 
             if (!LobbyEnabled)
@@ -773,8 +791,6 @@ namespace Content.Server.GameTicking
             _mapManager.Restart();
 
             _banManager.Restart();
-
-            _bugManager.Restart();
 
             _gameMapManager.ClearSelectedMap();
 

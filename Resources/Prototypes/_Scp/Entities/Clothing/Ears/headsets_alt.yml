@@ -1,7 +1,7 @@
 ﻿# Региональная администрация
 
 - type: entity
-  parent: ClothingHeadsetAlt
+  parent: BaseScpHeadsetAlt
   id: ClothingHeadsetAltRegionalAdministration
   components:
   - type: ContainerFill
@@ -17,7 +17,7 @@
 # Администрация
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltAdministration
   components:
   - type: ContainerFill
@@ -32,7 +32,7 @@
 # Департамент внутренней безопасности
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltInternalSecurity
   components:
   - type: ContainerFill
@@ -40,7 +40,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyInternalSecurity
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/command.rsi
   - type: Clothing
@@ -49,7 +48,7 @@
 # Комитет по этике
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltEthicsCommittee
   components:
   - type: ContainerFill
@@ -57,7 +56,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyEthicsCommittee
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/command.rsi
   - type: Clothing
@@ -66,7 +64,7 @@
 # Департамент внутреннего трибунала
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltInternalTribunalService
   components:
   - type: ContainerFill
@@ -74,7 +72,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyInternalTribunalService
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/command.rsi
   - type: Clothing
@@ -83,7 +80,7 @@
 # Руководство СБ(начальник охраны)
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltSecurityAdministration
   components:
   - type: ContainerFill
@@ -92,7 +89,6 @@
       - EncryptionKeyAdministration
       - EncryptionKeyHeavyContainmentSecurityService
       - EncryptionKeyExternalAdministrativeZoneSecurityService
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/security.rsi
   - type: Clothing
@@ -101,7 +97,7 @@
 # Служба безопасности тяжелой зоны
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltHeavyContainmentSecurityService
   components:
   - type: ContainerFill
@@ -109,7 +105,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyHeavyContainmentSecurityService
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/security.rsi
   - type: Clothing
@@ -118,7 +113,7 @@
 # Служба безопасности внешней административной зоны
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltExternalAdministrativeZoneSecurityService
   components:
   - type: ContainerFill
@@ -126,7 +121,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyExternalAdministrativeZoneSecurityService
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/security.rsi
   - type: Clothing
@@ -135,7 +129,7 @@
 # Научный отдел
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltScientificService
   components:
   - type: ContainerFill
@@ -143,7 +137,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyScientificService
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/science.rsi
   - type: Clothing
@@ -152,7 +145,7 @@
 # Медицинский отдел
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltMedicalService
   components:
   - type: ContainerFill
@@ -160,7 +153,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyMedicalService
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/medical.rsi
   - type: Clothing
@@ -169,7 +161,7 @@
 # Инженерно-технический отдел
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseCommandContraband]
+  parent: [BaseScpHeadsetAlt, BaseCommandContraband]
   id: ClothingHeadsetAltEngineeringTechnicalService
   components:
   - type: ContainerFill
@@ -177,7 +169,6 @@
       key_slots:
       - EncryptionKeyAdministration
       - EncryptionKeyEngineeringTechnicalService
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/engineering.rsi
   - type: Clothing
@@ -186,7 +177,7 @@
 # Отдел логистики
 
 - type: entity
-  parent: ClothingHeadsetAlt
+  parent: BaseScpHeadsetAlt
   id: ClothingHeadsetAltLogistics
   components:
   - type: ContainerFill
@@ -194,7 +185,6 @@
       key_slots:
       - EncryptionKeyLogisticsService
       - EncryptionKeyAdministration
-      - EncryptionKeyCommon
   - type: Sprite
     sprite: Clothing/Ears/Headsets/cargo.rsi
   - type: Clothing
@@ -203,7 +193,7 @@
 # Повстанцы хаоса
 
 - type: entity
-  parent: [ClothingHeadsetAlt, BaseChaosContraband]
+  parent: [BaseScpHeadsetAlt, BaseChaosContraband]
   id: ClothingHeadsetAltChaos
   components:
   - type: Headset

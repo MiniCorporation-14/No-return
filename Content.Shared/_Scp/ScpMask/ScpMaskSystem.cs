@@ -1,128 +1,74 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Content.Shared._Scp.Mobs.Components;
+using Content.Shared._Scp.SafeTime;
+using Content.Shared._Sunrise.Random;
 using Content.Shared.Actions;
-using Content.Shared.Damage;
+using Content.Shared.Damage.Systems;
 using Content.Shared.DoAfter;
-using Content.Shared.IdentityManagement;
 using Content.Shared.Inventory;
-using Content.Shared.Inventory.Events;
 using Content.Shared.Popups;
 using Content.Shared.Whitelist;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Network;
-using Robust.Shared.Random;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 
 namespace Content.Shared._Scp.ScpMask;
 
 /// <summary>
-/// Система масок для сцп объектов, работающая для абсолютно всех гумандоидных объектов, которые могут носить одежду
-/// Позволяет контроллировать будет ли надета маска, дает способность разорвать маску
-/// Имеет два метода для работы извне для получения Entity c маской и ее разрыва
+/// Система масок для сцп объектов, работающая для абсолютно всех гуманоидных объектов, которые могут носить одежду. <br/>
+/// Позволяет контролировать будет ли надета маска, дает способность разорвать маску. <br/>
 /// </summary>
-public sealed class ScpMaskSystem : EntitySystem
+/// <remarks>
+/// TODO: Рефактор на выдачу компонента на время ношения маски. Компонент должен хранить ссылку на маску.
+/// </remarks>
+
+public sealed partial class ScpMaskSystem : EntitySystem
 {
     [Dependency] private readonly SharedPopupSystem _popup = default!;
     [Dependency] private readonly SharedAudioSystem _audio = default!;
     [Dependency] private readonly InventorySystem _inventory = default!;
     [Dependency] private readonly SharedDoAfterSystem _doAfter = default!;
     [Dependency] private readonly EntityWhitelistSystem _whitelist = default!;
+    [Dependency] private readonly RandomPredictedSystem _random = default!;
     [Dependency] private readonly INetManager _net = default!;
-    [Dependency] private readonly IRobustRandom _random = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        SubscribeLocalEvent<ScpMaskComponent, BeingEquippedAttemptEvent>(OnEquip);
-
         SubscribeLocalEvent<ScpComponent, ScpTearMaskEvent>(OnTear);
         SubscribeLocalEvent<ScpComponent, ScpTearMaskDoAfterEvent>(OnTearSuccess);
 
         SubscribeLocalEvent<ScpComponent, DamageChangedEvent>(OnDamage);
-    }
 
-    private void OnEquip(Entity<ScpMaskComponent> ent, ref BeingEquippedAttemptEvent args)
-    {
-        var target = args.EquipTarget;
-
-        // Маска должна надеваться только на те сущности, что находятся в вайтлисте
-        if (_whitelist.IsWhitelistFailOrNull(ent.Comp.TargetWhitelist, target))
-        {
-            if (_net.IsClient) // Да пососи уже, почему так
-            {
-                var message = Loc.GetString("scp-mask-cannot-equip", ("name", Identity.Name(args.EquipTarget, EntityManager)));
-                _popup.PopupCursor(message, args.Equipee);
-            }
-
-            args.Cancel();
-            return;
-        }
-
-        // Уже есть маска?
-        if (HasScpMask(target))
-        {
-            args.Cancel();
-            return;
-        }
-
-        // Возможно отменить надевание маски в определенных ситуациях
-        // Пример: Маска 096 не должна надеваться, пока тот в агре
-
-        var maskEvent = new ScpMaskEquipAttempt();
-        var targetEvent = new ScpMaskTargetEquipAttempt();
-
-        RaiseLocalEvent(ent, maskEvent);
-        RaiseLocalEvent(target, targetEvent);
-
-        if (maskEvent.Cancelled || targetEvent.Cancelled)
-        {
-            args.Cancel();
-            return;
-        }
-
-        // Проигрывание звука надевания
-        if (ent.Comp.EquipSound != null)
-            _audio.PlayPvs(ent.Comp.EquipSound, target);
-
-        // Задаем сейвтайм, в течение которого игрок не может снять маску
-        ent.Comp.SafeTimeEnd = _timing.CurTime + TimeSpan.FromSeconds(ent.Comp.SafeTime);
-        Dirty(ent);
+        InitializeEquipment();
+        InitializeRestrictions();
     }
 
     private void OnTear(Entity<ScpComponent> scp, ref ScpTearMaskEvent args)
     {
-        if (!_timing.IsFirstTimePredicted)
+        if (args.Handled)
             return;
 
         if (!TryGetScpMask(scp, out var scpMask))
             return;
 
         // Нельзя снять маску, пока действует сейвтайм
-        if (scpMask.Value.Comp.SafeTimeEnd != null && _timing.CurTime < scpMask.Value.Comp.SafeTimeEnd)
-        {
-            var message = Loc.GetString("scp-mask-cannot-tear-safetime", ("time", scpMask.Value.Comp.SafeTimeEnd - _timing.CurTime));
-            _popup.PopupClient(message, scp, scp);
-
+        if (IsInSafeTime(scpMask.Value, scp))
             return;
-        }
 
         var doAfterArgs = new DoAfterArgs(EntityManager, scp, scpMask.Value.Comp.TearTime, new ScpTearMaskDoAfterEvent(), scp, scp, scpMask)
         {
             BreakOnDamage = true,
-            BreakOnMove = true,
         };
 
-        _doAfter.TryStartDoAfter(doAfterArgs);
+        args.Handled = _doAfter.TryStartDoAfter(doAfterArgs);
     }
 
     private void OnTearSuccess(Entity<ScpComponent> scp, ref ScpTearMaskDoAfterEvent args)
     {
-        if (!_timing.IsFirstTimePredicted)
-            return;
-
         if (args.Cancelled || args.Handled)
             return;
 
@@ -138,13 +84,21 @@ public sealed class ScpMaskSystem : EntitySystem
             return;
 
         // Нужен только тот урон, что нанесли игроки
-        if (!args.Origin.HasValue)
+        if (!args.Origin.HasValue || args.Origin == scp)
             return;
 
         if (!TryGetScpMask(scp, out var scpMask))
             return;
 
-        if (!_random.Prob(scpMask.Value.Comp.TearChanceOnDamage))
+        // Проверяем, подходит ли инициатор урона под заданные критерии
+        // Например, мы не хотим, чтобы урон от НЕ мобов считался -> записываем MobState в DamageOriginWhitelist
+        // и только сущности имеющие MobState пройдут здесь
+        if (!_whitelist.CheckBoth(args.Origin,
+                scpMask.Value.Comp.DamageOriginBlacklist,
+                scpMask.Value.Comp.DamageOriginWhitelist))
+            return;
+
+        if (!_random.ProbForEntity(scp, scpMask.Value.Comp.TearChanceOnDamage))
             return;
 
         TryTear(scp, scpMask.Value);
@@ -179,9 +133,7 @@ public sealed class ScpMaskSystem : EntitySystem
         );
 
         _popup.PopupPredicted(message, scp, null, PopupType.LargeCaution);
-
-        if (_net.IsServer)
-            QueueDel(mask);
+        PredictedQueueDel(mask.Owner);
 
         return true;
     }
@@ -200,9 +152,6 @@ public sealed class ScpMaskSystem : EntitySystem
         if (!Resolve(maskEntity, ref maskEntity.Comp))
             return false;
 
-        if (!Exists(maskEntity) || Terminating(maskEntity))
-            return false;
-
         mask = (maskEntity.Owner, maskEntity.Comp);
 
         return true;
@@ -216,7 +165,6 @@ public sealed class ScpMaskSystem : EntitySystem
     /// <summary>
     /// Создает попап, говорящий о невозможности использовать способность из-за маски
     /// </summary>
-    /// <param name="scp"></param>
     public bool TryCreatePopup(EntityUid scp, EntityUid? mask)
     {
         if (!mask.HasValue)
@@ -231,17 +179,55 @@ public sealed class ScpMaskSystem : EntitySystem
 
     #endregion
 
+    #region Helpers
+
+    /// <summary>
+    /// Упрощенный метод для проверки, находится ли маска в периоде "безопасного времени".
+    /// Автоматически получает маску на сущности и вызывает полноценный метод, возвращая его результат.
+    /// </summary>
+    /// <param name="user">Сущность, для которой будет показано уведомление о невозможности снятия маски, если <see cref="silent"/> = true</param>
+    /// <param name="silent">Будет ли показано уведомление о невозможности снятия маски, если маска находится в безопасном времени</param>
+    /// <returns>Находится ли маска в безопасном времени или нет</returns>
+    private bool IsInSafeTime(EntityUid user, bool silent = false)
+    {
+        if (!TryGetScpMask(user, out var mask))
+            return false;
+
+        return IsInSafeTime(mask.Value, user, silent);
+    }
+
+    /// <summary>
+    /// Проверяет, находится ли маска в "безопасном времени" в течение которого ее запрещено снимать.
+    /// </summary>
+    /// <param name="ent">Маска, которую проверяем</param>
+    /// <param name="user">Сущность, для которой будет показано уведомление о невозможности снятия маски, если <see cref="silent"/> = true</param>
+    /// <param name="silent">Будет ли показано уведомление о невозможности снятия маски, если маска находится в безопасном времени</param>
+    /// <returns>Находится ли маска в безопасном времени или нет.</returns>
+    private bool IsInSafeTime(Entity<ScpMaskComponent> ent, EntityUid user, bool silent = false)
+    {
+        if (!ent.Comp.SafeTimeEnd.HasValue)
+            return false;
+
+        if (_timing.CurTime >= ent.Comp.SafeTimeEnd)
+            return false;
+
+        if (!silent)
+        {
+            var timeLeft = SharedSafeTimeSystem.GetTimeLeft(_timing.CurTime, ent.Comp.SafeTimeEnd.Value);
+            var message = Loc.GetString("scp-mask-cannot-tear-safe-time", ("time", timeLeft));
+            _popup.PopupClient(message, user, user);
+        }
+
+        return true;
+    }
+
+    #endregion
+
 }
 
 #region Events
 
 public sealed partial class ScpTearMaskEvent : InstantActionEvent;
-
-[Serializable, NetSerializable]
-public sealed partial class ScpMaskEquipAttempt : CancellableEntityEventArgs;
-
-[Serializable, NetSerializable]
-public sealed partial class ScpMaskTargetEquipAttempt : CancellableEntityEventArgs;
 
 [Serializable, NetSerializable]
 public sealed partial class ScpTearMaskDoAfterEvent : SimpleDoAfterEvent;

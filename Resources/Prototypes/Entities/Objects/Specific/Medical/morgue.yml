@@ -1,6 +1,6 @@
 - type: entity
   id: BodyBag
-  parent: BaseDeployFoldable
+  parent: [ BaseDeployFoldable, BasePaperLabelableVisualized ]
   name: body bag
   description: A plastic bag designed for the storage and transportation of cadavers to stop body decomposition.
   components:
@@ -39,9 +39,28 @@
         shape:
           !type:PhysShapeAabb
           bounds: "-0.25,-0.4,0.25,0.1"
-        density: 20
+        density: 80
         mask:
         - ItemMask
+  # Sunrise added start - let body bags be destroyed to stop shooting-abuse from inside
+  - type: Damageable
+    damageModifierSet: Wood
+    damageContainer: StructuralInorganic
+  - type: Destructible
+    thresholds:
+    - trigger: # Excess damage, don't do anything
+        !type:DamageTrigger
+        damage: 200
+      behaviors:
+      - !type:DoActsBehavior
+        acts: ["Destruction"]
+    - trigger:
+        !type:DamageTrigger
+        damage: 60
+      behaviors:
+      - !type:DoActsBehavior
+        acts: ["Destruction"]
+  # Sunrise added end
   - type: EntityStorage
     capacity: 1
     isCollidableWhenOpen: true
@@ -54,16 +73,6 @@
     openSound:
       path: /Audio/Misc/zip.ogg
   - type: EntityStorageLayingDownOverride
-  - type: PaperLabel
-    labelSlot:
-      insertVerbText: comp-paper-label-insert
-      ejectVerbText: comp-paper-label-eject
-      whitelist:
-        components:
-        - Paper
-      blacklist:
-        tags:
-        - Book
   - type: Appearance
   - type: EntityStorageVisuals
     stateDoorOpen: open_overlay
@@ -88,7 +97,6 @@
           False: {visible: true}
   - type: Pullable
   - type: AntiRottingContainer
-  - type: ItemSlots
   - type: ContainerContainer
     containers:
       entity_storage: !type:Container
@@ -123,6 +131,7 @@
     state: ash
   - type: Tag
     tags:
+    - Burnt
     - Trash
   - type: SolutionContainerManager
     solutions:

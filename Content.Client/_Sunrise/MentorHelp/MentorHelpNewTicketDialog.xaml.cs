@@ -11,11 +11,14 @@ namespace Content.Client._Sunrise.MentorHelp
     [GenerateTypedNameReferences]
     public sealed partial class MentorHelpNewTicketDialog : DefaultWindow
     {
+        [Dependency] private readonly ILocalizationManager _loc = default!;
+
         public event Action<string, string>? OnTicketCreated;
 
         public MentorHelpNewTicketDialog()
         {
             RobustXamlLoader.Load(this);
+            IoCManager.InjectDependencies(this);
 
             CancelButton.OnPressed += _ => Close();
             CreateButton.OnPressed += _ =>
@@ -25,14 +28,14 @@ namespace Content.Client._Sunrise.MentorHelp
 
                 if (string.IsNullOrEmpty(subject))
                 {
-                    ErrorLabel.Text = Loc.GetString("mentor-help-new-ticket-error-subject");
+                    ErrorLabel.Text = _loc.GetString("mentor-help-new-ticket-error-subject");
                     ErrorLabel.Visible = true;
                     return;
                 }
 
                 if (string.IsNullOrEmpty(message))
                 {
-                    ErrorLabel.Text = Loc.GetString("mentor-help-new-ticket-error-message");
+                    ErrorLabel.Text = _loc.GetString("mentor-help-new-ticket-error-message");
                     ErrorLabel.Visible = true;
                     return;
                 }

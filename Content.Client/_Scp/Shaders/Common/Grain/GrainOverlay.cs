@@ -17,10 +17,12 @@ public sealed class GrainOverlay : Overlay
     private readonly EntityQuery<EyeComponent> _eyeQuery;
 
     private readonly ShaderInstance _shader;
+    private static readonly ProtoId<ShaderPrototype> ShaderProtoId = "Grain";
 
     /// <summary>
     /// Текущая сила шейдера
     /// </summary>
+    [ViewVariables]
     public float CurrentStrength;
 
     public GrainOverlay()
@@ -29,7 +31,7 @@ public sealed class GrainOverlay : Overlay
 
         _eyeQuery = _entManager.GetEntityQuery<EyeComponent>();
 
-        _shader = _prototype.Index<ShaderPrototype>("Grain").InstanceUnique();
+        _shader = _prototype.Index(ShaderProtoId).InstanceUnique();
     }
 
     public override OverlaySpace Space => OverlaySpace.WorldSpace;
@@ -60,5 +62,12 @@ public sealed class GrainOverlay : Overlay
         args.WorldHandle.UseShader(_shader);
         args.WorldHandle.DrawRect(args.WorldBounds, Color.White);
         args.WorldHandle.UseShader(null);
+    }
+
+    protected override void DisposeBehavior()
+    {
+        base.DisposeBehavior();
+
+        _shader.Dispose();
     }
 }

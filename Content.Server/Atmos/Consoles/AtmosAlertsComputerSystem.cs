@@ -21,6 +21,8 @@ using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Player;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
+using Content.Shared.PowerCell.Components; // Sunrise-edit
 
 namespace Content.Server.Atmos.Monitor.Systems;
 
@@ -35,7 +37,7 @@ public sealed class AtmosAlertsComputerSystem : SharedAtmosAlertsComputerSystem
     [Dependency] private readonly NavMapSystem _navMapSystem = default!;
     [Dependency] private readonly DeviceListSystem _deviceListSystem = default!;
     [Dependency] private readonly SharedAudioSystem _audio = default!;
-    [Dependency] private readonly SharedPowerCellSystem _cell = default!;
+    [Dependency] private readonly PowerCellSystem _cell = default!;
     [Dependency] private readonly IGameTiming _gameTiming = default!;
 
     private const float UpdateTime = 1.0f;
@@ -58,6 +60,7 @@ public sealed class AtmosAlertsComputerSystem : SharedAtmosAlertsComputerSystem
         // Alarm events
         SubscribeLocalEvent<AtmosAlertsDeviceComponent, EntityTerminatingEvent>(OnDeviceTerminatingEvent);
         SubscribeLocalEvent<AtmosAlertsDeviceComponent, AnchorStateChangedEvent>(OnDeviceAnchorChanged);
+
     }
 
     #region Event handling
@@ -201,9 +204,9 @@ public sealed class AtmosAlertsComputerSystem : SharedAtmosAlertsComputerSystem
                     _appearance.SetData(ent, AtmosAlertsComputerVisuals.ComputerLayerScreen, (int) highestAlert, entAppearance);
 
                 // Sunrise-start
-                if (HasComp<ActivatableUIRequiresPowerCellComponent>(ent) && TryComp<PowerCellDrawComponent>(ent, out var draw))
+                if (HasComp<ActivatableUIRequiresPowerCellComponent>(ent) && HasComp<PowerCellDrawComponent>(ent))
                 {
-                    if (_cell.HasActivatableCharge(ent, draw) || _cell.HasDrawCharge(ent, draw))
+                    if (_cell.HasActivatableCharge(ent) || _cell.HasDrawCharge(ent))
                     {
                         Beep(ent, entConsole, highestAlert);
                     }
@@ -227,7 +230,7 @@ public sealed class AtmosAlertsComputerSystem : SharedAtmosAlertsComputerSystem
     private void Beep(EntityUid ent, AtmosAlertsComputerComponent entConsole, AtmosAlarmType highestAlert)
     {
         if (entConsole.NextBeep >= _gameTiming.CurTime || highestAlert != AtmosAlarmType.Danger ||
-            entConsole.BeepSound == null)
+            entConsole.BeepSound == null || !entConsole.DoAtmosAlert) // Sunrise-edit
             return;
 
         _audio.PlayPvs(entConsole.BeepSound, ent);
@@ -257,7 +260,7 @@ public sealed class AtmosAlertsComputerSystem : SharedAtmosAlertsComputerSystem
 
         // Set the UI state
         _userInterfaceSystem.SetUiState(uid, AtmosAlertsComputerUiKey.Key,
-            new AtmosAlertsComputerBoundInterfaceState(airAlarmStateData, fireAlarmStateData, focusAlarmData));
+            new AtmosAlertsComputerBoundInterfaceState(airAlarmStateData, fireAlarmStateData, focusAlarmData, component.DoAtmosAlert)); // Sunrise-edit
     }
 
     private List<AtmosAlertsComputerEntry> GetAlarmStateData(EntityUid gridUid, AtmosAlertsComputerGroup group)

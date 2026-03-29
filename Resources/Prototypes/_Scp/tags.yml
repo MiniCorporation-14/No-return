@@ -54,3 +54,15 @@
 
 - type: Tag
   id: Scp173DamageOnCollide
+
+- type: Tag
+  id: MTFLoadoutCrate
+
+- type: Tag
+  id: UpgradeLocusKit
+
+- type: Tag
+  id: CanStandUpWithoutAbilityToMove
+
+- type: Tag
+  id: EncryptionScpSecurityCommon

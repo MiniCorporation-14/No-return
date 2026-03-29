@@ -1,43 +1,45 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+using System.Numerics;
 using Content.Shared._Scp.Blinking;
 using Content.Shared._Scp.Containment.Cage;
+using Content.Shared._Scp.Helpers;
+using Content.Shared._Scp.Proximity;
 using Content.Shared._Scp.Watching;
 using Content.Shared.ActionBlocker;
 using Content.Shared.DoAfter;
-using Content.Shared.Interaction;
 using Content.Shared.Interaction.Events;
 using Content.Shared.Movement.Events;
+using Content.Shared.Physics;
 using Content.Shared.Popups;
 using Content.Shared.Storage.Components;
+using Robust.Shared.Map;
+using Robust.Shared.Physics.Components;
 using Robust.Shared.Timing;
 
 namespace Content.Shared._Scp.Scp173;
 
+// TODO: Выделить логику блокировки движения при смотрении в отдельную систему со своим компонентом.
 public abstract class SharedScp173System : EntitySystem
 {
     [Dependency] protected readonly IGameTiming Timing = default!;
     [Dependency] private readonly SharedBlinkingSystem _blinking = default!;
     [Dependency] private readonly ActionBlockerSystem _blocker = default!;
     [Dependency] protected readonly EyeWatchingSystem Watching = default!;
-    [Dependency] private readonly EntityLookupSystem _lookup = default!;
-    [Dependency] private readonly SharedInteractionSystem _interaction = default!;
     [Dependency] private readonly SharedDoAfterSystem _doAfter = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
 
-    protected static readonly TimeSpan ReagentCheckInterval = TimeSpan.FromSeconds(1);
+    protected static readonly TimeSpan ReagentCheckInterval = TimeSpan.FromSeconds(1f);
 
     public const float ContainmentRoomSearchRadius = 8f;
+
+    private EntityQuery<InsideEntityStorageComponent> _insideQuery;
+    private EntityQuery<ScpCageComponent> _scpCageQuery;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        SubscribeLocalEvent<Scp173Component, AttackAttemptEvent>((uid, _, args) =>
-        {
-            if (Watching.IsWatched(uid))
-                args.Cancel();
-        });
+        SubscribeLocalEvent<Scp173Component, AttackAttemptEvent>(OnAttackAttempt);
 
         SubscribeLocalEvent<Scp173Component, ChangeDirectionAttemptEvent>(OnDirectionAttempt);
         SubscribeLocalEvent<Scp173Component, UpdateCanMoveEvent>(OnMoveAttempt);
@@ -46,20 +48,50 @@ public abstract class SharedScp173System : EntitySystem
 
         SubscribeLocalEvent<Scp173Component, Scp173BlindAction>(OnStartedBlind);
         SubscribeLocalEvent<Scp173Component, Scp173StartBlind>(OnBlind);
+
+        _insideQuery = GetEntityQuery<InsideEntityStorageComponent>();
+        _scpCageQuery = GetEntityQuery<ScpCageComponent>();
     }
 
     #region Movement
 
+    private void OnAttackAttempt(Entity<Scp173Component> ent, ref AttackAttemptEvent args)
+    {
+        if (IsInScpCage(ent, out _))
+        {
+            args.Cancel();
+            return;
+        }
+
+        if (Watching.IsWatchedByAny(ent, useTimeCompensation: true))
+        {
+            args.Cancel();
+            return;
+        }
+    }
+
     private void OnDirectionAttempt(Entity<Scp173Component> ent, ref ChangeDirectionAttemptEvent args)
     {
-        if (Watching.IsWatched(ent.Owner) && !IsInScpCage(ent, out _))
-            args.Cancel();
+        // В клетке можно двигаться
+        if (IsInScpCage(ent, out _))
+            return;
+
+        if (!Watching.IsWatchedByAny(ent, useTimeCompensation: true))
+            return;
+
+        args.Cancel();
     }
 
     private void OnMoveAttempt(Entity<Scp173Component> ent, ref UpdateCanMoveEvent args)
     {
-        if (Watching.IsWatched(ent.Owner) && !IsInScpCage(ent, out _))
-            args.Cancel();
+        // В клетке можно двигаться
+        if (IsInScpCage(ent, out _))
+            return;
+
+        if (!Watching.IsWatchedByAny(ent, useTimeCompensation: true))
+            return;
+
+        args.Cancel();
     }
 
     private void OnMoveInput(Entity<Scp173Component> ent, ref MoveInputEvent args)
@@ -113,19 +145,19 @@ public abstract class SharedScp173System : EntitySystem
         args.Handled = true;
     }
 
-    protected virtual void BreakNeck(EntityUid target, Scp173Component scp) {}
-
     #endregion
 
     #region Public API
 
     public void BlindEveryoneInRange(EntityUid scp, TimeSpan time, bool predicted = true)
     {
-        var eyes = Watching.GetWatchers(scp);
+        using var blinkableList = ListPoolEntity<BlinkableComponent>.Rent();
+        if (!Watching.TryGetAllEntitiesVisibleTo(scp, blinkableList.Value, flags: LookupFlags.Dynamic | LookupFlags.Approximate))
+            return;
 
-        foreach (var eye in eyes)
+        foreach (var eye in blinkableList.Value)
         {
-            _blinking.ForceBlind(eye, time, predicted);
+            _blinking.ForceBlind(eye.AsNullable(), time, predicted);
         }
 
         // TODO: Add sound.
@@ -138,8 +170,8 @@ public abstract class SharedScp173System : EntitySystem
     {
         storage = null;
 
-        if (TryComp<InsideEntityStorageComponent>(uid, out var insideEntityStorageComponent) &&
-            HasComp<ScpCageComponent>(insideEntityStorageComponent.Storage))
+        if (_insideQuery.TryComp(uid, out var insideEntityStorageComponent) &&
+            _scpCageQuery.HasComp(insideEntityStorageComponent.Storage))
         {
             storage = insideEntityStorageComponent.Storage;
             return true;
@@ -151,11 +183,12 @@ public abstract class SharedScp173System : EntitySystem
     /// <summary>
     /// Находится ли 173 в своей камере. Проверяется по наличию рядом спавнера работы
     /// </summary>
-    /// TODO: Оптимизировать, использовав EntityQueryEnumerator и ранний выход
     public bool IsContained(EntityUid uid)
     {
-        return _lookup.GetEntitiesInRange<Scp173BlockStructureDamageComponent>(Transform(uid).Coordinates, ContainmentRoomSearchRadius)
-            .Any(entity => _interaction.InRangeUnobstructed(uid, entity.Owner, ContainmentRoomSearchRadius));
+        return Watching.TryGetAnyEntitiesVisibleTo<Scp173BlockStructureDamageComponent>(uid,
+            LineOfSightBlockerLevel.None,
+            LookupFlags.Sensors | LookupFlags.Sundries,
+            ContainmentRoomSearchRadius);
     }
 
     private bool CanBlind(EntityUid uid, bool showPopups = true)
@@ -176,7 +209,7 @@ public abstract class SharedScp173System : EntitySystem
             return false;
         }
 
-        if (!IsWatched(uid, out var watchers))
+        if (!Watching.TryGetWatchers(uid, out var watchers))
         {
             if (showPopups)
                 _popup.PopupClient(Loc.GetString("scp173-blind-failed-too-few-watchers"), uid, uid);
@@ -184,7 +217,7 @@ public abstract class SharedScp173System : EntitySystem
             return false;
         }
 
-        if (watchers.Count <= 3)
+        if (watchers <= 3)
         {
             if (showPopups)
                 _popup.PopupClient(Loc.GetString("scp173-blind-failed-too-few-watchers"), uid, uid);
@@ -195,52 +228,43 @@ public abstract class SharedScp173System : EntitySystem
         return true;
     }
 
-    public bool IsWatched(EntityUid target, out HashSet<EntityUid> viewers)
+    #endregion
+
+    #region Jump Helpers
+
+    /// <summary>
+    /// Проверяет, является ли сущность непроходимым препятствием.
+    /// Используется для определения, нужно ли остановить прыжок SCP-173 при столкновении.
+    /// </summary>
+    protected bool IsImpassableObstacle(EntityUid entity)
     {
-        var watchers = Watching.GetWatchers(target);
+        if (!TryComp<PhysicsComponent>(entity, out var physics))
+            return false;
 
-        viewers = watchers
-            .Where(eye => Watching.CanBeWatched(eye, target))
-            .ToHashSet();
+        if (!physics.Hard)
+            return false;
 
-        return viewers.Count != 0;
+        var layer = (CollisionGroup) physics.CollisionLayer;
+
+        return layer.HasFlag(CollisionGroup.WallLayer)
+               || layer.HasFlag(CollisionGroup.GlassAirlockLayer)
+               || layer.HasFlag(CollisionGroup.HumanoidBlockLayer);
     }
 
     /// <summary>
-    /// Проверяет, находится ли SCP-173 в "безопасного времени", когда он не может засорять свою камеру
+    /// Ограничивает координаты цели прыжка до максимальной дальности.
+    /// Если цель дальше <paramref name="maxRange"/>, координаты обрезаются.
     /// </summary>
-    public bool IsInSafeTime(Entity<Scp173Component> ent, bool silent = false, bool predicted = true)
+    protected static void ClampTargetToRange(MapCoordinates performerCoords, ref MapCoordinates targetCoords, float maxRange)
     {
-        if (Timing.CurTime >= ent.Comp.SafeTimeEnd || !ent.Comp.SafeTimeEnd.HasValue)
-            return true;
+        var direction = targetCoords.Position - performerCoords.Position;
+        var distance = direction.Length();
 
-        if (!silent)
+        if (distance > maxRange)
         {
-            var timeLeft = GetTimeLeftMMSS(Timing.CurTime, ent.Comp.SafeTimeEnd.Value);
-            var message = Loc.GetString("scp173-in-safe-time", ("time", timeLeft));
-            if (predicted)
-                _popup.PopupPredicted(message, ent, ent);
-            else
-                _popup.PopupEntity(message, ent, ent);
+            direction = Vector2.Normalize(direction) * maxRange;
+            targetCoords = performerCoords.Offset(direction);
         }
-
-        return false;
-    }
-
-    public static string GetTimeLeftMMSS(TimeSpan now, TimeSpan end)
-    {
-        var timeLeft = end - now;
-        return GetTimeLeftMMSS(timeLeft);
-    }
-
-    public static string GetTimeLeftMMSS(TimeSpan timeLeft)
-    {
-        timeLeft = timeLeft < TimeSpan.Zero ? TimeSpan.Zero : timeLeft;
-
-        var minutes = ((int) timeLeft.TotalMinutes).ToString("D2");
-        var seconds = timeLeft.Seconds.ToString("D2");
-
-        return $"{minutes}:{seconds}";
     }
 
     #endregion

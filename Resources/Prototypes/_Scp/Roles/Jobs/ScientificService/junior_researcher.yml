@@ -3,11 +3,19 @@
   name: job-name-junior-researcher
   description: job-description-junior-researcher
   playTimeTracker: JobJuniorResearcher
-  startingGear: JuniorResearcherGear
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 3600
+  - !type:AgeRequirement
+    requiredAge: 22
+  - !type:AgeRequirement
+    requiredAge: 45
+    inverted: true
   icon: JobJuniorResearcher
   supervisors: job-supervisors-scientific-service-director
   canBeAntag: true
   displayWeight: 0
+  weight: 785
   accessGroups:
   - JuniorResearcher
   special:
@@ -23,11 +31,15 @@
       - Necrophobia
       proximityBlockerLevel: None
       seenBlockerLevel: None
+    - type: ShowScp096FaceDamageHud
 
 - type: startingGear
   id: JuniorResearcherGear
   equipment:
+    eyes: ClothingEyesGlasses
+    jumpsuit: ClothingUniformJumpsuitColorWhite
     shoes: ClothingShoesColorWhite
+    back: ClothingBackpackScience
     id: KeyCardJuniorResearcher
     ears: ClothingHeadsetScientificService
     pocket1: BookScientistsGuidebook

@@ -11,6 +11,7 @@
     layers:
     - map: [ "base" ]
       state: base
+      loop: false
   - type: Scp
     class: Keter
   - type: Scp106
@@ -35,6 +36,11 @@
   - type: MovementSpeedModifier
     baseWalkSpeed: 2
     baseSprintSpeed: 2
+  - type: ScpAnnounceOnSpawn
+    text: scp106-announce-on-spawn
+    channels:
+    - ScientificService
+    - HeavyContainmentSecurityService
   - type: XenoScreech
   - type: Muted
     allowed:
@@ -54,13 +60,11 @@
         layer:
         - MobLayer
   - type: Appearance
-  - type: GenericVisualizer
-    visuals:
-      enum.Scp106Visuals.Visuals:
-        base:
-          Default: { state: base }
-          Entering: { state: lusha_from_ded }
-          Exiting: { state: ded_from_lusha }
+  - type: Scp106Visuals
+    baseLayer: base
+    defaultState: base
+    enteringState: lusha_from_ded
+    exitingState: ded_from_lusha
   - type: ActionGrant
     actions:
     - BecomeTeleportPhantomAction
@@ -108,6 +112,7 @@
   - type: GuideHelp
     guides:
     - ScpResearch
+    - ScpFear
   - type: Store
     balance:
       LifeEssence: 20

@@ -38,16 +38,16 @@
           amount: 4
 
 - type: entity
-  parent: TrackingImplanter
-  id: TrackingImplanterMTF
+  parent: BaseImplantOnlyImplanter
+  id: DeathRattleImplanterMTF
   suffix: tracking
   components:
     - type: Implanter
-      implant: TrackingImplantMTF
+      implant: DeathRattleImplantMTF
 
 - type: entity
-  parent: TrackingImplant
-  id: TrackingImplantMTF
+  parent: DeathRattleImplant
+  id: DeathRattleImplantMTF
   components:
     - type: RattleOnTrigger
       radioChannel: RegionalAdministration
@@ -58,7 +58,7 @@
   components:
     - type: StorageFill
       contents:
-        - id: TrackingImplanterMTF
+        - id: DeathRattleImplanterMTF
           amount: 6
 
 - type: entity
@@ -72,7 +72,7 @@
   - type: StorageFill
     contents:
     - id: WeaponLightMachineGunL6
-    - id: MagazineLightRifleBoxSP
+    - id: MagazineRifleBoxSP
 
 - type: entity
   parent: CrateCommandSecure
@@ -144,13 +144,25 @@
     - NamesMilitaryLast
     nameFormat: name-format-ert
   - type: ZombieImmune
+  - type: Scp049Protection
+  - type: Mood
+    minimumSpeedModifier: 0.9
   - type: AutoImplant
     implants:
     - Scp049ProtectionImplant
-    - TrackingImplantMTF
+    - DeathRattleImplantMTF
     - MindShieldImplant
   - type: TTS
   - type: NoEmotions
+  - type: SpeakOnEyeStateChange # переопределение моргания с другими параметрами для охраны и МОГа
+    # Часть фраз уходит, так как более разговорная. А эти парни натренированы.
+    phraseOnClose:
+    - close-eye-phrase-1
+    - close-eye-phrase-2
+    phraseOnOpen:
+    - open-eye-phrase-3
+    speakOnAutomaticBlinking: true
+    speakOnlyInScp173Chamber: false
   - type: Fear
     phobias:
     - Exoremophobia
@@ -162,16 +174,17 @@
       Terror: 2
     fearBasedGrainStrength:
       None: 0
-      Anxiety: 30
-      Fear: 80
-      Terror: 150
+      Anxiety: 15
+      Fear: 45
+      Terror: 100
     fearBasedVignetteStrength:
       None: 0
-      Anxiety: 20
-      Fear: 30
-      Terror: 60
+      Anxiety: 15
+      Fear: 25
+      Terror: 50
     baseJitterTime: 0
     fallOffChance: 0
+  - type: ScpRepairableCanSeeExamineHints
 
 - type: randomHumanoidSettings
   id: CommonMTFSpecialist
@@ -193,6 +206,17 @@
     - NamesLeader
     - NamesMilitaryLast
     nameFormat: name-format-ert
+  - type: ScpAnnounceOnSpawn
+    text: mtf-announce-on-spawn
+    useGlobalAnnouncement: true
+    announceOnStationGridEntered: true
+    announceOnArrival: false
+    stationAnnouncementColor: "#065290"
+    stationAnnouncementVoice: CBMTF1
+    stationAnnouncementSound:
+      path: /Audio/_Scp/Effects/Announcement/mtf.ogg
+      params:
+        volume: -5
 
 - type: randomHumanoidSettings
   id: CommonMTFOperative

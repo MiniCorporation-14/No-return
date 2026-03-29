@@ -4,12 +4,16 @@
   name: ghost-role-information-mtf-leader-LLH-name
   description: ghost-role-information-mtf-leader-description
   playTimeTracker: JobLLHLeader
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 18000 #5 hrs
   setPreference: false
   startingGear: LLHLeaderGear
   icon: JobIconLLHleader
   supervisors: ghost-role-information-mtf-LLH-leader-supervisors
   canBeAntag: false
   radioBold: true
+  weight: 890
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
   accessGroups:
@@ -22,30 +26,25 @@
   id: LLHLeaderGear
   equipment:
     jumpsuit: ClothingUniformLLH
-    back: ClothingBackpackLLH
-    shoes: ClothingShoesBootsMagAdv
-    head: ClothingHeadHatCapLeatherLLHLeader
-    mask: ClothingMaskGasLLH
-    eyes: ClothingEyesNVDSec
+    back: MtfTacticalBackpack
+    shoes: ClothingShoesSwat
+    head: ClothingHelmetMtfTacticalNVG
+    mask: ClothingMaskMtfTacticalWhite
+    eyes: ClothingEyesNVDHighMtf
     gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorHeavyLLH
+    outerClothing: ClothingOuterArmorTacticalOmega
     id: KeyCardMtfLLHLeader
     ears: ClothingHeadsetAltMTFLLH
-    belt: MTFCommanderWebbing
-    pocket1: BaseUplinkLLHLeader
-    pocket2: PouchAmmo
+    belt: ClothingBeltMtfSparePouch
+    pocket1: BaseUplinkHightLeader
+    pocket2: MobileTaskForcePDA
   storage:
     back:
-    - BoxMRE
+    - BoxMtfLeaderKit
     - Crowbar
     - CombatKnife
-    - HandheldCriminalRecordsMonitorUnpowered
-    - DoubleEmergencyOxygenTankFilled
     - HandheldCrewMonitor
-    - MobileTaskForcePDA
-    belt:
-    - Stunbaton
-    - Handcuffs
+    - DoorRemoteCustom
 
 # Специалист
 - type: job
@@ -53,11 +52,15 @@
   name: ghost-role-information-mtf-specialist-LLH-name
   description: ghost-role-information-mtf-specialist-description
   playTimeTracker: JobLLHSpecialist
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 18000 #5 hrs
   setPreference: false
   startingGear: LLHSpecialistGear
   icon: JobIconLLH
   supervisors: ghost-role-information-mtf-LLH-specialist-supervisors
   canBeAntag: false
+  weight: 885
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
   accessGroups:
@@ -70,71 +73,21 @@
   id: LLHSpecialistGear
   equipment:
     jumpsuit: ClothingUniformLLH
-    back: ClothingBackpackLLH
-    shoes: ClothingShoesBootsMagAdv
-    head: ClothingHelmetMTF
-    mask: ClothingMaskGasLLH
-    eyes: ClothingEyesNVDSec
+    back: MtfTacticalBackpack
+    shoes: ClothingShoesSwat
+    head: ClothingHelmetMtfTacticalNVG
+    mask: ClothingMaskMtfTacticalWhite
+    eyes: ClothingEyesNVDHighMtf
     gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorHeavyLLH
+    outerClothing: ClothingOuterArmorTacticalOmega
     id: KeyCardMtfLLHSpecialist
     ears: ClothingHeadsetAltMTFLLH
-    belt: MTFWebbing
-    pocket1: BaseUplinkLLHSpecialist
-    pocket2: PouchAmmo
+    belt: ClothingBeltMtfSparePouch
+    pocket1: BaseUplinkHightSpecialist
+    pocket2: MobileTaskForcePDA
   storage:
     back:
     - Crowbar
-    - DoubleEmergencyOxygenTankFilled
-    - BoxMRE
-    - MobileTaskForcePDA
+    - BoxMtfBaseKit
     - CombatKnife
-    belt:
-    - Stunbaton
-    - Handcuffs
-
-# Кадет
-- type: job
-  id: LLHCadet
-  name: ghost-role-information-mtf-cadet-LLH-name
-  description: ghost-role-information-mtf-cadet-description
-  playTimeTracker: JobLLHCadet
-  setPreference: false
-  startingGear: LLHCadetGear
-  icon: JobIconLLH
-  supervisors: ghost-role-information-mtf-LLH-cadet-supervisors
-  canBeAntag: false
-  overrideConsoleVisibility: false
-  alwaysShowInBanPanel: true
-  accessGroups:
-  - AllComplex
-  special:
-  - !type:AddImplantSpecial
-    implants: [ MindShieldImplant ]
-
-- type: startingGear
-  id: LLHCadetGear
-  equipment:
-    jumpsuit: ClothingUniformLLH
-    back: ClothingBackpackLLH
-    shoes: ClothingShoesBootsMagAdv
-    head: ClothingHelmetMTF
-    mask: ClothingMaskGasLLH
-    eyes: ClothingEyesNVDSec
-    gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorHeavyLLH
-    id: KeyCardMtfLLHCadet
-    ears: ClothingHeadsetAltMTFLLH
-    belt: MTFWebbing
-    pocket1: BaseUplinkLLH
-    pocket2: PouchAmmo
-  storage:
-    back:
-    - Crowbar
-    - DoubleEmergencyOxygenTankFilled
-    - BoxMRE
-    - MobileTaskForcePDA
-    - CombatKnife
-    belt:
-    - Stunbaton
-    - Handcuffs
+    - DoorRemoteCustom

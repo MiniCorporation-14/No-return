@@ -79,9 +79,6 @@
   id: JobLeadResearcher
 
 - type: playTimeTracker
-  id: JobAnomabiologyResearcher
-
-- type: playTimeTracker
   id: JobAnomarchologyResearcher
 
 - type: playTimeTracker
@@ -174,6 +171,12 @@
 - type: playTimeTracker
   id: JobScp999
 
+- type: playTimeTracker
+  id: JobScp131A
+
+- type: playTimeTracker
+  id: JobScp131B
+
 # Отряды МОГ
 
 - type: playTimeTracker
@@ -192,9 +195,6 @@
   id: JobLLHSpecialist
 
 - type: playTimeTracker
-  id: JobLLHCadet
-
-- type: playTimeTracker
   id: JobMHLeader
 
 - type: playTimeTracker
@@ -210,9 +210,6 @@
   id: JobRRHSpecialist
 
 - type: playTimeTracker
-  id: JobRRHCadet
-
-- type: playTimeTracker
   id: JobNTFLeader
 
 - type: playTimeTracker
@@ -220,3 +217,8 @@
 
 - type: playTimeTracker
   id: JobNTFCadet
+
+# Антагонисты
+
+- type: playTimeTracker
+  id: AntagScp2054X

@@ -6,6 +6,12 @@
   id: BaseSword
   abstract: true
   components:
+  # Fire added start
+  - type: BloodSplatterer
+    amount: 1, 3
+    probability: 0.5
+    bloodLineProbability: 0.15
+  # Fire added end
   - type: Sharp
   - type: Execution
     doAfterDuration: 4.0
@@ -29,9 +35,6 @@
   id: Cutlass
   description: A wickedly curved blade, often seen in the hands of space pirates.
   components:
-  - type: Tag
-    tags:
-    - Machete
   - type: Sprite
     sprite: Objects/Weapons/Melee/cutlass.rsi
   - type: MeleeWeapon
@@ -47,6 +50,17 @@
     shape:
     - 0,0,0,2
   - type: DisarmMalus
+  # sunrise-start
+  - type: Reflect
+    reflectProb: 0.15
+    spread: 90
+  - type: Tool
+    qualities:
+    - Slicing
+    - Prying
+  - type: ToolTileCompatible
+  - type: Prying
+  # sunrise-end
 
 - type: entity
   name: machete
@@ -54,9 +68,6 @@
   id: Machete
   description: A large, vicious looking blade.
   components:
-  - type: Tag
-    tags:
-    - Machete
   - type: Sprite
     sprite: Objects/Weapons/Melee/machete.rsi
   - type: MeleeWeapon
@@ -108,6 +119,8 @@
     weight: 0.0002 # 5,000 times less likely than 1 regular animal
   - type: PirateAccent
     # not putting a BlockMovement component here cause that's funny.
+  - type: StealTarget
+    stealGroup: CaptainSword
   # Sunrise start
   - type: EmitSoundOnLand
     sound:
@@ -120,9 +133,6 @@
   id: Katana
   description: Ancient craftwork made with not so ancient plasteel.
   components:
-  - type: Tag
-    tags:
-    - Katana
   - type: Sprite
     sprite: Objects/Weapons/Melee/katana.rsi
   - type: MeleeWeapon
@@ -150,6 +160,8 @@
   id: EnergyKatana
   description: A katana infused with strong energy.
   components:
+  - type: Contraband
+    severity: HighlyIllegal
   - type: Sprite
     sprite: Objects/Weapons/Melee/energykatana.rsi
   - type: MeleeWeapon
@@ -179,6 +191,14 @@
     spread: 90
     slotFlags:
     - NONE
+  # Sunrise start
+  - type: Tool
+    qualities:
+    - Slicing
+    - Prying
+  - type: ToolTileCompatible
+  - type: Prying
+  # Sunrise end
 
 #Greatswords
 - type: entity

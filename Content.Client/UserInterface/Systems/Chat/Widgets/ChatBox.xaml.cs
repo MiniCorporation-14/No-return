@@ -14,6 +14,9 @@ using Robust.Shared.Input;
 using Robust.Shared.Player;
 using Robust.Shared.Utility;
 using System.Linq;
+using Content.Client._Sunrise.Messenger;
+using Content.Shared._Sunrise.Messenger;
+using Robust.Client.UserInterface.RichText;
 using static Robust.Client.UserInterface.Controls.LineEdit;
 
 namespace Content.Client.UserInterface.Systems.Chat.Widgets;
@@ -54,11 +57,6 @@ public partial class ChatBox : UIWidget
         _controller.RegisterChat(this);
     }
 
-    public void SetChatOpacity()
-    {
-        _controller.SetChatWindowOpacity(_configurationManager.GetCVar(CCVars.ChatWindowOpacity));
-    }
-
     private void OnTextEntered(LineEditEventArgs args)
     {
         _controller.SendMessage(this, SelectedChannel);
@@ -79,7 +77,7 @@ public partial class ChatBox : UIWidget
 
         var color = msg.MessageColorOverride ?? msg.Channel.TextColor();
 
-        AddLine(msg.WrappedMessage, color);
+        AddLine(msg.WrappedMessage, color, msg.Channel); // Sunrise-Edit
     }
 
     private void OnHighlightsUpdated(string highlights)
@@ -94,7 +92,7 @@ public partial class ChatBox : UIWidget
 
     public void Repopulate()
     {
-        ClearChatContents(); // Sunrise
+        ClearChatContents(); // Sunrise-Edit
 
         foreach (var message in _controller.History)
         {
@@ -104,7 +102,7 @@ public partial class ChatBox : UIWidget
 
     private void OnChannelFilter(ChatChannel channel, bool active)
     {
-        ClearChatContents(); // Sunrise
+        ClearChatContents(); // Sunrise-Edit
 
         foreach (var message in _controller.History)
         {
@@ -122,28 +120,23 @@ public partial class ChatBox : UIWidget
         _controller.UpdateHighlights(highlighs);
     }
 
-    // Sunrise start
-    private void ClearChatContents()
+    public void AddLine(string message, Color color, ChatChannel channel = ChatChannel.None)
     {
-        Contents.Clear();
+        // Sunrise-Start
+        var allowEmoji = SharedEmojiSystem.IsEmojiAllowedInChannel(channel);
+        _emoji ??= _entManager.System<EmojiSystem>();
 
-        foreach (var child in Contents.Children.ToArray())
-        {
-            if (child.Name != "_v_scroll")
-            {
-                Contents.RemoveChild(child);
-            }
-        }
-    }
-    // Sunrise end
+        if (allowEmoji && SharedEmojiSystem.IsContainsAnyEmoji(message))
+            message = _emoji.ParseEmojis(message);
 
-    public void AddLine(string message, Color color)
-    {
+        var tags = GetAllowedTags(channel, allowEmoji);
+        // Sunrise-End
+
         var formatted = new FormattedMessage(3);
         formatted.PushColor(color);
         formatted.AddMarkupOrThrow(message);
         formatted.Pop();
-        Contents.AddMessage(formatted);
+        Contents.AddMessage(formatted, tags);
     }
 
     public void Focus(ChatSelectChannel? channel = null)

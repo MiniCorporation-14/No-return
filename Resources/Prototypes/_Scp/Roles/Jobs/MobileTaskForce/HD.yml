@@ -4,12 +4,16 @@
   name: ghost-role-information-mtf-leader-HD-name
   description: ghost-role-information-mtf-leader-description
   playTimeTracker: JobHDLeader
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 18000 #5 hrs
   setPreference: false
   startingGear: HDLeaderGear
   icon: JobIconHDleader
   supervisors: ghost-role-information-mtf-leader-supervisors
   canBeAntag: false
   radioBold: true
+  weight: 920
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
   accessGroups:
@@ -22,32 +26,24 @@
   id: HDLeaderGear
   equipment:
     jumpsuit: ClothingUniformHD
-    back: MTFSpecialistBackpack
-    shoes: ClothingShoesBootsHDFilled
-    head: ClothingHeadHatHDMAA
-    mask: ClothingMaskMTF
-    eyes: ClothingEyesGlassesSecurity
-    gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorHD
+    back: MtfTacticalBackpack
+    shoes: ClothingShoesBootsMtfMilitaryFilled
+    head: ClothingHelmetMtfMilitary
+    eyes: ClothingEyesGlassesSecurityGuard
+    gloves: ClothingHandsGlovesMtfMilitary
     id: KeyCardMtfHDLeader
     ears: ClothingHeadsetAltMTF
-    belt: MTFCommanderWebbing
-    pocket1: BaseUplinkMTFLeader
-    pocket2: PouchAmmo
+    belt: ClothingBeltMtfSparePouch
+    pocket1: BaseUplinkMTFLeaderHD
+    pocket2: MobileTaskForcePDA
   storage:
     back:
-    - BoxMRE
+    - BoxMtfLeaderKit
     - Crowbar
     - CombatKnife
-    - HandheldCriminalRecordsMonitorUnpowered
-    - DoubleEmergencyOxygenTankFilled
     - HandheldCrewMonitor
-    - MobileTaskForcePDA
-    belt:
-    - Stunbaton
-    - Handcuffs
-    - Handcuffs
-    - Handcuffs
+    - DoorRemoteCustom
+    - ClothingHeadHatHDMAA
 
 # Специалист
 - type: job
@@ -55,11 +51,15 @@
   name: ghost-role-information-mtf-specialist-HD-name
   description: ghost-role-information-mtf-specialist-description
   playTimeTracker: JobHDSpecialist
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 18000 #5 hrs
   setPreference: false
   startingGear: HDSpecialistGear
   icon: JobIconHD
   supervisors: ghost-role-information-mtf-specialist-supervisors
   canBeAntag: false
+  weight: 915
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
   accessGroups:
@@ -72,29 +72,14 @@
   id: HDSpecialistGear
   equipment:
     jumpsuit: ClothingUniformHD
-    back: MTFSpecialistBackpack
-    shoes: ClothingShoesBootsHDFilled
-    head: ClothingHelmetMTF
-    mask: ClothingMaskMTF
-    eyes: ClothingEyesGlassesSecurity
-    gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorHD
+    shoes: ClothingShoesBootsMtfMilitaryFilled
+    head: ClothingHelmetMtfMilitary
+    eyes: ClothingEyesGlassesSecurityGuard
+    gloves: ClothingHandsGlovesMtfMilitary
     id: KeyCardMtfHDSpecialist
     ears: ClothingHeadsetAltMTF
-    belt: MTFWebbing
-    pocket1: BaseUplinkMTFSpecialist
-    pocket2: PouchAmmo
-  storage:
-    back:
-    - Crowbar
-    - DoubleEmergencyOxygenTankFilled
-    - BoxMRE
-    - MobileTaskForcePDA
-    belt:
-    - Stunbaton
-    - Handcuffs
-    - Handcuffs
-    - Handcuffs
+    pocket1: BaseUplinkMTFSpecialistHD
+    pocket2: MobileTaskForcePDA
 
 # Кадет
 - type: job
@@ -102,11 +87,15 @@
   name: ghost-role-information-mtf-cadet-HD-name
   description: ghost-role-information-mtf-cadet-description
   playTimeTracker: JobHDCadet
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 3600 #1 hr
   setPreference: false
   startingGear: HDCadetGear
   icon: JobIconHD
   supervisors: ghost-role-information-mtf-cadet-supervisors
   canBeAntag: false
+  weight: 910
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
   accessGroups:
@@ -119,26 +108,11 @@
   id: HDCadetGear
   equipment:
     jumpsuit: ClothingUniformHD
-    back: MTFSpecialistBackpack
-    shoes: ClothingShoesBootsHDFilled
-    head: ClothingHelmetMTF
-    mask: ClothingMaskMTF
-    eyes: ClothingEyesGlassesSecurity
-    gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorHD
+    shoes: ClothingShoesBootsMtfMilitaryFilled
+    head: ClothingHelmetMtfMilitary
+    eyes: ClothingEyesGlassesSecurityGuard
+    gloves: ClothingHandsGlovesMtfMilitary
     id: KeyCardMtfHDCadet
     ears: ClothingHeadsetAltMTF
-    belt: MTFWebbing
-    pocket1: BaseUplinkMTFCadet
-    pocket2: PouchAmmo
-  storage:
-    back:
-    - Crowbar
-    - DoubleEmergencyOxygenTankFilled
-    - BoxMRE
-    - MobileTaskForcePDA
-    belt:
-    - Stunbaton
-    - Handcuffs
-    - Handcuffs
-    - Handcuffs
+    pocket1: BaseUplinkMTFCadetHD
+    pocket2: MobileTaskForcePDA

@@ -24,6 +24,7 @@ using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.XAML;
 using Robust.Client.Utility;
+using Robust.Shared.Configuration;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
@@ -39,6 +40,7 @@ public sealed partial class SponsorTierEntry : Control
     [Dependency] private readonly IResourceCache _resourceCache = default!;
     [Dependency] private readonly IClientPreferencesManager _preferencesManager = default!;
     [Dependency] private readonly IPlayerManager _playerManager = default!;
+    [Dependency] private readonly IConfigurationManager _configManager = default!;
 
     private readonly LobbyUIController _lobbyUIController;
     private readonly ISharedSponsorsManager? _sponsorsManager;
@@ -259,9 +261,11 @@ public sealed partial class SponsorTierEntry : Control
                 _entityManager.System<HumanoidAppearanceSystem>().LoadProfile(dummyEnt, humanoid);
                 _lobbyUIController.GiveDummyJobClothes(dummyEnt, humanoid, roleProto);
 
-                if (_prototypeManager.HasIndex<RoleLoadoutPrototype>(LoadoutSystem.GetJobPrototype(roleProto.ID)))
+                var jobLoadoutId = LoadoutSystem.GetJobPrototype(roleProto.ID);
+                var effectiveJobLoadoutId = LoadoutSystem.GetEffectiveRolePrototype(jobLoadoutId, _prototypeManager);
+                if (_prototypeManager.HasIndex(effectiveJobLoadoutId))
                 {
-                    var loadout = humanoid.GetLoadoutOrDefault(LoadoutSystem.GetJobPrototype(roleProto.ID), _playerManager.LocalSession, humanoid.Species, _entityManager, _prototypeManager, sponsorPrototypes);
+                    var loadout = humanoid.GetLoadoutOrDefault(jobLoadoutId, _playerManager.LocalSession, humanoid.Species, _entityManager, _prototypeManager, sponsorPrototypes);
                     _lobbyUIController.GiveDummyLoadout(dummyEnt, loadout, true);
                 }
             }
@@ -407,9 +411,11 @@ public sealed partial class SponsorTierEntry : Control
                 _entityManager.System<HumanoidAppearanceSystem>().LoadProfile(dummyEnt, humanoid);
                 _lobbyUIController.GiveDummyJobClothes(dummyEnt, humanoid, roleProto);
 
-                if (_prototypeManager.HasIndex<RoleLoadoutPrototype>(LoadoutSystem.GetJobPrototype(roleProto.ID)))
+                var jobLoadoutId = LoadoutSystem.GetJobPrototype(roleProto.ID);
+                var effectiveJobLoadoutId = LoadoutSystem.GetEffectiveRolePrototype(jobLoadoutId, _prototypeManager);
+                if (_prototypeManager.HasIndex(effectiveJobLoadoutId))
                 {
-                    var loadout = humanoid.GetLoadoutOrDefault(LoadoutSystem.GetJobPrototype(roleProto.ID), _playerManager.LocalSession, humanoid.Species, _entityManager, _prototypeManager, sponsorPrototypes);
+                    var loadout = humanoid.GetLoadoutOrDefault(jobLoadoutId, _playerManager.LocalSession, humanoid.Species, _entityManager, _prototypeManager, sponsorPrototypes);
                     _lobbyUIController.GiveDummyLoadout(dummyEnt, loadout, true);
                 }
             }
@@ -460,9 +466,11 @@ public sealed partial class SponsorTierEntry : Control
                 _entityManager.System<HumanoidAppearanceSystem>().LoadProfile(dummyEnt, humanoid);
                 _lobbyUIController.GiveDummyJobClothes(dummyEnt, humanoid, roleProto);
 
-                if (_prototypeManager.HasIndex<RoleLoadoutPrototype>(LoadoutSystem.GetJobPrototype(roleProto.ID)))
+                var jobLoadoutId = LoadoutSystem.GetJobPrototype(roleProto.ID);
+                var effectiveJobLoadoutId = LoadoutSystem.GetEffectiveRolePrototype(jobLoadoutId, _prototypeManager);
+                if (_prototypeManager.HasIndex(effectiveJobLoadoutId))
                 {
-                    var loadout = humanoid.GetLoadoutOrDefault(LoadoutSystem.GetJobPrototype(roleProto.ID), _playerManager.LocalSession, humanoid.Species, _entityManager, _prototypeManager, sponsorPrototypes);
+                    var loadout = humanoid.GetLoadoutOrDefault(jobLoadoutId, _playerManager.LocalSession, humanoid.Species, _entityManager, _prototypeManager, sponsorPrototypes);
                     _lobbyUIController.GiveDummyLoadout(dummyEnt, loadout, true);
                 }
             }
@@ -506,14 +514,14 @@ public sealed partial class SponsorTierEntry : Control
         {
             SetSize = new Vector2(200, 200),
             Margin = new Thickness(5, 5, 5, 5),
-            StyleClasses = { StyleBase.ButtonSquare },
+            StyleClasses = { StyleClass.ButtonSquare },
         };
 
         var box = new BoxContainer()
         {
             Orientation = BoxContainer.LayoutOrientation.Vertical,
             Margin = new Thickness(5, 5, 5, 5),
-            StyleClasses = { StyleBase.ButtonSquare },
+            StyleClasses = { StyleClass.ButtonSquare },
             Align = BoxContainer.AlignMode.Center
         };
 
@@ -546,14 +554,14 @@ public sealed partial class SponsorTierEntry : Control
         {
             SetSize = new Vector2(200, 200),
             Margin = new Thickness(5, 5, 5, 5),
-            StyleClasses = { StyleBase.ButtonSquare },
+            StyleClasses = { StyleClass.ButtonSquare },
         };
 
         var box = new BoxContainer()
         {
             Orientation = BoxContainer.LayoutOrientation.Vertical,
             Margin = new Thickness(5, 5, 5, 5),
-            StyleClasses = { StyleBase.ButtonSquare },
+            StyleClasses = { StyleClass.ButtonSquare },
         };
 
         panel.AddChild(box);

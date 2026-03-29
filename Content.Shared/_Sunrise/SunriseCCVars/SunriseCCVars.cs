@@ -1,8 +1,11 @@
-﻿using Robust.Shared;
+using Robust.Shared;
 using Robust.Shared.Configuration;
 
 namespace Content.Shared._Sunrise.SunriseCCVars;
 
+// TODO: Разбиние на partial файлы
+// TODO: Документация по каждому из сиваров
+[CVarDefs]
 public sealed partial class SunriseCCVars : CVars
 {
     /**
@@ -197,25 +200,6 @@ public sealed partial class SunriseCCVars : CVars
     public static readonly CVarDef<string> InfoLinksReplays =
         CVarDef.Create("infolinks.replays", "https://t.me/ss14_replays", CVar.SERVER | CVar.REPLICATED);
 
-    /**
-     * Lobby
-     */
-
-    public static readonly CVarDef<string> LobbyBackgroundType = // Fire edit - анимации красивые у нас
-        CVarDef.Create("lobby.background", "Animation", CVar.CLIENTONLY | CVar.ARCHIVE);
-
-    public static readonly CVarDef<string> LobbyArt =
-        CVarDef.Create("lobby.art", "Random", CVar.CLIENTONLY | CVar.ARCHIVE);
-
-    public static readonly CVarDef<string> LobbyAnimation =
-        CVarDef.Create("lobby.animation", "Random", CVar.CLIENTONLY | CVar.ARCHIVE);
-
-    public static readonly CVarDef<string> LobbyParallax =
-        CVarDef.Create("lobby.parallax", "Random", CVar.CLIENTONLY | CVar.ARCHIVE);
-
-    public static readonly CVarDef<float> LobbyOpacity =
-        CVarDef.Create("lobby.lobby_opacity", 0.90f, CVar.CLIENTONLY | CVar.ARCHIVE);
-
     public static readonly CVarDef<string> ServerName =
         CVarDef.Create("lobby.server_name", "Sunrise Station", CVar.SERVER | CVar.REPLICATED);
 
@@ -229,12 +213,8 @@ public sealed partial class SunriseCCVars : CVars
     public static readonly CVarDef<int> MinPlayersPlanetPrison =
         CVarDef.Create("planet_prison.min_players", 0, CVar.SERVERONLY);
 
-    /*
-     * MaxLoadedChunks
-     */
-
-    public static readonly CVarDef<int> MaxLoadedChunks =
-        CVarDef.Create("chunk.max", 100, CVar.ARCHIVE | CVar.REPLICATED | CVar.SERVER);
+    public static readonly CVarDef<bool> PlanetPrisonModern =
+        CVarDef.Create("planet_prison.modern", true, CVar.SERVERONLY);
 
     /**
      * Roadmap
@@ -247,7 +227,7 @@ public sealed partial class SunriseCCVars : CVars
      * Lobby Changelog
      */
 
-    public static readonly CVarDef<string> LobbyChangelogsList =
+    public static readonly CVarDef<string> LobbyChangelogsList = // Fire edit
         CVarDef.Create("lobby_changelog.list", "ChangelogFire.yml", CVar.SERVER | CVar.REPLICATED);
 
     /*
@@ -258,7 +238,7 @@ public sealed partial class SunriseCCVars : CVars
         CVarDef.Create("cryo_teleport.enable", false, CVar.SERVERONLY);
 
     public static readonly CVarDef<int> CryoTeleportTransferDelay =
-        CVarDef.Create("cryo_teleport.transfer_delay", 5, CVar.SERVERONLY);
+        CVarDef.Create("cryo_teleport.transfer_delay", 6, CVar.SERVERONLY);
 
     /*
      * Damage
@@ -280,9 +260,11 @@ public sealed partial class SunriseCCVars : CVars
      * NPCs
      */
 
-    public static readonly CVarDef<bool> NPCDisableWithoutPlayers = CVarDef.Create("npc.disable_without_players", true);
+    public static readonly CVarDef<bool> NpcDisableWithoutPlayers =
+        CVarDef.Create("npc.disable_without_players", true, CVar.SERVERONLY | CVar.ARCHIVE);
 
-    public static readonly CVarDef<float> NPCDisableDistance = CVarDef.Create("npc.disable_distance", 20f);
+    public static readonly CVarDef<float> NpcDisableDistance =
+        CVarDef.Create("npc.disable_distance", 20f, CVar.SERVERONLY | CVar.ARCHIVE);
 
     /*
      * Vote
@@ -294,13 +276,14 @@ public sealed partial class SunriseCCVars : CVars
 
     public static readonly CVarDef<bool> ShowMapVotes = CVarDef.Create("vote.show_map_votes", true);
 
-    public static readonly CVarDef<bool> RunMapVoteAfterRestart =
-        CVarDef.Create("vote.run_map_vote_after_restart", false);
+    public static readonly CVarDef<bool> RunMapVoteAfterRestart = // Fire edit
+        CVarDef.Create("vote.run_map_vote_after_restart", true);
 
     public static readonly CVarDef<bool> RunPresetVoteAfterRestart =
         CVarDef.Create("vote.run_preset_vote_after_restart", false);
 
-    public static readonly CVarDef<int> VotingsDelay = CVarDef.Create("vote.votings_delay", 60);
+    // Fire edit
+    public static readonly CVarDef<int> VotingsDelay = CVarDef.Create("vote.votings_delay", 20);
 
     public static readonly CVarDef<bool> VoteMusicDisable =
         CVarDef.Create("vote.music_disable", true, CVar.CLIENTONLY | CVar.ARCHIVE);
@@ -356,9 +339,6 @@ public sealed partial class SunriseCCVars : CVars
     public static readonly CVarDef<bool> JumpEnable =
         CVarDef.Create("jump.enable", true, CVar.SERVER | CVar.REPLICATED);
 
-    public static readonly CVarDef<float> JumpDeadChance =
-        CVarDef.Create("jump.dead_chance", 0.001f, CVar.SERVER | CVar.REPLICATED);
-
     public static readonly CVarDef<float> JumpCooldown =
         CVarDef.Create("jump.cooldown", 0.600f, CVar.SERVER | CVar.REPLICATED);
 
@@ -393,13 +373,6 @@ public sealed partial class SunriseCCVars : CVars
 
     public static readonly CVarDef<float> SlipDeadChance =
         CVarDef.Create("slip.dead_chance", 0.001f, CVar.SERVER | CVar.REPLICATED);
-
-    /**
-     * Fall
-     */
-
-    public static readonly CVarDef<float> FallDeadChance =
-        CVarDef.Create("fall.dead_chance", 0.01f, CVar.SERVER | CVar.REPLICATED);
 
     /**
      * VigersRay
@@ -438,20 +411,6 @@ public sealed partial class SunriseCCVars : CVars
 
     public static readonly CVarDef<bool> DamageOverlayStructures =
         CVarDef.Create("damage_overlay.structures", true, CVar.CLIENTONLY | CVar.ARCHIVE);
-
-    /*
-     * Radio chat icons
-     */
-
-    public static readonly CVarDef<bool> ChatIconsEnable =
-        CVarDef.Create("chat_icon.enable", true, CVar.CLIENTONLY | CVar.ARCHIVE);
-
-    /*
-     * Pointing chat visuals
-     */
-
-    public static readonly CVarDef<bool> ChatPointingVisuals =
-        CVarDef.Create("chat_icon_pointing.enable", true, CVar.CLIENTONLY | CVar.ARCHIVE);
 
     /*
      * Mute new ghost role sound
@@ -496,47 +455,18 @@ public sealed partial class SunriseCCVars : CVars
     public static readonly CVarDef<float> ItemToArtifactRatio =
         CVarDef.Create("random_artifacts.ratio", 0.55f, CVar.SERVER | CVar.ARCHIVE);
 
-    /*
-     * AntiSpam params
-     */
-    // Fire edit start - включаем антиспам
-    public static readonly CVarDef<bool> AntiSpamEnable =
-        CVarDef.Create("anti_spam.enable", true, CVar.SERVER | CVar.ARCHIVE);
-    public static readonly CVarDef<int> AntiSpamCounterShort =
-        CVarDef.Create("anti_spam.counter_short", 2, CVar.SERVER | CVar.ARCHIVE);
-    public static readonly CVarDef<int> AntiSpamCounterLong =
-        CVarDef.Create("anti_spam.counter_long", 3, CVar.SERVER | CVar.ARCHIVE);
-    public static readonly CVarDef<float> AntiSpamMuteDuration =
-        CVarDef.Create("anti_spam.mute_duration", 30f, CVar.SERVER | CVar.ARCHIVE);
-    // Fire edit end
-    public static readonly CVarDef<float> AntiSpamTimeShort =
-        CVarDef.Create("anti_spam.time_short", 1.5f, CVar.SERVER | CVar.ARCHIVE);
-    public static readonly CVarDef<float> AntiSpamTimeLong =
-        CVarDef.Create("anti_spam.time_long", 5f, CVar.SERVER | CVar.ARCHIVE);
+    /// <summary>
+    /// Включён ли узел артефакта, который превращает ближайшие предметы в случайные.
+    /// При отключении уже сгенерированные узлы активируются без эффекта.
+    /// </summary>
+    public static readonly CVarDef<bool> ArtifactRandomTransformationEnabled =
+        CVarDef.Create("artifact.random_transformation.enabled", true, CVar.SERVERONLY | CVar.ARCHIVE);
 
     /// <summary>
     /// Вроде все очевидно
     /// </summary>
     public static readonly CVarDef<string> IpWhitelist =
         CVarDef.Create("admin.ip_whitelist", "", CVar.SERVERONLY | CVar.CONFIDENTIAL);
-
-    /*
-     * Chat sanitization
-     */
-
-    /// <summary>
-    /// Включена ли санитизация чата (антиспам от набегаторов)
-    /// </summary>
-    public static readonly CVarDef<bool> ChatSanitizationEnable =
-        CVarDef.Create("chatsan.enable", true, CVar.SERVER | CVar.ARCHIVE);
-
-    /// <summary>
-    /// Контроллирует поведение санитизации.
-    /// Агрессивное: если сообщение не проходит критерии - блокировать полностью его.
-    /// Обычное: в сообщении, которое не проходит критерии, удалять не проходящие критерии части.
-    /// </summary>
-    public static readonly CVarDef<bool> ChatSanitizationAggressive =
-        CVarDef.Create("chatsan.aggressive", true, CVar.SERVER | CVar.ARCHIVE);
 
     public static readonly CVarDef<bool> TracesEnabled =
         CVarDef.Create("opt.traces_enabled", true, CVar.CLIENTONLY | CVar.ARCHIVE);
@@ -547,8 +477,8 @@ public sealed partial class SunriseCCVars : CVars
     /// <summary>
     /// Название корпорации для подстановки в документы
     /// </summary>
-    public static readonly CVarDef<string> DocumentCorporationName =
-        CVarDef.Create("doc.corp_name", "Nanotrasen", CVar.SERVER | CVar.ARCHIVE);
+    public static readonly CVarDef<string> DocumentCorporationName = // Fire edit
+        CVarDef.Create("doc.corp_name", "SCP Foundation", CVar.SERVER | CVar.ARCHIVE);
 
     /// <summary>
     /// Смешение автозаполнения времени в часах
@@ -559,27 +489,46 @@ public sealed partial class SunriseCCVars : CVars
     /// <summary>
     /// Смешение автозаполнения времени в годах
     /// </summary>
-    public static readonly CVarDef<int> DocumentYearOffset =
-        CVarDef.Create("doc.year_offset", 1000, CVar.SERVER | CVar.ARCHIVE);
+    public static readonly CVarDef<int> DocumentYearOffset = // Fire edit
+        CVarDef.Create("doc.year_offset", 0, CVar.SERVER | CVar.ARCHIVE);
 
     /// <summary>
     /// Пул шаблонов документов, используемых при создании документов на принтере
     /// </summary>
     public static readonly CVarDef<string> DocumentTemplatePool =
-        CVarDef.Create("doc.template_pool", "Sunrise", CVar.SERVER | CVar.ARCHIVE);
+        CVarDef.Create("doc.template_pool", "ProjectFire", CVar.SERVER | CVar.ARCHIVE); /// fire edit
 
-    public static readonly CVarDef<bool> MentorHelpAdminPrefix =
-        CVarDef.Create("mentor_help.admin_prefix", true, CVar.SERVERONLY);
+    public static readonly CVarDef<bool> GameIPBlockingEnabled =
+        CVarDef.Create("game.ipblocking_enabled", true, CVar.SERVERONLY);
 
-    public static readonly CVarDef<float> MentorHelpRateLimitPeriod =
-        CVarDef.Create("mentor_help.rate_limit_period", 2f, CVar.SERVERONLY);
+    public static readonly CVarDef<int> GameIPBlockingDuration =
+        CVarDef.Create("game.ipblocking_duration", 900, CVar.SERVERONLY);
 
-    public static readonly CVarDef<int> MentorHelpRateLimitCount =
-        CVarDef.Create("mentor_help.rate_limit_count", 10, CVar.SERVERONLY);
+    public static readonly CVarDef<int> GameIPBlockingMaxResponseLength =
+        CVarDef.Create("game.ipblocking_max_response_length", 10485760, CVar.SERVERONLY);
 
-    public static readonly CVarDef<string> MentorHelpSound =
-        CVarDef.Create("mentor_help.mentor_help_sound", "/Audio/_Sunrise/Effects/adminticketopen.ogg", CVar.ARCHIVE | CVar.CLIENTONLY);
+    public static readonly CVarDef<int> GameIPBlockingUnhandledMessageRateLimit =
+        CVarDef.Create("game.ipblocking_unhandled_message_rate_limit", 10, CVar.SERVERONLY);
 
-    public static readonly CVarDef<bool> MentorHelpSoundEnabled =
-        CVarDef.Create("mentor_help.mentor_help_sound_enabled", true, CVar.ARCHIVE | CVar.CLIENTONLY);
+
+    /*
+    LOADOUTS
+    */
+
+    /// <summary>
+    /// Включает кастомный пул loadout
+    /// Если выключено, используется стандартный пул из loadout-прототипов
+    /// Имя пула задаётся в custom_loadout.pool
+    /// </summary>
+    public static readonly CVarDef<bool> CustomLoadoutEnabled =
+        CVarDef.Create("custom_loadout.enabled", true, CVar.SERVER | CVar.REPLICATED | CVar.ARCHIVE);
+
+    /// <summary>
+    /// Имя кастомного пула loadout
+    /// Используется только если custom_loadout.enabled = true
+    /// Варианты: "SunriseLoadout"
+    /// </summary>
+    public static readonly CVarDef<string> LoadoutPool =
+        CVarDef.Create("custom_loadout.pool", "SunriseLoadout", CVar.SERVER | CVar.REPLICATED | CVar.ARCHIVE);
+
 }

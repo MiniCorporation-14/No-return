@@ -28,10 +28,11 @@
       - !type:NestedSelector
         tableId: ScpArtifactEffectsUltraFunnyTable
         weight: 1
-  - type: GhostPanelAntagonistMarker
-    name: ghost-panel-antagonist-scp-name
-    description: ghost-panel-antagonist-scp-description
-    priority: -10
+  - type: ScpAnnounceOnSpawn
+    text: scp173-announce-on-spawn
+    channels:
+    - ScientificService
+    - HeavyContainmentSecurityService
   - type: ScpDamageOnCollide
     params:
     - whitelist:
@@ -69,9 +70,12 @@
         - SecurePlasmaWindoor
         - SecureUraniumWindoor
         - Scp173DamageOnCollide
+        components:
+        - EntityStorage
+        - VendingMachine
       damage:
         types:
-          Blunt: 8
+          Blunt: 14
   - type: MovementSpeedModifier
     baseWalkSpeed: 5
     baseSprintSpeed: 12
@@ -87,6 +91,8 @@
       groups:
         Brute: 10
   - type: Muted
+  - type: SafeTime
+    addWidget: false
   - type: DamageOnHighSpeedImpact
     stunChance: 0
     speedDamageFactor: 0
@@ -114,16 +120,11 @@
     leftBareFootState:
     - dragging-1
     - dragging-2
-    - dragging-3
-    - dragging-4
-    - dragging-5
     rightBareFootState:
     - dragging-1
     - dragging-2
-    - dragging-3
-    - dragging-4
-    - dragging-5
   - type: GuideHelp
     guides:
     - ScpResearch
     - ScpResearchAdvanced
+    - ScpFear

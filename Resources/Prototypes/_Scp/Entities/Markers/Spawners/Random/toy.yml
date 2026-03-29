@@ -1,6 +1,6 @@
 ﻿- type: entity
   id: ScpToySpawner
-  parent: ToySpawner
+  parent: PlushieSpawner50
   components:
   - type: RandomSpawner
     rarePrototypes:
@@ -8,9 +8,8 @@
     - PlushieGhost
     rareChance: 0.03
     prototypes:
-    # Fire added start
     - PlushieScp999
-    # Fire added end
+    - PlushieClassD
     - PlushieBee
     - PlushieAtmosian
     - PlushieLizard
@@ -23,7 +22,7 @@
     - PlushieSharkPink
     - PlushieSharkGrey
     - ToyMouse
-    - PlushieSmile  # Sunrise-edit
+    - PlushieSmile
     - PlushieBlackCat
     - PlushieGreyCat
     - PlushieWhiteCat
@@ -91,13 +90,13 @@
 
 - type: entity
   id: ScpFigureSpawner
-  parent: FigureSpawner
+  parent: MechFigurineSpawner50
   components:
   - type: RandomSpawner
     prototypes:
     - ToyAi
     - ToyNuke
-    - ToyGriffin
+    - ToyFigurineGriffin
     - ToyHonk
     - ToyIan
     - ToyMarauder
@@ -117,7 +116,7 @@
 
 - type: entity
   id: ScpSpacemenFigureSpawner
-  parent: SpacemenFigureSpawner
+  parent: SpacemenFigurineSpawner90
   components:
   - type: RandomSpawner
     prototypes:

@@ -24,7 +24,6 @@
   components:
   - type: EncryptionKey
     channels:
-    - Common
     - Administration
     - EthicsCommittee
     - HeavyContainmentSecurityService
@@ -68,7 +67,6 @@
   components:
   - type: EncryptionKey
     channels:
-    - Common
     - RegionalAdministration
     - Administration
     - HeavyContainmentSecurityService
@@ -145,7 +143,16 @@
 # Служба безопасности тяжелой зоны
 
 - type: entity
-  parent: [ EncryptionKey, BaseSecurityLawyerContraband ]
+  parent: [ EncryptionKeySecurity, BaseSecurityContraband ]
+  id: ScpEncryptionKeySecurity
+  components:
+  - type: Tag
+    tags:
+    - EncryptionSecurity
+    - EncryptionScpSecurityCommon
+
+- type: entity
+  parent: [ EncryptionKey, BaseSecurityContraband ]
   id: EncryptionKeyHeavyContainmentSecurityService
   components:
   - type: EncryptionKey
@@ -164,7 +171,7 @@
 # Служба безопасности внешней административной зоны
 
 - type: entity
-  parent: [ EncryptionKey, BaseSecurityLawyerContraband ]
+  parent: [ EncryptionKey, BaseSecurityContraband ]
   id: EncryptionKeyExternalAdministrativeZoneSecurityService
   components:
   - type: EncryptionKey
@@ -283,3 +290,17 @@
     layers:
     - state: crypt_chaos
     - state: chaos_label
+
+- type: entity
+  parent: [ EncryptionKey, BaseFoundationEnemyContraband ]
+  id: EncryptionKeyGRU
+  components:
+  - type: EncryptionKey
+    channels:
+    - GRU
+    defaultChannel: GRU
+  - type: Sprite
+    sprite: _Scp/Objects/Devices/encryption_keys.rsi
+    layers:
+    - state: crypt_gru
+    - state: gru_label

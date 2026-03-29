@@ -3,13 +3,16 @@
   name: job-name-lead-researcher
   description: job-description-lead-researcher
   playTimeTracker: JobLeadResearcher
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-  - !type:OverallPlaytimeRequirement
-    time: 54000 # 15 часов
-  startingGear: LeadResearcherGear
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: ScientificService
+    time: 36000
+  - !type:AgeRequirement
+    requiredAge: 30
   icon: JobLeadResearcher
   supervisors: job-supervisors-scientific-service-director
   displayWeight: 35
+  weight: 800
   accessGroups:
   - LeadResearcher
   special:
@@ -25,12 +28,18 @@
       - Necrophobia
       proximityBlockerLevel: None
       seenBlockerLevel: None
+    - type: ShowScp096FaceDamageHud
 
 - type: startingGear
   id: LeadResearcherGear
   equipment:
     head: ClothingHeadHatBeretRND
+    eyes: ClothingEyesGlasses
+    outerClothing: ClothingOuterCoatLabSeniorResearcher
+    jumpsuit: ClothingUniformJumpsuitSeniorResearcher
+    gloves: ClothingHandsGlovesLatex
+    shoes: ClothingShoesColorWhite
+    back: ClothingBackpackScience
     id: KeyCardLeadResearcher
     ears: ClothingHeadsetScientificService
-    outerClothing: ClothingOuterCoatLabSeniorResearcher
     pocket2: ScpResearchPDA

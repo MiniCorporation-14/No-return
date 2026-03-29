@@ -99,109 +99,6 @@
     - state: centcom
 
 - type: entity
-  id: SpawnPointHeadOfPrison
-  parent: SpawnPointJobBase
-  name: head of prison
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: HeadOfPrison
-  - type: Sprite
-    layers:
-    - state: green
-    - state: hos
-
-- type: entity
-  id: SpawnPointPrisonChef
-  parent: SpawnPointJobBase
-  name: prison's chef
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: PrisonChef
-  - type: Sprite
-    layers:
-    - state: green
-    - state: chef
-
-- type: entity
-  id: SpawnPointPrisonDoctor
-  parent: SpawnPointJobBase
-  name: prison's doctor
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: PrisonDoctor
-  - type: Sprite
-    layers:
-    - state: green
-    - state: doctor
-
-- type: entity
-  id: SpawnPointPrisonEngineer
-  parent: SpawnPointJobBase
-  name: prison's engineer
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: PrisonEngineer
-  - type: Sprite
-    layers:
-    - state: green
-    - state: engineer
-
-- type: entity
-  id: SpawnPointPrisonGuard
-  parent: SpawnPointJobBase
-  name: prison's guard
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: PrisonGuard
-  - type: Sprite
-    layers:
-    - state: green
-
-- type: entity
-  id: SpawnPointPrisonPilot
-  parent: SpawnPointJobBase
-  name: prison's pilot
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: PrisonPilot
-  - type: Sprite
-    layers:
-    - state: green
-    - state: seniorofficer
-
-- type: entity
-  id: SpawnPointPlanetPrisoner
-  parent: SpawnPointJobBase
-  name: prisoner
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: PlanetPrisoner
-  - type: Sprite
-    layers:
-    - state: green
-    - state: prisoner
-
-- type: entity
-  id: SpawnPointPrisonWorker
-  parent: SpawnPointJobBase
-  name: prison's worker
-  categories: [ HideSpawnMenu ] # Fire added
-  components:
-  - type: SpawnPoint
-    job_id: PrisonWorker
-  - type: Sprite
-    layers:
-    - state: green
-    - state: serviceworker
-
-- type: entity
   id: SpawnPointSeniorEngineer
   parent: SpawnPointJobBase
   name: senior engineer
@@ -298,6 +195,7 @@
   id: SpawnPointminingspecialist
   parent: SpawnPointJobBase
   name: miningspecialist
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: SpawnPoint
     job_id: MiningSpecialist
@@ -310,9 +208,12 @@
   id: SpawnPointClownBorg
   parent: SpawnPointJobBase
   name: cyborg
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: SpawnPoint
     job_id: ClownBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -325,9 +226,12 @@
   id: SpawnPointEngineerBorg
   parent: SpawnPointJobBase
   name: cyborg
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: SpawnPoint
     job_id: EngineerBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -340,9 +244,12 @@
   id: SpawnPointJanitorBorg
   parent: SpawnPointJobBase
   name: cyborg
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: SpawnPoint
     job_id: JanitorBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -358,6 +265,8 @@
   components:
   - type: SpawnPoint
     job_id: MedicalBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -373,6 +282,8 @@
   components:
   - type: SpawnPoint
     job_id: MiningBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -388,6 +299,8 @@
   components:
   - type: SpawnPoint
     job_id: PeaceBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -403,6 +316,8 @@
   components:
   - type: SpawnPoint
     job_id: SecurityBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -418,6 +333,8 @@
   components:
   - type: SpawnPoint
     job_id: ServiceBorg
+  - type: PreferredSpawn
+    preferredSpawnTypes: [ Job ]
   - type: Sprite
     layers:
     - state: green
@@ -437,3 +354,55 @@
     layers:
     - state: green
     - state: lawyer
+
+- type: entity
+  id: SpawnPointCommaid
+  parent: SpawnPointJobBase
+  name: commaid
+  components:
+  - type: SpawnPoint
+    job_id: ComMaid
+  - type: Sprite
+    sprite: _Sunrise/Markers/jobs.rsi
+    layers:
+    - state: green
+    - state: commaid
+
+- type: entity
+  id: SpawnPointMailCarrier
+  parent: SpawnPointJobBase
+  name: mailcarrier
+  components:
+  - type: SpawnPoint
+    job_id: MailCarrier
+  - type: Sprite
+    sprite: _Sunrise/Markers/jobs.rsi
+    layers:
+    - state: green
+    - state: mailcarrier
+
+- type: entity
+  id: SpawnPointRoboticist
+  parent: SpawnPointJobBase
+  name: roboticist
+  components:
+  - type: SpawnPoint
+    job_id: Roboticist
+  - type: Sprite
+    sprite: _Sunrise/Markers/jobs.rsi
+    layers:
+    - state: green
+    - state: roboticist
+
+- type: entity
+  id: SpawnPointSecurityPilot
+  parent: SpawnPointJobBase
+  name: securitypilot
+  components:
+  - type: SpawnPoint
+    job_id: SecurityPilot
+  - type: Sprite
+    sprite: _Sunrise/Markers/jobs.rsi
+    layers:
+    - state: green
+    - state: security_pilot

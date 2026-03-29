@@ -1,12 +1,13 @@
-- type: job
+﻿- type: job
   id: EthicsCommitteeRepresentative
   name: job-name-ethics-committee-representative
   description: job-description-ethics-committee-representative
   playTimeTracker: JobEthicsCommitteeRepresentative
   requirements:
-    - !type:DiscordRoleRequirement
-  weight: 10
-  startingGear: EthicsCommitteeRepresentativeGear
+  - !type:DiscordRoleRequirement
+  - !type:AgeRequirement
+    requiredAge: 32
+  weight: 860
   icon: JobEthicsCommitteeRepresentative
   supervisors: job-supervisors-ethics-committee
   canBeAntag: true
@@ -31,5 +32,6 @@
     head: ClothingHeadHatCapEthicsCommittee
     id: KeyCardEthicsCommitteePass
     ears: ClothingHeadsetAltEthicsCommittee
+    jumpsuit: ClothingUniformJumpsuitWithWhiteShirt
     back: ClothingBackpackSatchelLeatherEthicsCommitteeFilled
     pocket2: BaseFoundationPDA

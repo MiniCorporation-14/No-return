@@ -102,7 +102,7 @@
     enabled: false
     castShadows: false
     radius: 1.5
-    energy: 1.6
+    energy: 3.0
     color: "#39b8ee"
   - type: LitOnPowered
   - type: GenericVisualizer
@@ -225,6 +225,9 @@
   id: TelecomServerFilledCommon
   suffix: Common
   components:
+  # Fire added start
+  - type: ScpAnnounceOnSpawnSource
+  # Fire added end
   - type: ContainerFill
     containers:
       key_slots:

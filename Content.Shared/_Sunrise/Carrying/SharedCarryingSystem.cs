@@ -27,6 +27,7 @@ using Content.Shared.Buckle.Components;
 using Content.Shared.Movement.Systems;
 using Content.Shared.Coordinates;
 using Content.Shared.Hands.EntitySystems;
+using Content.Shared._Sunrise.Nesting;
 
 namespace Content.Shared._Sunrise.Carrying;
 
@@ -277,6 +278,10 @@ public sealed class SharedCarryingSystem : EntitySystem
 
     private void Carry(EntityUid carrier, EntityUid carried, CarriableComponent component)
     {
+        if (TryComp<BeingCarriedComponent>(carrier, out var beingCarried))
+        {
+            DropCarried(beingCarried.Carrier, carrier);
+        }
         if (TryComp<PullableComponent>(carried, out var pullable))
             _pullingSystem.TryStopPull(carried, pullable, carrier);
 
@@ -334,6 +339,14 @@ public sealed class SharedCarryingSystem : EntitySystem
         if (!Resolve(carried, ref carriedComp, false))
             return false;
 
+        if (carriedComp.RequiresNestingMob)
+        {
+            var ev = new CanCarryEvent(carrier);
+            RaiseLocalEvent(carried, ev);
+            if (ev.Cancelled)
+                return false;
+        }
+
         if (!HasComp<MapGridComponent>(Transform(carrier).ParentUid))
             return false;
 
@@ -342,6 +355,14 @@ public sealed class SharedCarryingSystem : EntitySystem
 
         if (_handsSystem.CountFreeHands(carrier) < carriedComp.FreeHandsRequired)
             return false;
+
+        // Fire added start - для 096
+        var evAttempt = new CarryAttemptEvent(carried);
+        RaiseLocalEvent(carrier, ref evAttempt);
+
+        if (evAttempt.Cancelled)
+            return false;
+        // Fire added end
 
         return true;
     }
@@ -364,4 +385,10 @@ public sealed class SharedCarryingSystem : EntitySystem
         var ev = new CarryDroppedEvent();
         RaiseLocalEvent(carried, ref ev);
     }
+}
+
+[ByRefEvent]
+public record struct CarryAttemptEvent(EntityUid Target)
+{
+    public bool Cancelled;
 }

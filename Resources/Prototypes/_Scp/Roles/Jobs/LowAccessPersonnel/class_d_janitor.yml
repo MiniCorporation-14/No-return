@@ -1,23 +1,25 @@
-﻿- type: job
+- type: job
   id: ClassDJanitor
   name: job-name-class-d-janitor
   description: job-description-class-d-janitor
   playTimeTracker: JobClassDJanitor
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-  - !type:OverallPlaytimeRequirement
-    time: 3600 # 1 час
-  startingGear: ClassDJanitorGear
   icon: JobClassDJanitor
   supervisors: job-supervisors-security-and-research
   access:
   - ClassDJanitor
-  alwaysUseSpawner: true
+  weight: 710
   special:
   - !type:AddComponentSpecial
     components:
     - type: ClassDAppearance
     - type: EmployeeClass
       class: D
+    - type: ScpAnnounceOnSpawn
+      text: class-d-announce-on-spawn
+      channels:
+      - ExternalAdministrativeZoneSecurityService
+      includeJobName: true
+      requiredGameRunLevel: InRound
 
 - type: startingGear
   id: ClassDJanitorGear

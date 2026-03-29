@@ -1,23 +1,28 @@
-﻿- type: job
+- type: job
   id: ClassDBotanist
   name: job-name-class-d-botanist
   description: job-description-class-d-botanist
   playTimeTracker: JobClassDBotanist
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
+  requirements:
   - !type:OverallPlaytimeRequirement
     time: 3600 # 1 час
-  startingGear: ClassDBotanistGear
   icon: JobClassDBotanist
   supervisors: job-supervisors-security-and-research
   access:
   - ClassDCanteen
-  alwaysUseSpawner: true
+  weight: 715
   special:
   - !type:AddComponentSpecial
     components:
     - type: ClassDAppearance
     - type: EmployeeClass
       class: D
+    - type: ScpAnnounceOnSpawn
+      text: class-d-announce-on-spawn
+      channels:
+      - ExternalAdministrativeZoneSecurityService
+      includeJobName: true
+      requiredGameRunLevel: InRound
 
 - type: startingGear
   id: ClassDBotanistGear
@@ -29,4 +34,3 @@
     gloves: ClothingHandsGlovesLeather
     shoes: ClothingShoesClassD
     id: KeyCardClassDBotanist
-

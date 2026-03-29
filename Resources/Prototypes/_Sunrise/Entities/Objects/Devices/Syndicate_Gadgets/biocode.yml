@@ -6,5 +6,19 @@
   - type: Biocode
     factions:
     - Syndicate
+    - Pirate
     - Thief
-    alertText: Данный предмет биокодирован. Вы не можете его использовать.
+
+- type: entity
+  parent: DefibrillatorSyndicate
+  id: DefibrillatorSyndicateBiocode
+  suffix: BIOCODE
+  components:
+  - type: Biocode
+    factions:
+    - Syndicate
+    - Pirate
+  - type: FactionWeaponBlocker
+    factions:
+    - Syndicate
+    - Pirate

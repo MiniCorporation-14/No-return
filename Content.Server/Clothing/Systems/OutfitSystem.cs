@@ -4,6 +4,7 @@ using Content.Shared.Access.Components;
 using Content.Shared.Clothing;
 using Content.Shared.Hands.Components;
 using Content.Shared.Humanoid;
+using Content.Shared.Interaction.Components;
 using Content.Shared.Inventory;
 using Content.Shared.PDA;
 using Content.Shared.Preferences;
@@ -11,6 +12,7 @@ using Content.Shared.Preferences.Loadouts;
 using Content.Shared.Roles;
 using Content.Shared.Station;
 using Content.Sunrise.Interfaces.Shared;
+using Robust.Shared.Configuration; // Sunrise-edit
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 
@@ -23,6 +25,8 @@ public sealed class OutfitSystem : EntitySystem
     [Dependency] private readonly HandsSystem _handSystem = default!;
     [Dependency] private readonly InventorySystem _invSystem = default!;
     [Dependency] private readonly SharedStationSpawningSystem _spawningSystem = default!;
+    [Dependency] private readonly IConfigurationManager _configurationManager = default!;  // Sunrise-edit
+
     private ISharedSponsorsManager? _sponsorsManager; // Sunrise-Sponsors
 
     public override void Initialize()
@@ -31,7 +35,7 @@ public sealed class OutfitSystem : EntitySystem
         IoCManager.Instance!.TryResolveType(out _sponsorsManager); // Sunrise-Sponsors
     }
 
-    public bool SetOutfit(EntityUid target, string gear, Action<EntityUid, EntityUid>? onEquipped = null)
+    public bool SetOutfit(EntityUid target, string gear, Action<EntityUid, EntityUid>? onEquipped = null, bool unremovable = false)
     {
         if (!EntityManager.TryGetComponent(target, out InventoryComponent? inventoryComponent))
             return false;
@@ -68,6 +72,8 @@ public sealed class OutfitSystem : EntitySystem
                 }
 
                 _invSystem.TryEquip(target, equipmentEntity, slot.Name, silent: true, force: true, inventory: inventoryComponent);
+                if (unremovable)
+                    EnsureComp<UnremoveableComponent>(equipmentEntity);
 
                 onEquipped?.Invoke(target, equipmentEntity);
             }
@@ -90,8 +96,12 @@ public sealed class OutfitSystem : EntitySystem
             if (job.StartingGear != gear)
                 continue;
 
+            // Sunrise-start
             var jobProtoId = LoadoutSystem.GetJobPrototype(job.ID);
-            if (!_prototypeManager.TryIndex<RoleLoadoutPrototype>(jobProtoId, out var jobProto))
+            var effectiveJobProtoId = LoadoutSystem.GetEffectiveRolePrototype(jobProtoId, _prototypeManager);
+
+            if (!_prototypeManager.TryIndex<RoleLoadoutPrototype>(effectiveJobProtoId, out var jobProto))
+            // Sunrise-end
                 break;
 
             // Don't require a player, so this works on Urists

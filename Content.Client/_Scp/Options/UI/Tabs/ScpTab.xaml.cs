@@ -32,6 +32,7 @@ public sealed partial class ScpTab : Control
             GrainOverlayComponent.BaseStrengthLimit.Min, GrainOverlayComponent.BaseStrengthLimit.Max);
 
         // Поле зрения
+        Control.AddOptionCheckBox(ScpCCVars.FieldOfViewBlurEnabled, FieldOfViewBlurEnabled);
         Control.AddOptionPercentSlider(ScpCCVars.FieldOfViewOpacity, FieldOfViewOpacitySlider,
             FieldOfViewComponent.MinOpacity, FieldOfViewComponent.MaxOpacity);
         Control.AddOptionPercentSlider(ScpCCVars.FieldOfViewBlurScale, FieldOfViewBlurScale,
@@ -58,7 +59,6 @@ public sealed partial class ScpTab : Control
 
         // Подавление звуков
         Control.AddOptionCheckBox(ScpCCVars.AudioMufflingEnabled, AudioMufflingEnabled);
-        Control.AddOptionCheckBox(ScpCCVars.AudioMufflingHighFrequencyUpdate, AudioMufflingHighFrequencyUpdate);
 
         /*
          * Игра
@@ -86,7 +86,7 @@ public sealed partial class ScpTab : Control
         ToggleBloom();
         ToggleBloomCone();
         ToggleEcho();
-        ToggleAudioMuffling();
+        ToggleFovBlur();
     }
 
     protected override void EnteredTree()
@@ -97,7 +97,7 @@ public sealed partial class ScpTab : Control
         LightBloomEnable.OnToggled += ToggleBloom;
         LightBloomConeEnable.OnToggled += ToggleBloomCone;
         EchoEnabled.OnToggled += ToggleEcho;
-        AudioMufflingEnabled.OnToggled += ToggleAudioMuffling;
+        FieldOfViewBlurEnabled.OnToggled += ToggleFovBlur;
     }
 
     protected override void ExitedTree()
@@ -108,7 +108,7 @@ public sealed partial class ScpTab : Control
         LightBloomEnable.OnToggled -= ToggleBloom;
         LightBloomConeEnable.OnToggled -= ToggleBloomCone;
         EchoEnabled.OnToggled -= ToggleEcho;
-        AudioMufflingEnabled.OnToggled -= ToggleAudioMuffling;
+        FieldOfViewBlurEnabled.OnToggled -= ToggleFovBlur;
     }
 
     private void ToggleGrain(BaseButton.ButtonToggledEventArgs value = default!)
@@ -136,8 +136,8 @@ public sealed partial class ScpTab : Control
         EchoStrongPresetPreferred.Visible = EchoEnabled.Pressed;
     }
 
-    private void ToggleAudioMuffling(BaseButton.ButtonToggledEventArgs value = default!)
+    private void ToggleFovBlur(BaseButton.ButtonToggledEventArgs value = default!)
     {
-        AudioMufflingHighFrequencyUpdate.Visible = AudioMufflingEnabled.Pressed;
+        FieldOfViewBlurScale.Visible = FieldOfViewBlurEnabled.Pressed;
     }
 }

@@ -10,7 +10,6 @@
   - StripableInventoryBase
   components:
   - type: Sprite
-    noRot: true
     drawdepth: Mobs
     sprite: _Scp/Mobs/Scp/scp-049.rsi
     state: SCP-049
@@ -18,6 +17,8 @@
     class: Euclid
   - type: Scp049
   - type: ScpRestriction
+    canBeDisarmed: true
+    canStandingState: true
     canPull: true
     canMobCollide: true
   - type: ScpShow049Hud
@@ -30,10 +31,11 @@
     vignetteShaderStrength:
       min: 0
       max: 200
-  - type: GhostPanelAntagonistMarker
-    name: ghost-panel-antagonist-scp-name
-    description: ghost-panel-antagonist-scp-description
-    priority: -10
+  - type: ScpAnnounceOnSpawn
+    text: scp049-announce-on-spawn
+    channels:
+    - ScientificService
+    - HeavyContainmentSecurityService
   - type: Inventory
     templateId: scp049
   - type: FieldOfView
@@ -83,3 +85,9 @@
   - type: GuideHelp
     guides:
     - ScpResearch
+    - ScpFear
+  - type: Appearance
+  - type: RotationVisuals
+    defaultRotation: 90
+    horizontalRotation: 90
+  - type: Perishable

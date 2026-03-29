@@ -87,9 +87,11 @@
         acts: [ "Destruction" ]
       - !type:SpawnEntitiesBehavior
         spawn:
-          Log:
+          ScpLog: # Fire edit
             min: 2
             max: 8
+  - type: TypingIndicator # Add diona typing indicator here so that diona players keep the same typing bubble when polymorphed into a tree.
+    proto: diona
 
 - type: entity
   parent: BaseTree
@@ -411,7 +413,7 @@
         acts: [ "Destruction" ]
       - !type:SpawnEntitiesBehavior
         spawn:
-          Log:
+          ScpLog:
             min: 0
             max: 1
       - !type:SpawnEntitiesBehavior

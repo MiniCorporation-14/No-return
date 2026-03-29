@@ -20,7 +20,7 @@ public sealed class GrainOverlaySystem : ComponentOverlaySystem<GrainOverlay, Gr
 
         Overlay = new GrainOverlay();
 
-        SubscribeLocalEvent<GrainOverlayComponent, ShaderAdditionalStrengthChanged>(OnAdditionalStrengthChanged);
+        SubscribeLocalEvent<GrainOverlayComponent, AfterAutoHandleStateEvent>(OnAdditionalStrengthChanged);
 
         _cfg.OnValueChanged(ScpCCVars.GrainToggleOverlay, ToggleGrainOverlay);
         _cfg.OnValueChanged(ScpCCVars.GrainStrength, SetBaseStrength);
@@ -29,6 +29,8 @@ public sealed class GrainOverlaySystem : ComponentOverlaySystem<GrainOverlay, Gr
     public override void Shutdown()
     {
         base.Shutdown();
+
+        Overlay.Dispose();
 
         _cfg.UnsubValueChanged(ScpCCVars.GrainToggleOverlay, ToggleGrainOverlay);
         _cfg.UnsubValueChanged(ScpCCVars.GrainStrength, SetBaseStrength);
@@ -42,7 +44,7 @@ public sealed class GrainOverlaySystem : ComponentOverlaySystem<GrainOverlay, Gr
         SetBaseStrength(_cfg.GetCVar(ScpCCVars.GrainStrength));
     }
 
-    private void OnAdditionalStrengthChanged(Entity<GrainOverlayComponent> ent, ref ShaderAdditionalStrengthChanged args)
+    private void OnAdditionalStrengthChanged(Entity<GrainOverlayComponent> ent, ref AfterAutoHandleStateEvent args)
     {
         if (_player.LocalEntity != ent)
             return;

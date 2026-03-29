@@ -3,11 +3,16 @@
   name: job-name-senior-logistics-officer
   description: job-description-senior-logistics-officer
   playTimeTracker: JobSeniorLogisticsOfficer
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-  - !type:OverallPlaytimeRequirement
-    time: 90000 # 25 часов
-  weight: 10
-  startingGear: SeniorLogisticsOfficerGear
+  requirements:
+  - !type:RoleTimeRequirement
+    role: JobLogisticsOfficer
+    time: 36000
+  - !type:AgeRequirement
+    requiredAge: 29
+  - !type:AgeRequirement
+    requiredAge: 75
+    inverted: true
+  weight: 935
   icon: JobSeniorLogisticsOfficer
   supervisors: job-supervisors-director
   canBeAntag: true
@@ -23,10 +28,24 @@
       class: C
     - type: AccessLevel
       level: Three
+    - type: ScpAnnounceOnSpawn
+      text: head-announce-on-spawn
+      channels:
+      - LogisticsService
+      includeJobName: true
 
 - type: startingGear
   id: SeniorLogisticsOfficerGear
   equipment:
+    head: ClothingHeadBandOrange
+    eyes: ClothingEyesGlasses
+    mask: ClothingMaskGasExplorer
+    neck: ClothingNeckScarfQm
+    outerClothing: ClothingOuterWinterMiner
+    jumpsuit: ClothingUniformJumpsuitQM
+    gloves: ClothingHandsGlovesColorLightBrown
+    shoes: ClothingShoesColorBrown
+    back: ClothingBackpackCargo
     id: KeyCardSeniorLogisticsOfficer
     ears: ClothingHeadsetAltLogistics
     pocket1: AppraisalTool

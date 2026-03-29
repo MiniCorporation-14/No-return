@@ -6,6 +6,7 @@
   components:
   # Fire start
   - type: ShowBlinkable
+  - type: ShowScp096FaceDamageHud
   # Fire end
   - type: ContentEye
     maxZoom: 8.916104, 8.916104
@@ -19,6 +20,7 @@
     - SilentStorageUser
     - PreventAccessLogging
     - AllowBiomeLoading
+    - NotGhostnadoWarpable
   - type: Input
     context: "aghost"
   - type: Ghost
@@ -39,7 +41,6 @@
   - type: CombatMode
   - type: Physics
     ignorePaused: true
-    bodyType: Kinematic
   - type: Access
     groups:
     - AllAccess
@@ -93,7 +94,10 @@
     followEntity: true
   - type: CargoOrderConsole
   - type: CrewMonitoringConsole
-    doCorpseAlert: false
+    # Sunrise - Start отключаем verb
+  - type: CrewMonitoringCorpseAlert
+    showToggleVerb: false
+    # Sunrise - End
   - type: GeneralStationRecordConsole
     canDeleteEntries: true
   - type: DeviceNetwork

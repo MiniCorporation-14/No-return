@@ -30,7 +30,6 @@ namespace Content.Server.Database
     public abstract class ServerDbBase
     {
         private readonly ISawmill _opsLog;
-
         public event Action<DatabaseNotification>? OnNotificationReceived;
 
         /// <param name="opsLog">Sawmill to trace log database operations to.</param>
@@ -279,11 +278,11 @@ namespace Content.Server.Database
                 new HumanoidCharacterAppearance
                 (
                     profile.HairName,
-                    Color.FromHex(profile.HairColor),
+                    Color.FromHex(string.IsNullOrEmpty(profile.HairColor) ? "#000000FF" : profile.HairColor),
                     profile.FacialHairName,
-                    Color.FromHex(profile.FacialHairColor),
-                    Color.FromHex(profile.EyeColor),
-                    Color.FromHex(profile.SkinColor),
+                    Color.FromHex(string.IsNullOrEmpty(profile.FacialHairColor) ? "#000000FF" : profile.FacialHairColor),
+                    Color.FromHex(string.IsNullOrEmpty(profile.EyeColor) ? "#000000FF" : profile.EyeColor),
+                    Color.FromHex(string.IsNullOrEmpty(profile.SkinColor) ? "#C0967FFF" : profile.SkinColor),
                     markings,
                     //sunrise gradient start
                     (MarkingEffectType)profile.HairColorType,
@@ -307,6 +306,8 @@ namespace Content.Server.Database
         {
             profile ??= new Profile();
             var appearance = (HumanoidCharacterAppearance) humanoid.CharacterAppearance;
+
+            // Debug logging for incoming appearance values
             List<string> markingStrings = new();
             foreach (var marking in appearance.Markings)
             {
@@ -697,6 +698,40 @@ namespace Content.Server.Database
                 .SingleOrDefaultAsync(p => p.UserId == userId.UserId, cancel);
 
             return record == null ? null : MakePlayerRecord(record);
+        }
+
+        public async Task<Dictionary<Guid, string>> GetPlayerNamesBatchAsync(IEnumerable<Guid> userIds, CancellationToken cancel)
+        {
+            await using var db = await GetDb();
+
+            var userIdList = userIds.ToList();
+            if (userIdList.Count == 0)
+                return new Dictionary<Guid, string>();
+
+            var records = await db.DbContext.Player
+                .Where(p => userIdList.Contains(p.UserId))
+                .Select(p => new { p.UserId, p.LastSeenUserName })
+                .ToListAsync(cancel);
+
+            var result = new Dictionary<Guid, string>();
+            foreach (var record in records)
+            {
+                if (!string.IsNullOrWhiteSpace(record.LastSeenUserName))
+                {
+                    result[record.UserId] = record.LastSeenUserName;
+                }
+            }
+
+            // Fill missing names with "Unknown"
+            foreach (var userId in userIdList)
+            {
+                if (!result.ContainsKey(userId))
+                {
+                    result[userId] = "Unknown";
+                }
+            }
+
+            return result;
         }
 
         protected async Task<bool> PlayerRecordExists(DbGuard db, NetUserId userId)
@@ -1108,7 +1143,7 @@ INSERT INTO player_round (players_id, rounds_id) VALUES ({players[player]}, {id}
                     players[i] = log.Players[i].PlayerUserId;
                 }
 
-                yield return new SharedAdminLog(log.Id, log.Type, log.Impact, log.Date, log.CurTime, log.Message, players);
+                yield return new SharedAdminLog(log.Id, log.Type, log.Impact, log.Date, log.Message, players);
             }
         }
 
@@ -1419,7 +1454,7 @@ INSERT INTO player_round (players_id, rounds_id) VALUES ({players[player]}, {id}
                 NormalizeDatabaseTime(ban.LastEditedAt),
                 NormalizeDatabaseTime(ban.ExpirationTime),
                 ban.Hidden,
-                new [] { ban.RoleId.Replace(BanManager.JobPrefix, null) },
+                new [] { ban.RoleId.Replace(BanManager.PrefixJob, null).Replace(BanManager.PrefixAntag, null) },
                 MakePlayerRecord(unbanningAdmin),
                 ban.Unban?.UnbanTime);
         }
@@ -1719,7 +1754,7 @@ INSERT INTO player_round (players_id, rounds_id) VALUES ({players[player]}, {id}
                     NormalizeDatabaseTime(firstBan.LastEditedAt),
                     NormalizeDatabaseTime(firstBan.ExpirationTime),
                     firstBan.Hidden,
-                    banGroup.Select(ban => ban.RoleId.Replace(BanManager.JobPrefix, null)).ToArray(),
+                    banGroup.Select(ban => ban.RoleId.Replace(BanManager.PrefixJob, null).Replace(BanManager.PrefixAntag, null)).ToArray(),
                     MakePlayerRecord(unbanningAdmin),
                     NormalizeDatabaseTime(firstBan.Unban?.UnbanTime)));
             }
@@ -1820,6 +1855,7 @@ INSERT INTO player_round (players_id, rounds_id) VALUES ({players[player]}, {id}
 
         # endregion
 
+        // Sunrise-start
         # region MentorHelp
 
         public async Task AddMentorHelpTicketAsync(MentorHelpTicket ticket)
@@ -1833,53 +1869,108 @@ INSERT INTO player_round (players_id, rounds_id) VALUES ({players[player]}, {id}
         {
             await using var db = await GetDb();
             return await db.DbContext.MentorHelpTickets
+                .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Id == ticketId);
         }
 
-        public async Task<List<MentorHelpStatistics>> GetMentorHelpStatisticsAsync()
+        public async Task<List<MentorHelpStatistics>> GetMentorHelpStatisticsAsync(DateTimeOffset? from)
         {
             await using var db = await GetDb();
+            var isSqlite = db.DbContext.Database.ProviderName?.Contains("Sqlite") == true;
 
-            // Получаем количество тикетов, взятых каждым ментором
-            var tickets = await db.DbContext.MentorHelpTickets
-                .Where(t => t.AssignedToUserId != null)
-                .GroupBy(t => t.AssignedToUserId!.Value)
-                .Select(g => new { MentorUserId = g.Key, TicketsClaimed = g.Count() })
+            var handledTicketsQuery = db.DbContext.MentorHelpMessages
+                .AsNoTracking()
+                .Join(
+                    db.DbContext.MentorHelpTickets.AsNoTracking().Where(ticket => ticket.AssignedToUserId != null),
+                    message => message.TicketId,
+                    ticket => ticket.Id,
+                    (message, ticket) => new
+                    {
+                        message.TicketId,
+                        message.SenderUserId,
+                        message.SentAt,
+                        ticket.PlayerId,
+                        AssignedMentorId = ticket.AssignedToUserId!.Value
+                    })
+                .Where(activity =>
+                    activity.SenderUserId == activity.AssignedMentorId &&
+                    activity.SenderUserId != activity.PlayerId);
+
+            var messagesQuery = db.DbContext.MentorHelpMessages
+                .AsNoTracking()
+                .Join(
+                    db.DbContext.MentorHelpTickets.AsNoTracking(),
+                    message => message.TicketId,
+                    ticket => ticket.Id,
+                    (message, ticket) => new
+                    {
+                        message.SenderUserId,
+                        message.SentAt,
+                        ticket.PlayerId
+                    })
+                .Where(message => message.SenderUserId != message.PlayerId);
+
+            if (from != null && !isSqlite)
+                messagesQuery = messagesQuery.Where(m => m.SentAt >= from);
+
+            var handledTicketsData = await handledTicketsQuery
+                .Select(ticket => new { ticket.TicketId, ticket.AssignedMentorId, ticket.SentAt })
                 .ToListAsync();
 
-            // Получаем количество сообщений, отправленных каждым ментором
-            var messages = await db.DbContext.MentorHelpMessages
-                .GroupBy(m => m.SenderUserId)
-                .Select(g => new { MentorUserId = g.Key, MessagesCount = g.Count() })
+            var messagesData = await messagesQuery
+                .Select(m => new { m.SenderUserId, m.SentAt })
                 .ToListAsync();
 
-            // Объединяем статистику по MentorUserId
+            if (from != null && isSqlite)
+                messagesData = messagesData.Where(m => m.SentAt >= from).ToList();
+
+            var handledTickets = handledTicketsData
+                .GroupBy(ticket => new { ticket.AssignedMentorId, ticket.TicketId })
+                .Select(group => new
+                {
+                    MentorUserId = group.Key.AssignedMentorId,
+                    FirstHandledAt = group.Min(ticket => ticket.SentAt)
+                });
+
+            if (from != null)
+                handledTickets = handledTickets.Where(ticket => ticket.FirstHandledAt >= from);
+
+            var ticketStats = handledTickets
+                .GroupBy(ticket => ticket.MentorUserId)
+                .Select(group => new { MentorUserId = group.Key, TicketsClosed = group.Count() })
+                .ToList();
+
+            var messageStats = messagesData
+                .GroupBy(message => message.SenderUserId)
+                .Select(group => new { MentorUserId = group.Key, MessagesCount = group.Count() })
+                .ToList();
+
             var stats = new Dictionary<Guid, MentorHelpStatistics>();
 
-            foreach (var t in tickets)
+            foreach (var ticketStat in ticketStats)
             {
-                stats[t.MentorUserId] = new MentorHelpStatistics
+                stats[ticketStat.MentorUserId] = new MentorHelpStatistics
                 {
-                    MentorUserId = t.MentorUserId,
-                    TicketsClaimed = t.TicketsClaimed,
+                    MentorUserId = ticketStat.MentorUserId,
+                    TicketsClosed = ticketStat.TicketsClosed,
                     MessagesCount = 0
                 };
             }
 
-            foreach (var m in messages)
+            foreach (var messageStat in messageStats)
             {
-                if (stats.TryGetValue(m.MentorUserId, out var stat))
+                if (stats.TryGetValue(messageStat.MentorUserId, out var stat))
                 {
-                    stat.MessagesCount = m.MessagesCount;
-                    stats[m.MentorUserId] = stat;
+                    stat.MessagesCount = messageStat.MessagesCount;
+                    stats[messageStat.MentorUserId] = stat;
                 }
                 else
                 {
-                    stats[m.MentorUserId] = new MentorHelpStatistics
+                    stats[messageStat.MentorUserId] = new MentorHelpStatistics
                     {
-                        MentorUserId = m.MentorUserId,
-                        TicketsClaimed = 0,
-                        MessagesCount = m.MessagesCount
+                        MentorUserId = messageStat.MentorUserId,
+                        TicketsClosed = 0,
+                        MessagesCount = messageStat.MessagesCount
                     };
                 }
             }
@@ -1897,41 +1988,41 @@ INSERT INTO player_round (players_id, rounds_id) VALUES ({players[player]}, {id}
         public async Task<List<MentorHelpTicket>> GetMentorHelpTicketsByPlayerAsync(Guid playerId)
         {
             await using var db = await GetDb();
-            return (await db.DbContext.MentorHelpTickets
+            var tickets = await db.DbContext.MentorHelpTickets
+                .AsNoTracking()
                 .Where(t => t.PlayerId == playerId)
-                .ToListAsync())
-                .OrderByDescending(t => t.CreatedAt)
-                .ToList();
+                .ToListAsync();
+            return tickets.OrderByDescending(t => t.CreatedAt).ToList();
         }
 
         public async Task<List<MentorHelpTicket>> GetOpenMentorHelpTicketsAsync()
         {
             await using var db = await GetDb();
-            return (await db.DbContext.MentorHelpTickets
+            var tickets = await db.DbContext.MentorHelpTickets
+                .AsNoTracking()
                 .Where(t => t.Status != MentorHelpTicketStatus.Closed)
-                .ToListAsync())
-                .OrderByDescending(t => t.UpdatedAt)
-                .ToList();
+                .ToListAsync();
+            return tickets.OrderByDescending(t => t.UpdatedAt).ToList();
         }
 
         public async Task<List<MentorHelpTicket>> GetAssignedMentorHelpTicketsAsync(Guid mentorId)
         {
             await using var db = await GetDb();
-            return (await db.DbContext.MentorHelpTickets
+            var tickets = await db.DbContext.MentorHelpTickets
+                .AsNoTracking()
                 .Where(t => t.AssignedToUserId == mentorId && t.Status != MentorHelpTicketStatus.Closed)
-                .ToListAsync())
-                .OrderByDescending(t => t.UpdatedAt)
-                .ToList();
+                .ToListAsync();
+            return tickets.OrderByDescending(t => t.UpdatedAt).ToList();
         }
 
         public async Task<List<MentorHelpTicket>> GetClosedMentorHelpTicketsAsync()
         {
             await using var db = await GetDb();
-            return (await db.DbContext.MentorHelpTickets
+            var tickets = await db.DbContext.MentorHelpTickets
+                .AsNoTracking()
                 .Where(t => t.Status == MentorHelpTicketStatus.Closed)
-                .ToListAsync())
-                .OrderByDescending(t => t.UpdatedAt)
-                .ToList();
+                .ToListAsync();
+            return tickets.OrderByDescending(t => t.UpdatedAt).ToList();
         }
 
         public async Task AddMentorHelpMessageAsync(MentorHelpMessage message)
@@ -1945,10 +2036,10 @@ INSERT INTO player_round (players_id, rounds_id) VALUES ({players[player]}, {id}
         {
             await using var db = await GetDb();
             return await db.DbContext.MentorHelpMessages
+                .AsNoTracking()
                 .Where(m => m.TicketId == ticketId)
                 .ToListAsync();
         }
-
         # endregion
         // Sunrise-End
 

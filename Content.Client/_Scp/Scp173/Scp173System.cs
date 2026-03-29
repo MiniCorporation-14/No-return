@@ -1,23 +1,24 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Content.Client._Scp.Scp173.UI;
-using Content.Client.Actions;
 using Content.Client.Charges;
-using Content.Client.Examine;
 using Content.Client.UserInterface.Screens;
 using Content.Client.UserInterface.Systems.Actions;
 using Content.Client.UserInterface.Systems.Gameplay;
+using Content.Shared._Scp.SafeTime;
 using Content.Shared._Scp.Scp173;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
+using Robust.Shared.Map;
 using Robust.Shared.Physics.Systems;
 using Robust.Shared.Player;
 using Robust.Shared.Timing;
 
 namespace Content.Client._Scp.Scp173;
 
+// TODO: Единая система для управления виджетами вместе с SafeTimeSystem
 public sealed class Scp173System : SharedScp173System
 {
     [Dependency] private readonly IPlayerManager _player = default!;
@@ -25,9 +26,7 @@ public sealed class Scp173System : SharedScp173System
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly IUserInterfaceManager _ui = default!;
     [Dependency] private readonly TransformSystem _transform = default!;
-    [Dependency] private readonly ActionsSystem _actionsSystem = default!;
     [Dependency] private readonly SharedPhysicsSystem _physics = default!;
-    [Dependency] private readonly ExamineSystem _examine = default!;
     [Dependency] private readonly ChargesSystem _charges = default!;
 
     private Scp173Overlay _overlay = default!;
@@ -53,7 +52,7 @@ public sealed class Scp173System : SharedScp173System
         gameplayStateLoad.OnScreenLoad += EnsureWidgetExist;
         gameplayStateLoad.OnScreenUnload += RemoveWidget;
 
-        _overlay = new(_transform, _ui.GetUIController<ActionUIController>(), _actionsSystem, _physics, _examine, _charges);
+        _overlay = new(_transform, _ui.GetUIController<ActionUIController>(), _physics, _charges, this);
         _ui.OnScreenChanged += _ => RecreateWidget();
     }
 
@@ -100,10 +99,7 @@ public sealed class Scp173System : SharedScp173System
         _nextReagentCheck = _timing.CurTime + ReagentCheckInterval;
 
         if (!TryGetPlayerEntity(out var ent))
-        {
-            _widget.Visible = false;
             return;
-        }
 
         if (!IsContained(ent.Value))
         {
@@ -111,16 +107,10 @@ public sealed class Scp173System : SharedScp173System
             return;
         }
 
+        SetReagentData(ent.Value, _widget);
+        SetSafeTimeData(ent.Value.Owner, _widget);
+
         _widget.Visible = true;
-
-        var current = ent.Value.Comp.ReagentVolumeAround.Int();
-        var timeLeft = ent.Value.Comp.SafeTimeEnd - Timing.CurTime;
-
-        _widget.SetData(current,
-            Scp173Component.MinTotalSolutionVolume,
-            Scp173Component.ExtraMinTotalSolutionVolume,
-            ent.Value.Comp.SafeTime,
-            timeLeft);
     }
 
     private bool TryGetPlayerEntity([NotNullWhen(true)] out Entity<Scp173Component>? ent)
@@ -133,6 +123,20 @@ public sealed class Scp173System : SharedScp173System
         ent = (_player.LocalEntity.Value, scp173);
 
         return true;
+    }
+
+    private void SetReagentData(Entity<Scp173Component> ent, Scp173UiWidget widget)
+    {
+        var current = ent.Comp.ReagentVolumeAround.Int();
+        widget.ReagentBar.UpdateInfo(current, Scp173Component.MinTotalSolutionVolume, Scp173Component.ExtraMinTotalSolutionVolume);
+    }
+
+    private void SetSafeTimeData(Entity<SafeTimeComponent?> ent, Scp173UiWidget widget)
+    {
+        if (!Resolve(ent, ref ent.Comp))
+            return;
+
+        widget.SafeTime.UpdateSafeTimeInfo(ent.Comp.TimeEnd);
     }
 
     private void EnsureWidgetExist()
@@ -152,7 +156,7 @@ public sealed class Scp173System : SharedScp173System
         if (layoutContainer == null)
             return;
 
-        _widget = new Scp173UiWidget();
+        _widget = new ();
 
         var layout = _ui.ActiveScreen is SeparatedChatGameScreen
             ? LayoutContainer.LayoutPreset.TopRight
@@ -179,4 +183,19 @@ public sealed class Scp173System : SharedScp173System
         RemoveWidget();
         EnsureWidgetExist();
     }
+
+    #region Overlay API
+
+    /// <summary>
+    /// Публичная обёртка над <see cref="SharedScp173System.IsImpassableObstacle"/> для использования в оверлее.
+    /// </summary>
+    public bool CheckImpassableObstacle(EntityUid entity) => IsImpassableObstacle(entity);
+
+    /// <summary>
+    /// Публичная обёртка над <see cref="SharedScp173System.ClampTargetToRange"/> для использования в оверлее.
+    /// </summary>
+    public void ClampTarget(MapCoordinates performerCoords, ref MapCoordinates targetCoords, float maxRange)
+        => ClampTargetToRange(performerCoords, ref targetCoords, maxRange);
+
+    #endregion
 }

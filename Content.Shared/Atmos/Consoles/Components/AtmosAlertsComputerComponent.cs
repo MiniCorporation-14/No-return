@@ -38,6 +38,9 @@ public sealed partial class AtmosAlertsComputerComponent : Component
 
     [DataField]
     public TimeSpan NextBeep = TimeSpan.Zero;
+
+    [DataField, AutoNetworkedField]
+    public bool DoAtmosAlert = false;
     // Sunrise-end
 }
 
@@ -110,7 +113,7 @@ public struct AtmosAlertsFocusDeviceData
 }
 
 [Serializable, NetSerializable]
-public sealed class AtmosAlertsComputerBoundInterfaceState : BoundUserInterfaceState
+public sealed partial class AtmosAlertsComputerBoundInterfaceState : BoundUserInterfaceState // Sunrise - edit добавлено partial
 {
     /// <summary>
     /// A list of all air alarms
@@ -126,6 +129,7 @@ public sealed class AtmosAlertsComputerBoundInterfaceState : BoundUserInterfaceS
     /// Data for the UI focus (if applicable)
     /// </summary>
     public AtmosAlertsFocusDeviceData? FocusData;
+
 
     /// <summary>
     /// Sends data from the server to the client to populate the atmos monitoring console UI
@@ -220,6 +224,14 @@ public sealed class AtmosAlertsComputerDeviceSilencedMessage : BoundUserInterfac
         SilenceDevice = silenceDevice;
     }
 }
+
+// Sunrise-start
+[Serializable, NetSerializable]
+public sealed class AtmosAlertsComputerAlertSoundToggleMessage(bool enabled) : BoundUserInterfaceMessage
+{
+    public bool Enabled = enabled;
+}
+// Sunrise-end
 
 /// <summary>
 /// List of all the different atmos device groups

@@ -2,6 +2,7 @@
 - type: species
   id: HumanoidXeno
   name: species-name-xeno
+  sponsorOnly: true
   roundStart: false # Fire edit
   stationRecordsHidden: true # Fire added
   prototype: MobHumanoidXeno
@@ -10,7 +11,10 @@
   markingLimits: MobHumanoidXenoMarkingLimits
   dollPrototype: MobXenoDummy
   skinColoration: Hues
-  sponsorOnly: false
+  maleFirstNames: names_xeno_first
+  femaleFirstNames: names_xeno_first
+  maleLastNames: names_xeno_last
+  femaleLastNames: names_xeno_last
   defaultHeight: 1.1
   defaultWidth: 1.2
   maxHeight: 1.15
@@ -22,6 +26,8 @@
   buttScan:
     sprite: /Textures/_Sunrise/CopyMachine/butts_scans.rsi
     state: human
+  sexes:
+  - Unsexed
 
 - type: bodyType
   id: HumanoidXenoNormal
@@ -64,10 +70,10 @@
       points: 1
       required: false
     Legs:
-      points: 0
+      points: 1
       required: false
     Arms:
-      points: 0
+      points: 1
       required: false
 
 - type: humanoidBaseSprite

@@ -33,12 +33,13 @@
     domePrototype: EnergyDomeMediumRed
   - type: PowerCellDraw
     drawRate: 0
-    useRate: 0
+    useCharge: 0
   - type: UseDelay
     delay: 10.0
   - type: Biocode
     factions:
     - Syndicate
+    - Pirate
 
 - type: entity
   name: BR-50c "Bastion"
@@ -75,7 +76,7 @@
     domePrototype: EnergyDomeMediumBlue
   - type: PowerCellDraw
     drawRate: 0
-    useRate: 0
+    useCharge: 0
   - type: UseDelay
     delay: 10.0
 
@@ -113,6 +114,6 @@
     domePrototype: EnergyDomeSmallBlue
   - type: PowerCellDraw
     drawRate: 0
-    useRate: 0
+    useCharge: 0
   - type: UseDelay
     delay: 10.0

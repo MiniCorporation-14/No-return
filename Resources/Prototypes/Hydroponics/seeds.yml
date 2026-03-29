@@ -475,10 +475,10 @@
   name: seeds-towercap-name
   noun: seeds-noun-spores
   displayName: seeds-towercap-display-name
-  plantRsi: Objects/Specific/Hydroponics/towercap.rsi
-  packetPrototype: TowercapSeeds
+  plantRsi: _Scp/Objects/Specific/Hydroponics/towercap.rsi # Fire edit
+  packetPrototype: ScpTowercapSeeds # Fire edit
   productPrototypes:
-    - Log
+    - ScpLog # Fire edit
   mutationPrototypes:
     - steelcap
     - glasscap #Sunrise-add
@@ -1301,10 +1301,6 @@
       Min: 1
       Max: 5
       PotencyDivisor: 20
-    Desoxyephedrine:
-      Min: 1
-      Max: 10
-      PotencyDivisor: 10
     Vitamin:
       Min: 1
       Max: 2
@@ -1339,10 +1335,6 @@
       Min: 1
       Max: 5
       PotencyDivisor: 20
-    Desoxyephedrine:
-      Min: 1
-      Max: 10
-      PotencyDivisor: 10
 
 - type: seed
   id: galaxythistle
@@ -1389,6 +1381,10 @@
       Min: 1
       Max: 25
       PotencyDivisor: 4
+    Desoxyephedrine: # meff!!
+      Min: 1
+      Max: 10
+      PotencyDivisor: 10
 
 - type: seed
   id: flyAmanita

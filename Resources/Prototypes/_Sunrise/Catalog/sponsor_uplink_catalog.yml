@@ -973,6 +973,21 @@
     - IAA
 
 - type: listing
+  id: UplinkSunriseTacticalHosUniform
+  name: uplink-sunrise-tactical-hos-uniform-name
+  productEntity: ClothingUniformJumpskirtTacticalHos
+  cost:
+    Suntick: 40
+  categories:
+  - HOSHeadOfDepartment
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 1
+  - !type:BuyerJobCondition
+    whitelist:
+    - HeadOfSecurity
+
+- type: listing
   id: UplinkSunriseClothingHeadHatCapUSSPBlack
   name: uplink-sunrise-clothing-head-hat-cap-black-name
   productEntity: ClothingHeadHatCapUSSPBlack
@@ -1016,6 +1031,37 @@
   - !type:BuyerJobCondition
     whitelist:
     - HeadOfSecurity
+
+- type: listing
+  id: UplinkSunriseBoxArbiterBundle
+  name: uplink-sunrise-box-arbiter-bundle-name
+  productEntity: BoxArbiterBundle
+  cost:
+    Suntick: 70
+  # HOSHeadOfDepartment = sponsor shop category for Head of Security
+  categories:
+  - HOSHeadOfDepartment
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 1
+  - !type:BuyerJobCondition
+    whitelist:
+    - HeadOfSecurity
+
+- type: listing
+  id: UplinkSunriseBoxRedMistBundle
+  name: uplink-sunrise-box-redmist-bundle-name
+  productEntity: BoxRedMistBundle
+  cost:
+    Suntick: 60
+  categories:
+  - SecurityThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 1
+  - !type:BuyerJobCondition
+    whitelist:
+    - Detective
 
 # Research Director
 
@@ -1148,21 +1194,6 @@
   id: UplinkSunriseClothingOuterCoatCMOOvercoat
   name: uplink-sunrise-clothing-outer-coat-overcoat-name
   productEntity: ClothingOuterCoatCMOOvercoat
-  cost:
-    Suntick: 15
-  categories:
-  - CMOHeadOfDepartment
-  conditions:
-  - !type:ListingLimitedStockCondition
-    stock: 1
-  - !type:BuyerJobCondition
-    whitelist:
-    - ChiefMedicalOfficer
-
-- type: listing
-  id: UplinkSunriseClothingNeckCMOCloak
-  name: uplink-sunrise-clothing-neck-cmo-cloak-name
-  productEntity: ClothingNeckCMOCloak
   cost:
     Suntick: 15
   categories:
@@ -1316,7 +1347,7 @@
   name: uplink-sunrise-clothing-neck-cloak-black-sec-name
   productEntity: ClothingNeckCloakBlackSec
   cost:
-    Suntick: 15
+    Suntick: 20
   categories:
   - SecurityThings
   conditions:
@@ -1331,22 +1362,7 @@
   name: uplink-sunrise-weapon-disabler-name
   productEntity: WeaponDisabler
   cost:
-    Suntick: 10
-  categories:
-  - SecurityThings
-  conditions:
-  - !type:ListingLimitedStockCondition
-    stock: 1
-  - !type:BuyerDepartmentCondition
-    whitelist:
-    - Security
-
-- type: listing
-  id: UplinkSunriseClothingOuterArmorBulletproof
-  name: uplink-sunrise-clothing-outer-armor-bulletproof-name
-  productEntity: ClothingOuterArmorBulletproof
-  cost:
-    Suntick: 10
+    Suntick: 15
   categories:
   - SecurityThings
   conditions:
@@ -1660,6 +1676,21 @@
     whitelist:
     - Medical
 
+- type: listing
+  id: UplinkSunriseClothingNeckMedCloak
+  name: uplink-sunrise-clothing-neck-med-cloak-name
+  productEntity: ClothingNeckMedCloak
+  cost:
+    Suntick: 20
+  categories:
+  - MedicalThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 1
+  - !type:BuyerDepartmentCondition
+    whitelist:
+    - Medical
+
 # Research
 
 - type: listing
@@ -1810,6 +1841,20 @@
   conditions:
   - !type:ListingLimitedStockCondition
     stock: 3
+  - !type:BuyerDepartmentCondition
+    whitelist:
+    - Civilian
+
+- type: listing
+  id: UplinkSunriseProtoAdvMop
+  productEntity: ProtoAdvMop
+  cost:
+    Suntick: 35
+  categories:
+  - ServiceThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 1
   - !type:BuyerDepartmentCondition
     whitelist:
     - Civilian
@@ -2044,3 +2089,107 @@
   conditions:
   - !type:ListingLimitedStockCondition
     stock: 3
+
+# region Paint
+
+- type: listing
+  id: UplinkSunriseRestockPaintVend
+  productEntity: VendingMachineRestockPaintVend
+  cost:
+    Suntick: 50
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 1
+
+- type: listing
+  id: UplinkSunriseSprayPaint
+  name: uplink-sunrise-spray-paint-blue-name
+  description: uplink-sunrise-spray-paint-desc
+  productEntity: SprayPaintBlue
+  cost:
+    Suntick: 10
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 2
+
+- type: listing
+  id: UplinkSunriseSprayPaintBlack
+  name: uplink-sunrise-spray-paint-black-name
+  description: uplink-sunrise-spray-paint-desc
+  productEntity: SprayPaintBlack
+  cost:
+    Suntick: 20
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 2
+
+- type: listing
+  id: UplinkSunriseSprayPaintRed
+  name: uplink-sunrise-spray-paint-red-name
+  description: uplink-sunrise-spray-paint-desc
+  productEntity: SprayPaintRed
+  cost:
+    Suntick: 10
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 2
+
+- type: listing
+  id: UplinkSunriseSprayPaintGreen
+  name: uplink-sunrise-spray-paint-green-name
+  description: uplink-sunrise-spray-paint-desc
+  productEntity: SprayPaintGreen
+  cost:
+    Suntick: 10
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 2
+
+- type: listing
+  id: UplinkSunriseSprayPaintOrange
+  name: uplink-sunrise-spray-paint-orange-name
+  description: uplink-sunrise-spray-paint-desc
+  productEntity: SprayPaintOrange
+  cost:
+    Suntick: 10
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 2
+
+- type: listing
+  id: UplinkSunriseSprayPaintPurple
+  name: uplink-sunrise-spray-paint-purple-name
+  description: uplink-sunrise-spray-paint-desc
+  productEntity: SprayPaintPurple
+  cost:
+    Suntick: 10
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 2
+
+- type: listing
+  id: UplinkSunriseSprayPaintWhite
+  name: uplink-sunrise-spray-paint-white-name
+  description: uplink-sunrise-spray-paint-desc
+  productEntity: SprayPaintWhite
+  cost:
+    Suntick: 10
+  categories:
+  - PaintThings
+  conditions:
+  - !type:ListingLimitedStockCondition
+    stock: 2

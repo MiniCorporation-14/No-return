@@ -72,7 +72,6 @@
       methods: [ Touch ]
       effects:
         - !type:HealthChange
-          scaleByQuantity: true
           damage:
             types:
               Cold: 2
@@ -134,3 +133,7 @@
     normalBodyTemperature: 1000
     implicitHeatRegulation: 200000
     metabolismHeat: 80000
+  - type: GuideHelp
+    guides:
+    - ScpResearch
+    - ScpFear

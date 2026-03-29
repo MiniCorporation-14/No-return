@@ -4,6 +4,7 @@
   parent: BaseStructure
   name: table frame
   description: Pieces of metal that make the frame of a table.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/frame.rsi
@@ -57,6 +58,7 @@
 
 - type: entity
   id: CounterWoodFrame
+  categories: [ HideSpawnMenu ] # Fire edit
   parent: BaseStructure
   name: wooden counter frame
   description: Pieces of wood that make the frame of a table.
@@ -160,6 +162,7 @@
   parent: TableBase
   name: table
   description: A square piece of metal standing on four metal legs.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/generic.rsi
@@ -204,6 +207,7 @@
   parent: TableBase
   name: reinforced table
   description: A square piece of metal standing on four metal legs. Extra robust.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/reinforced.rsi
@@ -251,6 +255,7 @@
   parent: TableBase
   name: glass table
   description: A square piece of glass, standing on four metal legs.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/glass.rsi
@@ -360,6 +365,7 @@
   parent: TableBase
   name: reinforced glass table
   description: A square piece of glass, standing on four metal legs. Extra robust.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/r_glass.rsi
@@ -417,6 +423,7 @@
   parent: TableBase
   name: plasma glass table
   description: A square piece of plasma glass, standing on four metal legs. Pretty!
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/plasma.rsi
@@ -514,6 +521,7 @@
 
 - type: entity
   id: TableWood
+  categories: [ HideSpawnMenu ] # Fire edit
   parent: TableBase
   name: wood table
   description: Do not apply fire to this. Rumour says it burns easily.
@@ -534,7 +542,7 @@
         acts: [ "Destruction" ]
       - !type:PlaySoundBehavior
         sound:
-          collection: GlassBreak
+          collection: WoodDestroy
     - trigger:
         !type:DamageTrigger
         damage: 15
@@ -593,7 +601,7 @@
           collection: WoodDestroy
       - !type:SpawnEntitiesBehavior
         spawn:
-          MaterialWoodPlank:
+          ScpMaterialWoodPlank: # Fire edit
             min: 1
             max: 1
           MaterialCloth1:
@@ -618,6 +626,7 @@
   parent: TableBase
   name: stone table
   description: Literally the sturdiest thing you have ever seen.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/stone.rsi
@@ -645,6 +654,7 @@
   parent: TableBase
   name: web table
   description: Really smooth and surprisingly durable.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Damageable
     damageModifierSet: Web
@@ -679,6 +689,7 @@
   id: TableXeno
   name: xeno table
   description: I wouldn't put the silverware on it.
+  categories: [ HideSpawnMenu ] # Fire added
   components:
   - type: Sprite
     sprite: Structures/Furniture/Tables/xeno.rsi
@@ -715,6 +726,12 @@
     damageModifierSet: Wood
   - type: Destructible
     thresholds:
+    - trigger: # Excess damage, don't spawn entities
+        !type:DamageTrigger
+        damage: 100
+      behaviors:
+      - !type:DoActsBehavior
+        acts: [ "Destruction" ]
     - trigger:
         !type:DamageTrigger
         damage: 25
@@ -724,7 +741,7 @@
           collection: WoodDestroy
       - !type:SpawnEntitiesBehavior
         spawn:
-          MaterialWoodPlank:
+          ScpMaterialWoodPlank:
             min: 1
             max: 1
           MaterialCloth1:
@@ -755,6 +772,21 @@
     node: TableFancyBlue
   - type: IconSmooth
     key: fancytableblue
+
+- type: entity
+  id: TableFancySkyBlue
+  parent: TableFancyBase
+  suffix: SkyBlue
+  components:
+  - type: Sprite
+    sprite: Structures/Furniture/Tables/Fancy/skyblue.rsi
+  - type: Icon
+    sprite: Structures/Furniture/Tables/Fancy/skyblue.rsi
+  - type: Construction
+    graph: Table
+    node: TableFancySkyBlue
+  - type: IconSmooth
+    key: fancytableskyblue
 
 - type: entity
   id: TableFancyCyan
@@ -886,9 +918,6 @@
   suffix: DEBUG
   categories: [ Debug ] # Sunrise added
   components:
-  - type: Tag
-    tags:
-      - Debug
   - type: Sprite
     sprite: Structures/Furniture/Tables/debug.rsi
   - type: Icon
@@ -906,6 +935,7 @@
 
 - type: entity
   id: TableCounterWood
+  categories: [ HideSpawnMenu ] # Fire edit
   parent: CounterBase
   name: wood counter
   description: Do not apply fire to this. Rumour says it burns easily.

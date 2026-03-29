@@ -1,5 +1,5 @@
-ui-lobby-mhelp-button = МHelp
-ui-options-function-open-mentor-help = Открыть ментор помощь
+ui-lobby-mhelp-button = MHelp
+ui-options-function-open-mentor-help = Открыть Ментор помощь
 ui-options-function-open-help-choice = Открыть выбор помощи
 
 # Mentor Help Window
@@ -12,13 +12,18 @@ mentor-help-tab-closed = Закрытые
 # Buttons
 mentor-help-statistics = Статистика
 mentor-help-new-ticket = Новый тикет
-mentor-help-back-to-list = Назад к списку
+mentor-help-back-to-list = Назад
 mentor-help-send-reply = Отправить
 mentor-help-claim = Взять
 mentor-help-unassign = Освободить
 mentor-help-close-ticket = Закрыть
+mentor-help-close-confirm = Вы уверены?
 mentor-help-cancel = Отмена
 mentor-help-close = Закрыть
+mentor-help-auto-open-tickets = Авто-открытие
+mentor-help-auto-open-tickets-tooltip = Автоматически открывать тикет при новых сообщениях
+mentor-help-ticket-activity-unread = Новое сообщение
+mentor-help-ticket-activity-author = Игрок написал
 
 # Table columns
 mentor-help-column-id = ID
@@ -34,6 +39,8 @@ mentor-help-status-awaiting = Ожидает ответа
 mentor-help-status-closed = Закрыт
 mentor-help-status-unknown = Неизвестно
 mentor-help-unassigned = Не назначен
+
+mentor-help-unknown-user = Неизвестный
 
 # Ticket info
 mentor-help-ticket-info = Статус: {$status} | Назначен: {$assigned} | Создан: {$created}
@@ -54,7 +61,7 @@ mentor-help-new-ticket-error-message = Пожалуйста, опишите ва
 # Statistics dialog
 mentor-help-statistics-title = Статистика ментор помощи
 mentor-help-statistics-header = Статистика работы менторов
-mentor-help-statistics-content = Здесь будет отображаться статистика по количеству взятых тикетов каждым ментором.
+mentor-help-statistics-content = Здесь будет отображаться статистика по количеству обработанных тикетов и сообщений каждого ментора.
 
 
 mentor-help-status-label = Статус: {$status}
@@ -70,3 +77,13 @@ help-choice-ahelp-button = Админ-помощь
 help-choice-mhelp-button = Ментор-помощь
 help-choice-ahelp-desc-label = [color=#CCCCCC][font size=12]• Админ-помощь - для жалоб на игроков, сообщений о багах и нарушениях правил[/font][/color]
 help-choice-mhelp-desc-label = [color=#CCCCCC][font size=12]• Ментор-помощь - для вопросов о механиках игры и помощи новичкам[/font][/color]
+
+help-kwoink-play-sound = Звук сообщений
+
+mentor-help-statistics-column-mentor = Ментор
+mentor-help-statistics-column-tickets = Обработанных тикетов
+mentor-help-statistics-column-messages = Сообщений
+mentor-help-statistics-period-week = За неделю
+mentor-help-statistics-period-month = За месяц
+mentor-help-statistics-period-all-time = За все время
+mentor-help-statistics-no-data = Нет данных о статистике менторов

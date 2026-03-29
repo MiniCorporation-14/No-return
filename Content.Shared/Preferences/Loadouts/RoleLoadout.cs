@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Content.Shared.CCVar;
+using Content.Shared.Clothing; // Sunrise-edit
 using Content.Shared.Humanoid.Prototypes;
 using Content.Shared.Random;
 using Content.Sunrise.Interfaces.Shared;
@@ -30,6 +31,7 @@ public sealed partial class RoleLoadout : IEquatable<RoleLoadout>
     /// <summary>
     /// Loadout specific name.
     /// </summary>
+    [DataField]
     public string? EntityName;
 
     /*
@@ -66,7 +68,10 @@ public sealed partial class RoleLoadout : IEquatable<RoleLoadout>
         var protoManager = collection.Resolve<IPrototypeManager>();
         var configManager = collection.Resolve<IConfigurationManager>();
 
-        if (!protoManager.TryIndex(Role, out var roleProto))
+        // Sunrise-start
+        var effectiveRole = LoadoutSystem.GetEffectiveRolePrototype(Role, protoManager);
+        if (!protoManager.TryIndex(effectiveRole, out var roleProto))
+        // Sunrise-end
         {
             EntityName = null;
             SelectedLoadouts.Clear();
@@ -216,7 +221,10 @@ public sealed partial class RoleLoadout : IEquatable<RoleLoadout>
             SelectedLoadouts.Clear();
 
         var collection = IoCManager.Instance!;
-        var roleProto = protoManager.Index(Role);
+        // Sunrise-start
+        var effectiveRole = LoadoutSystem.GetEffectiveRolePrototype(Role, protoManager);
+        var roleProto = protoManager.Index(effectiveRole);
+        // Sunrise-end
 
         for (var i = roleProto.Groups.Count - 1; i >= 0; i--)
         {
@@ -231,13 +239,13 @@ public sealed partial class RoleLoadout : IEquatable<RoleLoadout>
             var loadouts = new List<Loadout>();
             SelectedLoadouts[group] = loadouts;
 
-            if (groupProto.MinLimit > 0)
+            if (groupProto.MinLimit > 0 || loadouts.Count < groupProto.DefaultSelected)
             {
                 // Apply any loadouts we can.
                 foreach (var protoId in groupProto.Loadouts)
                 {
                     // Reached the limit, time to stop
-                    if (loadouts.Count >= groupProto.MinLimit)
+                    if (loadouts.Count >= Math.Max(groupProto.MinLimit, groupProto.DefaultSelected))
                         break;
 
                     if (!protoManager.TryIndex(protoId, out var loadoutProto))

@@ -25,6 +25,7 @@
     categories:
       - General
       - SecurityThings
+      - HOSHeadOfDepartment
       - CMOHeadOfDepartment
       - CEHeadOfDepartment
       - RDHeadOfDepartment
@@ -41,6 +42,7 @@
       - Cloaks
       - QMHeadOfDepartment
       - Music
+      - PaintThings
     currencyWhitelist:
       - Suntick
     balance:
@@ -50,7 +52,6 @@
       - SunriseUplink
 
 ##################
-#    SUNRISE     #
 ##################
 
 - type: entity

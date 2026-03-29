@@ -58,7 +58,7 @@ public sealed partial class OptionsTabControlRow : Control
         RobustXamlLoader.Load(this);
         IoCManager.InjectDependencies(this);
 
-        ResetButton.StyleClasses.Add(StyleBase.ButtonOpenRight);
+        ResetButton.StyleClasses.Add(StyleClass.ButtonOpenRight);
         ApplyButton.OnPressed += ApplyButtonPressed;
         ResetButton.OnPressed += ResetButtonPressed;
         DefaultButton.OnPressed += DefaultButtonPressed;
@@ -208,6 +208,19 @@ public sealed partial class OptionsTabControlRow : Control
     {
         UpdateButtonState();
     }
+
+    // Sunrise added start - allow UI refreshes without implying a user edit
+    /// <summary>
+    /// <see cref="RefreshButtonState"/> updates the options buttons without implying user-driven edits.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="ValueChanged"/>, <see cref="RefreshButtonState"/> only re-evaluates the current button state.
+    /// </remarks>
+    public void RefreshButtonState()
+    {
+        UpdateButtonState();
+    }
+    // Sunrise added end
 
     private void UpdateButtonState()
     {

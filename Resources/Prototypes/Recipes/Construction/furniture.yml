@@ -295,6 +295,7 @@
   graph: Table
   startNode: start
   targetNode: TableWood
+  hide: true # Fire added
   category: construction-category-furniture
   objectType: Structure
   placementMode: SnapgridCenter
@@ -339,6 +340,19 @@
   canBuildInImpassable: false
   conditions:
     - !type:TileNotBlocked
+
+- type: construction
+  id: TableFancySkyBlue
+  name: construction-recipe-table-fancy-sky-blue
+  graph: Table
+  startNode: start
+  targetNode: TableFancySkyBlue
+  category: construction-category-furniture
+  objectType: Structure
+  placementMode: SnapgridCenter
+  canBuildInImpassable: false
+  conditions:
+  - !type:TileNotBlocked
 
 - type: construction
   id: TableFancyCyan
@@ -448,6 +462,7 @@
   graph: Table
   startNode: start
   targetNode: CounterWood
+  hide: true # Fire added
   category: construction-category-furniture
   objectType: Structure
   placementMode: SnapgridCenter
@@ -507,6 +522,7 @@
 
 - type: construction
   id: Dresser
+  hide: true # Fire edit - hidden in favor of ScpDresser
   graph: Dresser
   startNode: start
   targetNode: dresser
@@ -571,6 +587,17 @@
   graph: Curtains
   startNode: start
   targetNode: CurtainsBlue
+  category: construction-category-furniture
+  objectType: Structure
+  placementMode: SnapgridCenter
+  canBuildInImpassable: true
+
+- type: construction
+  id: CurtainsSkyBlue
+  name: construction-recipe-curtains-sky-blue
+  graph: Curtains
+  startNode: start
+  targetNode: CurtainsSkyBlue
   category: construction-category-furniture
   objectType: Structure
   placementMode: SnapgridCenter
@@ -655,6 +682,7 @@
 
 - type: construction
   id: Bookshelf
+  hide: true # Fire edit - hidden in favor of ScpBookshelf
   graph: Bookshelf
   startNode: start
   targetNode: bookshelf

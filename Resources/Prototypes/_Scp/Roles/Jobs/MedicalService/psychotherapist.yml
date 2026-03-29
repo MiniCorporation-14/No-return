@@ -3,13 +3,15 @@
   name: job-name-psychotherapist
   description: job-description-psychotherapist
   playTimeTracker: JobPsychotherapist
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-    - !type:OverallPlaytimeRequirement
-      time: 10800 # 3 часов
-  startingGear: PsychotherapistGear
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 7200
+  - !type:AgeRequirement
+    requiredAge: 27
   icon: JobPsychotherapist
   supervisors: job-supervisors-head-of-medical-sector
   displayWeight: 10  # Sunrise
+  weight: 765
   accessGroups:
   - CommonMedicalJob
   special:
@@ -23,7 +25,15 @@
 - type: startingGear
   id: PsychotherapistGear
   equipment:
+    head: ClothingHeadMirror
+    eyes: ClothingEyesGlasses
+    mask: ClothingMaskBreathMedical
+    neck: ClothingNeckScarfStripedLightBlue
+    outerClothing: ClothingOuterCoatLab
+    jumpsuit: ClothingUniformJumpsuitPsychologist
+    gloves: ClothingHandsGlovesLatex
     shoes: ClothingShoesLeather
+    back: ClothingBackpackMedical
     id: KeyCardPsychotherapist
     ears: ClothingHeadsetMedicalService
     pocket2: ScpMedicalPDA

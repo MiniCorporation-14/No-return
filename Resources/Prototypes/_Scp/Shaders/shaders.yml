@@ -1,12 +1,12 @@
 - type: shader
   id: BlinkingEffect
   kind: source
-  path: "/Textures/Shaders/blinking_effect.swsl"
+  path: "/Textures/_Scp/Shaders/blinking_effect.swsl"
 
 - type: shader
   id: Hide
   kind: source
-  path: "/Textures/Shaders/hide.swsl"
+  path: "/Textures/_Scp/Shaders/hide.swsl"
 
 - type: shader
   id: CRT_VHS
@@ -18,7 +18,7 @@
   kind: source
   path: "/Textures/_Scp/Shaders/grain.swsl"
   params:
-    strength: 140.0
+    strength: 70.0
 
 - type: shader
   id: Vignette
@@ -49,3 +49,24 @@
   id: LightingOverlay
   kind: source
   path: "/Textures/_Scp/Shaders/light.swsl"
+
+- type: shader
+  id: Scp096Rage
+  kind: source
+  path: "/Textures/_Scp/Shaders/scp096_rage.swsl"
+
+- type: shader
+  id: Scp096Static
+  kind: source
+  path: "/Textures/_Scp/Shaders/scp096_static.swsl"
+  params:
+    abber: 0.0
+    strength: 0.6
+
+- type: shader
+  id: Scp096WithoutFace
+  kind: source
+  path: "/Textures/_Scp/Shaders/scp096_static.swsl"
+  params:
+    abber: 0.0015
+    strength: 0.85

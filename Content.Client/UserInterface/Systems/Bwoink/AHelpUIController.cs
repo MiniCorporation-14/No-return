@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
+using Content.Client._Scp.UI.Compatibility;
+using Content.Client._Sunrise.Lobby.UI;
 using Content.Client.Administration.Managers;
 using Content.Client.Administration.Systems;
 using Content.Client.Administration.UI.Bwoink;
@@ -16,6 +18,7 @@ using Content.Shared.Input;
 using JetBrains.Annotations;
 using Robust.Client.Audio;
 using Robust.Client.Graphics;
+using Robust.Client.Input;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controllers;
@@ -37,11 +40,12 @@ public sealed class AHelpUIController: UIController, IOnSystemChanged<BwoinkSyst
     [Dependency] private readonly IPlayerManager _playerManager = default!;
     [Dependency] private readonly IClyde _clyde = default!;
     [Dependency] private readonly IUserInterfaceManager _uiManager = default!;
+    [Dependency] private readonly IInputManager _input = default!;
     [UISystemDependency] private readonly AudioSystem _audio = default!;
 
     private BwoinkSystem? _bwoinkSystem;
     private MenuButton? GameAHelpButton => UIManager.GetActiveUIWidgetOrNull<GameTopMenuBar>()?.AHelpButton;
-    private Button? LobbyAHelpButton => (UIManager.ActiveScreen as LobbyGui)?.AHelpButton;
+    private Button? LobbyAHelpButton => (UIManager.ActiveScreen as SunriseLobbyGui)?.AHelpButton;
     public IAHelpUIHandler? UIHelper;
     private bool _discordRelayActive;
     private bool _hasUnreadAHelp;
@@ -101,21 +105,19 @@ public sealed class AHelpUIController: UIController, IOnSystemChanged<BwoinkSyst
     {
         _bwoinkSystem = system;
         _bwoinkSystem.OnBwoinkTextMessageRecieved += ReceivedBwoink;
-        _bwoinkSystem.OnBwoinkCooldownReceived += ReceivedCooldown;
+        _bwoinkSystem.OnBwoinkCooldownReceived += ReceivedCooldown; // Sunrise-Edit
 
-        CommandBinds.Builder
-            .Bind(ContentKeyFunctions.OpenAHelp,
-                InputCmdHandler.FromDelegate(_ => ToggleWindow()))
-            .Register<AHelpUIController>();
+        _input.SetInputCommand(ContentKeyFunctions.OpenAHelp,
+            InputCmdHandler.FromDelegate(_ => ToggleWindow()));
     }
 
     public void OnSystemUnloaded(BwoinkSystem system)
     {
-        CommandBinds.Unregister<AHelpUIController>();
+        _input.SetInputCommand(ContentKeyFunctions.OpenAHelp, null);
 
         DebugTools.Assert(_bwoinkSystem != null);
         _bwoinkSystem!.OnBwoinkTextMessageRecieved -= ReceivedBwoink;
-        _bwoinkSystem!.OnBwoinkCooldownReceived -= ReceivedCooldown;
+        _bwoinkSystem!.OnBwoinkCooldownReceived -= ReceivedCooldown; // Sunrise-Edit
         _bwoinkSystem = null;
     }
 
@@ -129,6 +131,9 @@ public sealed class AHelpUIController: UIController, IOnSystemChanged<BwoinkSyst
         if (LobbyAHelpButton != null)
         {
             LobbyAHelpButton.Pressed = pressed;
+            // Sunrise added start - sync lobby icon tint on programmatic pressed changes
+            HoverColorHelper.SetContentColor(LobbyAHelpButton, HoverColorHelper.GetColorForCurrentState(LobbyAHelpButton));
+            // Sunrise added end
         }
 
         UIManager.ClickSound();
@@ -160,11 +165,13 @@ public sealed class AHelpUIController: UIController, IOnSystemChanged<BwoinkSyst
         UIHelper!.Receive(message);
     }
 
+    // Sunrise-Start
     private void ReceivedCooldown(object? sender, BwoinkCooldownMessage message)
     {
         EnsureUIHelper();
         UIHelper?.OnCooldownReceived(message);
     }
+    // Sunrise-End
 
     private void DiscordRelayUpdated(BwoinkDiscordRelayUpdated args, EntitySessionEventArgs session)
     {
@@ -258,7 +265,7 @@ public sealed class AHelpUIController: UIController, IOnSystemChanged<BwoinkSyst
         helper.ClydeWindow = _clyde.CreateWindow(new WindowCreateParameters
         {
             Maximized = false,
-            Title = "Admin Help",
+            Title = Loc.GetString("bwoink-admin-title"),
             Monitor = monitor,
             Width = 900,
             Height = 500
@@ -276,15 +283,15 @@ public sealed class AHelpUIController: UIController, IOnSystemChanged<BwoinkSyst
 
     private void UnreadAHelpReceived()
     {
-        GameAHelpButton?.StyleClasses.Add(MenuButton.StyleClassRedTopButton);
-        LobbyAHelpButton?.StyleClasses.Add(StyleNano.StyleClassButtonColorRed);
+        GameAHelpButton?.StyleClasses.Add(StyleClass.Negative);
+        LobbyAHelpButton?.StyleClasses.Add(StyleClass.Negative);
         _hasUnreadAHelp = true;
     }
 
     private void UnreadAHelpRead()
     {
-        GameAHelpButton?.StyleClasses.Remove(MenuButton.StyleClassRedTopButton);
-        LobbyAHelpButton?.StyleClasses.Remove(StyleNano.StyleClassButtonColorRed);
+        GameAHelpButton?.StyleClasses.Remove(StyleClass.Negative);
+        LobbyAHelpButton?.StyleClasses.Remove(StyleClass.Negative);
         _hasUnreadAHelp = false;
     }
 
@@ -320,6 +327,9 @@ public sealed class AHelpUIController: UIController, IOnSystemChanged<BwoinkSyst
             LobbyAHelpButton.OnPressed -= AHelpButtonPressed;
             LobbyAHelpButton.OnPressed += AHelpButtonPressed;
             LobbyAHelpButton.Pressed = UIHelper?.IsOpen ?? false;
+            // Sunrise added start - sync lobby icon tint on programmatic pressed changes
+            HoverColorHelper.SetContentColor(LobbyAHelpButton, HoverColorHelper.GetColorForCurrentState(LobbyAHelpButton));
+            // Sunrise added end
 
             if (_hasUnreadAHelp)
             {
@@ -350,7 +360,7 @@ public interface IAHelpUIHandler : IDisposable
     public void ToggleWindow();
     public void DiscordRelayChanged(bool active);
     public void PeopleTypingUpdated(BwoinkPlayerTypingUpdated args);
-    public void OnCooldownReceived(BwoinkCooldownMessage message);
+    public void OnCooldownReceived(BwoinkCooldownMessage message); // Sunrise-Edit
     public event Action OnClose;
     public event Action OnOpen;
     public Action<NetUserId, string, bool, bool>? SendMessageAction { get; set; }
@@ -374,10 +384,10 @@ public sealed class AdminAHelpUIHandler : IAHelpUIHandler
     public bool IsOpen => Window is { Disposed: false, IsOpen: true } || ClydeWindow is { IsDisposed: false };
     public bool EverOpened;
 
-    public BwoinkWindow? Window;
+    public _Sunrise.Administration.UI.Bwoink.SunriseBwoinkWindow? Window;   // Sunrise-edit
     public WindowRoot? WindowRoot;
     public IClydeWindow? ClydeWindow;
-    public BwoinkControl? Control;
+    public _Sunrise.Administration.UI.Bwoink.SunriseBwoinkControl? Control;  // Sunrise-edit
 
     public void Receive(SharedBwoinkSystem.BwoinkTextMessage message)
     {
@@ -441,6 +451,7 @@ public sealed class AdminAHelpUIHandler : IAHelpUIHandler
             panel.UpdatePlayerTyping(args.PlayerName, args.Typing);
     }
 
+    // Sunrise-Start
     public void OnCooldownReceived(BwoinkCooldownMessage message)
     {
         // For admins, we might want to show a message in the currently active panel
@@ -451,7 +462,6 @@ public sealed class AdminAHelpUIHandler : IAHelpUIHandler
         }
     }
 
-    // Sunrise-Start
     public void SetLoadDb(NetUserId userId)
     {
         if (_activePanelMap.TryGetValue(userId, out var panel))
@@ -495,7 +505,7 @@ public sealed class AdminAHelpUIHandler : IAHelpUIHandler
         if (Control is { Disposed: false })
             return;
 
-        Window = new BwoinkWindow();
+        Window = new _Sunrise.Administration.UI.Bwoink.SunriseBwoinkWindow();  // Sunrise-edit
         Control = Window.Bwoink;
         Window.OnClose += () => { OnClose?.Invoke(); };
         Window.OnOpen += () =>
@@ -640,10 +650,12 @@ public sealed class UserAHelpUIHandler : IAHelpUIHandler
     {
     }
 
+    // Sunrise-Start
     public void OnCooldownReceived(BwoinkCooldownMessage message)
     {
         _chatPanel?.OnCooldownReceived(message);
     }
+    // Sunrise-End
 
     public event Action? OnClose;
     public event Action? OnOpen;

@@ -28,8 +28,14 @@
       types:
         Blunt: 20
         Slash: 20
-        Structural: 50
+        Structural: 80
     range: 2
+  - type: BloodSplatterer
+    amount: 2, 6
+    distance: 2, 25
+    probability: 1
+    bloodLineProbability: 0.4
+    pierceLevel: HardenedMetal
   - type: MovementSpeedModifier
     baseWalkSpeed: 2.5
     baseSprintSpeed: 4
@@ -45,10 +51,11 @@
     templateId: scp939
   - type: ToggleableNightVision
     effect: ScpEffectNightVisionScp939
-  - type: GhostPanelAntagonistMarker
-    name: ghost-panel-antagonist-scp-name
-    description: ghost-panel-antagonist-scp-description
-    priority: -10
+  - type: ScpAnnounceOnSpawn
+    text: scp939-announce-on-spawn
+    channels:
+    - ScientificService
+    - HeavyContainmentSecurityService
   - type: Puller
     needsHands: false
   - type: Pullable
@@ -82,6 +89,15 @@
     originWhitelist:
       components:
       - Scp939
+  - type: ScpExaminableDamage
+    mode: MobToCritical
+    generalMessages: ScpScp939Messages
+    departmentMessages:
+      HeavyContainmentSecurityService: ScpScp939SecurityMessages
+      ExternalAdministrativeZoneSecurityService: ScpScp939SecurityMessages
+    jobMessages:
+      SecurityCommander: ScpScp939SecurityMessages
   - type: GuideHelp
     guides:
     - ScpResearch
+    - ScpFear

@@ -3,13 +3,16 @@
   name: job-name-anomarchology-researcher
   description: job-description-anomarchology-researcher
   playTimeTracker: JobAnomarchologyResearcher
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-  - !type:OverallPlaytimeRequirement
-    time: 18000 # 5 часов
-  startingGear: AnomarchologyResearcherGear
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: ScientificService
+    time: 10800
+  - !type:AgeRequirement
+    requiredAge: 27
   icon: JobAnomarchologyResearcher
   supervisors: job-supervisors-scientific-service-director
   displayWeight: 10
+  weight: 795
   accessGroups:
   - Scientist
   special:
@@ -25,10 +28,18 @@
       - Necrophobia
       proximityBlockerLevel: None
       seenBlockerLevel: None
+    - type: ShowScp096FaceDamageHud
 
 - type: startingGear
   id: AnomarchologyResearcherGear
   equipment:
-    ears: ClothingHeadsetScientificService
+    eyes: ClothingEyesGlasses
+    neck: ClothingNeckTieSci
+    jumpsuit: ClothingUniformJumpsuitScientist
+    outerClothing: ClothingOuterCoatLab
+    gloves: ClothingHandsGlovesLatex
+    shoes: ClothingShoesColorWhite
+    back: ClothingBackpackScience
     id: KeyCardAnomarchologyResearcher
+    ears: ClothingHeadsetScientificService
     pocket2: ScpResearchPDA

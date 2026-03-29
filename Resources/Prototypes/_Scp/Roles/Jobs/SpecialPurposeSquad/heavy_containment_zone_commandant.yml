@@ -3,13 +3,20 @@
   name: job-name-heavy-containment-zone-commandant
   description: job-description-heavy-containment-zone-commandant
   playTimeTracker: JobHeavyContainmentZoneCommandant
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-    - !type:OverallPlaytimeRequirement
-      time: 90000 # 25 часов
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: HeavyContainmentSecurityService
+    time: 43200
+  - !type:AgeRequirement
+    requiredAge: 29
+  - !type:AgeRequirement
+    requiredAge: 65
+    inverted: true
   icon: JobHeavyContainmentZoneCommandant
   supervisors: job-supervisors-security-commander
   canBeAntag: false
   displayWeight: 70
+  weight: 845
   accessGroups:
   - SecurityCommandant
   special:
@@ -21,6 +28,23 @@
       class: C
     - type: AccessLevel
       level: Three
+    - type: ScpAnnounceOnSpawn
+      text: squad-commander-announce-on-spawn
+      channels:
+      - HeavyContainmentSecurityService
+      includeJobName: true
+    - type: SpeakOnEyeStateChange
+      phraseOnClose:
+      - close-eye-phrase-1
+      - close-eye-phrase-2
+      - close-eye-phrase-3
+      - close-eye-phrase-4
+      phraseOnOpen:
+      - open-eye-phrase-1
+      - open-eye-phrase-2
+      - open-eye-phrase-3
+      - open-eye-phrase-4
+      speakOnAutomaticBlinking: true
     - type: Fear # переопределение компонента страха для СБ
       phobias:
       - Exoremophobia
@@ -42,18 +66,26 @@
         Fear: 60
         Terror: 350
       baseJitterTime: 2
-      fallOffChance: 1
+      fallOffChance: 0.01
 
 - type: startingGear
   id: HeavyContainmentZoneCommandantGear
   equipment:
     head: ClothingHeadHatCapLeatherSquadLeader
-    ears: ClothingHeadsetAltHeavyContainmentSecurityService
     eyes: ClothingEyesGlassesSecurity
+    mask: ClothingMaskSecurityBandBlack
     neck: ClothingNeckMantleSecurity
     jumpsuit: ClothingUniformJumpsuitSquadLeader
     outerClothing: ClothingOuterArmorSecurity
     gloves: ClothingHandsGlovesColorBlackAlt
     shoes: ClothingShoesBootsSecurityGuard
+    back: ClothingBackpackSecurity
+    suitstorage: WeaponSubMachineGunMP5
     id: KeyCardHeavyContainmentZoneCommandant
+    ears: ClothingHeadsetAltHeavyContainmentSecurityService
+    belt: ScpClothingBeltSecurityWebbingFilled
+    pocket1: WeaponPistolG22
     pocket2: ScpSecurityPDA
+  storage:
+    back:
+    - ScpRadioHandheldSecurityEnabled

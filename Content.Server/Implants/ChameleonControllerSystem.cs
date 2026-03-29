@@ -11,6 +11,7 @@ using Content.Shared.Preferences.Loadouts;
 using Content.Shared.Roles;
 using Content.Shared.Station;
 using Content.Shared.Timing;
+using Robust.Shared.Configuration; // Sunrise-edit
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 
@@ -23,6 +24,7 @@ public sealed class ChameleonControllerSystem : SharedChameleonControllerSystem
     [Dependency] private readonly SharedStationSpawningSystem _stationSpawningSystem = default!;
     [Dependency] private readonly ChameleonClothingSystem _chameleonClothingSystem = default!;
     [Dependency] private readonly IServerPreferencesManager _preferences = default!;
+    [Dependency] private readonly IConfigurationManager _configManager = default!;   // Sunrise-edit
     [Dependency] private readonly UseDelaySystem _delay = default!;
 
     public override void Initialize()
@@ -49,8 +51,8 @@ public sealed class ChameleonControllerSystem : SharedChameleonControllerSystem
     {
         var outfitPrototype = _proto.Index(outfit);
 
-        _proto.TryIndex(outfitPrototype.Job, out var jobPrototype);
-        _proto.TryIndex(outfitPrototype.StartingGear, out var startingGearPrototype);
+        _proto.Resolve(outfitPrototype.Job, out var jobPrototype);
+        _proto.Resolve(outfitPrototype.StartingGear, out var startingGearPrototype);
 
         GetJobEquipmentInformation(jobPrototype, user, out var customRoleLoadout, out var defaultRoleLoadout, out var jobStartingGearPrototype);
 
@@ -81,7 +83,7 @@ public sealed class ChameleonControllerSystem : SharedChameleonControllerSystem
         if (jobPrototype == null)
             return;
 
-        _proto.TryIndex(jobPrototype.StartingGear, out jobStartingGearPrototype);
+        _proto.Resolve(jobPrototype.StartingGear, out jobStartingGearPrototype);
 
         if (!TryComp<ActorComponent>(user, out var actorComponent))
             return;
@@ -96,7 +98,10 @@ public sealed class ChameleonControllerSystem : SharedChameleonControllerSystem
 
         profile.Loadouts.TryGetValue(jobProtoId, out customRoleLoadout);
 
-        if (!_proto.HasIndex<RoleLoadoutPrototype>(jobProtoId))
+        // Sunrise-start
+        var effectiveJobProtoId = LoadoutSystem.GetEffectiveRolePrototype(jobProtoId, _proto);
+        if (!_proto.HasIndex<RoleLoadoutPrototype>(effectiveJobProtoId))
+        // Sunrise-end
             return;
 
         defaultRoleLoadout = new RoleLoadout(jobProtoId);

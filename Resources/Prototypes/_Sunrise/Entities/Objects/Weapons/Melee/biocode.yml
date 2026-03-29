@@ -1,18 +1,19 @@
 - type: entity
-  parent: EnergySwordDouble
+  parent: EnergySwordDoubleSunrise
   id: EnergySwordDoubleBiocode
   suffix: BIOCODE
   components:
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
   - type: Construction
     graph: EnergySwordDoubleGraph
-    node: DoubleEnergySwordNode
+    node: double
   - type: Biocode
     factions:
     - Syndicate
+    - Pirate
 
 - type: entity
   parent: EnergySword
@@ -22,7 +23,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
   - type: Tag
     tags:
     - EnergySword
@@ -32,6 +33,7 @@
   - type: Biocode
     factions:
     - Syndicate
+    - Pirate
 
 - type: entity
   parent: FireAxeFlaming
@@ -41,10 +43,11 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
   - type: Biocode
     factions:
     - Syndicate
+    - Pirate
 
 - type: entity
   parent: EnergyDagger
@@ -54,10 +57,11 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
   - type: Biocode
     factions:
     - Syndicate
+    - Pirate
 
 - type: entity
   parent: SyndicateRapier
@@ -67,7 +71,8 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
   - type: Biocode
     factions:
     - Syndicate
+    - Pirate

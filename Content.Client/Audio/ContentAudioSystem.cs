@@ -4,6 +4,7 @@ using AudioComponent = Robust.Shared.Audio.Components.AudioComponent;
 
 namespace Content.Client.Audio;
 
+// TODO: СОБСТВЕННАЯ АМБИЕНТ МУЗИК СИСТЕМА. В ШАРЕДЕ
 public sealed partial class ContentAudioSystem : SharedContentAudioSystem
 {
     // Need how much volume to change per tick and just remove it when it drops below "0"
@@ -66,6 +67,9 @@ public sealed partial class ContentAudioSystem : SharedContentAudioSystem
             Audio.SetGain(restartAudio, oldAudioGain.Value, restartComp);
         }
         PlayRestartSound(ev);
+        // Sunrise added start - clear end-round music rotation when the round returns to lobby.
+        HandleSunriseRoundEndMusicCleanup();
+        // Sunrise added end
     }
 
     public override void Shutdown()
@@ -84,6 +88,9 @@ public sealed partial class ContentAudioSystem : SharedContentAudioSystem
 
         UpdateAmbientMusic();
         UpdateLobbyMusic();
+        // Sunrise added start - keep end-round music rotating while the summary screen is open.
+        UpdateSunriseRoundEndMusic();
+        // Sunrise added end
         UpdateFades(frameTime);
     }
 
@@ -129,11 +136,13 @@ public sealed partial class ContentAudioSystem : SharedContentAudioSystem
             volume = MathF.Max(MinVolume, volume);
             _audio.SetVolume(stream, volume, component);
 
+            // Fire edit start - раньше тут использовались методы, которые НЕ работают на клиенте. Я поменял
             if (component.Volume.Equals(MinVolume))
             {
-                _audio.Stop(stream);
+                PredictedDel(stream);
                 _fadeToRemove.Add(stream);
             }
+            // Fire edit end
         }
 
         foreach (var stream in _fadeToRemove)

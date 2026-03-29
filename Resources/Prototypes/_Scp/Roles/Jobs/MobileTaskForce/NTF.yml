@@ -4,12 +4,16 @@
   name: ghost-role-information-mtf-leader-NTF-name
   description: ghost-role-information-mtf-leader-description
   playTimeTracker: JobNTFLeader
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 18000 #5 hrs
   setPreference: false
   startingGear: NTFLeaderGear
   icon: JobIconNTFleader
   supervisors: ghost-role-information-mtf-leader-supervisors
   canBeAntag: false
   radioBold: true
+  weight: 880
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
   accessGroups:
@@ -22,31 +26,24 @@
   id: NTFLeaderGear
   equipment:
     jumpsuit: ClothingUniformNTF
-    back: MTFSpecialistBackpack
-    shoes: ClothingShoesBootsNTFFilled
-    head: ClothingHelmetNTF
-    mask: ClothingMaskMTF
+    back: MtfTacticalBackpack
+    shoes: ClothingShoesBootsJackFilled
+    head: ClothingHelmetMtfTactical
+    mask: ClothingMaskMtf
     eyes: ClothingEyesGlassesSecurity
     gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorNTF
+    outerClothing: ClothingOuterArmorTactical
+    belt: ClothingBeltMtfSparePouch
     id: KeyCardMtfNTFLeader
     ears: ClothingHeadsetAltMTF
-    belt: MTFCommanderWebbing
-    pocket1: BaseUplinkMTFLeader
-    pocket2: PouchAmmo
+    pocket1: BaseUplinkMTFLeaderNtf
+    pocket2: MobileTaskForcePDA
   storage:
     back:
-    - BoxMRE
+    - BoxMtfLeaderKit
     - Crowbar
-    - HandheldCriminalRecordsMonitorUnpowered
-    - DoubleEmergencyOxygenTankFilled
     - HandheldCrewMonitor
-    - MobileTaskForcePDA
-    belt:
-    - Stunbaton
-    - Handcuffs
-    - Handcuffs
-    - Handcuffs
+    - DoorRemoteCustom
 
 # Специалист
 - type: job
@@ -54,11 +51,15 @@
   name: ghost-role-information-mtf-specialist-NTF-name
   description: ghost-role-information-mtf-specialist-description
   playTimeTracker: JobNTFSpecialist
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 18000 #5 hrs
   setPreference: false
   startingGear: NTFSpecialistGear
   icon: JobIconNTF
   supervisors: ghost-role-information-mtf-specialist-supervisors
   canBeAntag: false
+  weight: 875
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
   accessGroups:
@@ -71,29 +72,15 @@
   id: NTFSpecialistGear
   equipment:
     jumpsuit: ClothingUniformNTF
-    back: MTFSpecialistBackpack
-    shoes: ClothingShoesBootsNTFFilled
-    head: ClothingHelmetNTF
-    mask: ClothingMaskMTF
+    shoes: ClothingShoesBootsJackFilled
+    head: ClothingHelmetMtfTactical
+    mask: ClothingMaskMtf
     eyes: ClothingEyesGlassesSecurity
     gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorNTF
     id: KeyCardMtfNTFSpecialist
     ears: ClothingHeadsetAltMTF
-    belt: MTFWebbing
-    pocket1: BaseUplinkMTFSpecialist
-    pocket2: PouchAmmo
-  storage:
-    back:
-    - Crowbar
-    - DoubleEmergencyOxygenTankFilled
-    - BoxMRE
-    - MobileTaskForcePDA
-    belt:
-    - Stunbaton
-    - Handcuffs
-    - Handcuffs
-    - Handcuffs
+    pocket1: BaseUplinkMTFSpecialistNtf
+    pocket2: MobileTaskForcePDA
 
 # Кадет
 - type: job
@@ -101,6 +88,9 @@
   name: ghost-role-information-mtf-cadet-NTF-name
   description: ghost-role-information-mtf-cadet-description
   playTimeTracker: JobNTFCadet
+  requirements:
+  - !type:OverallPlaytimeRequirement
+    time: 3600 #1 hrs
   setPreference: false
   startingGear: NTFCadetGear
   icon: JobIconNTF
@@ -108,6 +98,7 @@
   canBeAntag: false
   overrideConsoleVisibility: false
   alwaysShowInBanPanel: true
+  weight: 870
   accessGroups:
   - AllComplex
   special:
@@ -118,26 +109,12 @@
   id: NTFCadetGear
   equipment:
     jumpsuit: ClothingUniformNTF
-    back: MTFSpecialistBackpack
-    shoes: ClothingShoesBootsNTFFilled
-    head: ClothingHelmetNTF
-    mask: ClothingMaskMTF
+    shoes: ClothingShoesBootsJackFilled
+    head: ClothingHelmetMtfTactical
+    mask: ClothingMaskMtf
     eyes: ClothingEyesGlassesSecurity
     gloves: ClothingHandsGlovesCombat
-    outerClothing: ClothingOuterArmorNTF
     id: KeyCardMtfNTFCadet
     ears: ClothingHeadsetAltMTF
-    belt: MTFWebbing
-    pocket1: BaseUplinkMTFCadet
-    pocket2: PouchAmmo
-  storage:
-    back:
-    - Crowbar
-    - DoubleEmergencyOxygenTankFilled
-    - BoxMRE
-    - MobileTaskForcePDA
-    belt:
-    - Stunbaton
-    - Handcuffs
-    - Handcuffs
-    - Handcuffs
+    pocket1: BaseUplinkMTFCadetNtf
+    pocket2: MobileTaskForcePDA

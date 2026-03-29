@@ -1,0 +1,23 @@
+﻿- type: entity
+  id: BaseSecurityScienceContraband
+  parent: BaseRestrictedContraband
+  abstract: true
+  components:
+  - type: Contraband
+    allowedDepartments: [ Security, Science ]
+
+- type: entity
+  id: BaseSalvageSpecialistContraband
+  parent: BaseRestrictedContraband
+  abstract: true
+  components:
+  - type: Contraband
+    allowedJobs: [ SalvageSpecialist ]
+
+- type: entity
+  id: BaseSovietContraband
+  parent: BaseMajorContraband
+  abstract: true
+  components:
+  - type: Contraband
+    severity: Soviet

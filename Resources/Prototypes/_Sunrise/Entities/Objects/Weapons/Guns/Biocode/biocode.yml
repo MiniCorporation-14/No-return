@@ -1,22 +1,12 @@
 - type: entity
   parent: WeaponRevolverPythonAP
   id: WeaponRevolverPythonAPBiocode
-  suffix: BIOCODE
+  suffix: BIOCODE, AP
   components:
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
-
-- type: entity
-  parent: WeaponRevolverPython
-  id: WeaponRevolverPythonBiocode
-  suffix: BIOCODE
-  components:
-  - type: FactionWeaponBlocker
-    factions:
-    - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponShotgunBulldog
@@ -26,7 +16,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponLightMachineGunL6
@@ -36,7 +26,17 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
+
+- type: entity
+  parent: WeaponLightMachineGunL6Max
+  id: WeaponLightMachineGunL6MaxBiocode
+  suffix: BIOCODE
+  components:
+  - type: FactionWeaponBlocker
+    factions:
+    - Syndicate
+    - Pirate
 
 - type: entity
   parent: WeaponSubMachineGunC20r
@@ -46,7 +46,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponRifleEstoc
@@ -56,7 +56,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponLauncherChinaLake
@@ -66,7 +66,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponLauncherM79
@@ -76,7 +76,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponSniperHristov
@@ -86,27 +86,17 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
-  parent: WeaponPistolCobra
-  id: WeaponPistolCobraBiocode
+  parent: WeaponPistolDeagle
+  id: WeaponPistolDeagleBiocode
   suffix: BIOCODE
   components:
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
-
-- type: entity
-  parent: WeaponPistolViper
-  id: WeaponPistolViperBiocode
-  suffix: BIOCODE
-  components:
-  - type: FactionWeaponBlocker
-    factions:
-    - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponRifleM90GrenadeLauncher
@@ -116,7 +106,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponRifleBauer127
@@ -126,7 +116,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponSniperDragunov
@@ -136,7 +126,17 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
+
+- type: entity
+  parent: WeaponRifleType88AMR
+  id: WeaponRifleType88AMRBiocode
+  suffix: BIOCODE
+  components:
+  - type: FactionWeaponBlocker
+    factions:
+    - Syndicate
+    - Pirate
 
 - type: entity
   parent: WeaponSIAR52
@@ -146,7 +146,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponDL6902
@@ -156,7 +156,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponAJ100
@@ -166,7 +166,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponSyndieLaserPistol
@@ -176,7 +176,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponLaserMinigun
@@ -186,7 +186,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponSyndieLaserGun
@@ -196,7 +196,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponGrenadeLauncherGL70
@@ -206,7 +206,7 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
   parent: WeaponShotgunMinotaur
@@ -216,14 +216,34 @@
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
 
 - type: entity
-  parent: WeaponMiniEnergyCrossbow
-  id: WeaponMiniEnergyCrossbowBiocode
+  parent: WeaponEnergyCrossbow
+  id: WeaponEnergyCrossbowBiocode
   suffix: BIOCODE
   components:
   - type: FactionWeaponBlocker
     factions:
     - Syndicate
-    alertText: Данное оружие биокодировано. Вы не можете его использовать.
+    - Pirate
+
+- type: entity
+  parent: WeaponSubMachineGunC40r
+  id: WeaponSubMachineGunC40rBiocode
+  suffix: BIOCODE
+  components:
+  - type: FactionWeaponBlocker
+    factions:
+    - Syndicate
+    - Pirate
+
+- type: entity
+  parent: WeaponPistolDeagleGolden
+  id: WeaponPistolDeagleGoldenBiocode
+  suffix: BIOCODE
+  components:
+  - type: FactionWeaponBlocker
+    factions:
+    - Syndicate
+    - Pirate

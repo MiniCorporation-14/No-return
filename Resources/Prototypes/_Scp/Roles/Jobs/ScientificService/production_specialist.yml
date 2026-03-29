@@ -3,13 +3,22 @@
   name: job-name-production-specialist
   description: job-description-production-specialist
   playTimeTracker: JobProductionSpecialist
-  requirements: # TODO: Поменять после того, как игроки наберут время на новых ролях
-    - !type:OverallPlaytimeRequirement
-      time: 10800 # 3 часов
-  startingGear: ProductionSpecialistGear
+  requirements:
+  - !type:DepartmentTimeRequirement
+    department: ScientificService
+    time: 10800
+  - !type:DepartmentTimeRequirement
+    department: EngineeringTechnicalService
+    time: 10800
+  - !type:AgeRequirement
+    requiredAge: 25
+  - !type:AgeRequirement
+    requiredAge: 75
+    inverted: true
   icon: JobProductionSpecialist
   supervisors: job-supervisors-scientific-service-director
   displayWeight: 10
+  weight: 790
   accessGroups:
   - ProductionSpecialist
   special:
@@ -25,10 +34,17 @@
       - Necrophobia
       proximityBlockerLevel: None
       seenBlockerLevel: None
+    - type: ShowScp096FaceDamageHud
 
 - type: startingGear
   id: ProductionSpecialistGear
   equipment:
-    ears: ClothingHeadsetScientificService
+    head: ClothingHeadHatCorpsoft
+    neck: ClothingNeckTieSci
+    jumpsuit: ClothingUniformJumpsuitRoboticist
+    outerClothing: ClothingOuterCoatRobo
+    shoes: ClothingShoesColorWhite
+    back: ClothingBackpackScience
     id: KeyCardProductionSpecialist
+    ears: ClothingHeadsetScientificService
     pocket2: ScpResearchPDA
