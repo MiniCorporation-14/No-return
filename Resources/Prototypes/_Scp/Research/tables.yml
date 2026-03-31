@@ -194,3 +194,10 @@
     TriggerDealDamageSlash30: 1
     TriggerDealDamageSlash70: 1
     TriggerDeath: 0.5
+
+- type: weightedRandomXenoArchTrigger
+  id: Scp018Triggers
+  weights:
+    TriggerThrow: 1
+    TriggerOnDrop: 1
+    TriggerDeath: 0.5
