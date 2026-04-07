@@ -1,0 +1,11 @@
+scp-hold-already-holding-other = You are already holding someone else.
+scp-hold-target-invalid = {CAPITALIZE(THE($target))} cannot be held.
+scp-hold-target-immune = {CAPITALIZE(THE($target))} cannot be held yet.
+scp-hold-target-fully-held = {CAPITALIZE(THE($target))} is already fully held.
+scp-hold-target-too-far = You are too far away to hold {THE($target)}.
+scp-hold-holder-no-free-hand = You need a free hand to grab {THE($target)}.
+scp-hold-breakout-too-early = You need to endure the hold a little longer before breaking free.
+scp-hold-breakout-start = You start trying to break free.
+scp-hold-breakout-interrupted = Your breakout attempt was interrupted.
+alerts-scp-held-name = Forcefully restrained
+alerts-scp-held-desc = Someone is physically gripping you. Move or click this alert to try to break free. In a hard restraint you must endure the hold before the breakout starts.

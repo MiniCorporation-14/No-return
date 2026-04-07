@@ -1,0 +1,11 @@
+scp-hold-already-holding-other = Вы уже удерживаете кого-то другого.
+scp-hold-target-invalid = {CAPITALIZE(THE($target))} нельзя удержать.
+scp-hold-target-immune = {CAPITALIZE(THE($target))} пока нельзя удержать.
+scp-hold-target-fully-held = {CAPITALIZE(THE($target))} уже полностью удерживается.
+scp-hold-target-too-far = Вы слишком далеко, чтобы удерживать {THE($target)}.
+scp-hold-holder-no-free-hand = Чтобы схватить {THE($target)}, нужна свободная рука.
+scp-hold-breakout-too-early = Нужно продержаться в удержании ещё немного, прежде чем вырываться.
+scp-hold-breakout-start = Вы начинаете вырываться.
+scp-hold-breakout-interrupted = Попытка вырваться была прервана.
+alerts-scp-held-name = Вас удерживают силой
+alerts-scp-held-desc = Кто-то физически держит вас. Двигайтесь или нажмите на этот статус-эффект, чтобы попытаться вырваться. В полном удержании сначала нужно выдержать захват.

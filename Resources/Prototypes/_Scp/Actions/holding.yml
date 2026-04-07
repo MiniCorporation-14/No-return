@@ -1,0 +1,32 @@
+- type: entity
+  id: ActionScpHoldTarget
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: Action
+    icon:
+      sprite: Objects/Misc/handcuffs.rsi
+      state: handcuff
+    itemIconStyle: NoItem
+    priority: 12
+  - type: TargetAction
+    interactOnMiss: false
+    checkCanAccess: false
+    range: 0
+    ignoreContainer: true
+  - type: EntityTargetAction
+    event: !type:ScpHoldActionEvent
+    canTargetSelf: false
+
+- type: entity
+  id: ActionScpHoldBreakout
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: Action
+    checkCanInteract: false
+    icon:
+      sprite: Objects/Misc/handcuffs.rsi
+      state: handcuff
+    itemIconStyle: NoItem
+    priority: 12
+  - type: InstantAction
+    event: !type:ScpHoldBreakoutActionEvent
