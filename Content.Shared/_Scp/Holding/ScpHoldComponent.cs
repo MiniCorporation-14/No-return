@@ -24,6 +24,12 @@ public sealed partial class ScpHoldComponent : Component
     public EntityUid? ActionEntity;
 
     /// <summary>
+    /// Cooldown applied to the hold action after each successful use.
+    /// </summary>
+    [DataField]
+    public TimeSpan HoldActionCooldown = TimeSpan.FromSeconds(1);
+
+    /// <summary>
     /// Minimum delay between soft breakout attempts while the hold is active.
     /// </summary>
     [DataField]

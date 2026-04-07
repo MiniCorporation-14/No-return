@@ -2,10 +2,10 @@ using System.Numerics;
 using Content.Shared.ActionBlocker;
 using Content.Shared.Alert;
 using Content.Shared.Actions;
-using Content.Shared.Actions.Components;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Part;
 using Content.Shared.Body.Systems;
+using Content.Shared.Coordinates;
 using Content.Shared.DoAfter;
 using Content.Shared.Hands;
 using Content.Shared.Hands.Components;
@@ -19,9 +19,10 @@ using Content.Shared.Movement.Systems;
 using Content.Shared.Popups;
 using Content.Shared.StatusEffectNew;
 using Content.Shared.StatusEffectNew.Components;
-using Robust.Shared.GameStates;
+using Content.Shared.Throwing;
+using Robust.Shared.Audio;
+using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
-using Robust.Shared.Maths;
 using Robust.Shared.Network;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
@@ -35,6 +36,7 @@ public sealed class SharedScpHoldingSystem : EntitySystem
 {
     [Dependency] private readonly ActionBlockerSystem _actionBlocker = default!;
     [Dependency] private readonly AlertsSystem _alerts = default!;
+    [Dependency] private readonly SharedAudioSystem _audio = default!;
     [Dependency] private readonly SharedActionsSystem _actions = default!;
     [Dependency] private readonly SharedBodySystem _body = default!;
     [Dependency] private readonly SharedContainerSystem _container = default!;
@@ -51,9 +53,10 @@ public sealed class SharedScpHoldingSystem : EntitySystem
     [Dependency] private readonly SharedVirtualItemSystem _virtualItem = default!;
 
     private const string GrabbedStatusEffect = "StatusEffectScpHeld";
+    private const string BreakoutAttemptEffect = "WhistleExclamation";
     private const float SoftDragDistanceFactor = 0.3f;
-    private const float SoftDragMinimumDistance = 0.18f;
-    private const float SoftDragMaximumDistance = 0.3f;
+    private const float SoftDragMinimumDistance = 0.4f;
+    private const float SoftDragMaximumDistance = 0.6f;
     private const float SoftDragSnapTolerance = 0.03f;
     private const float SoftDragSettleTolerance = 0.08f;
     private const float SoftDragVelocityDirectionThreshold = 0.05f;
@@ -61,9 +64,14 @@ public sealed class SharedScpHoldingSystem : EntitySystem
     private const float SoftDragMaximumCorrectionSpeed = 6f;
     private const float SoftDragAwayVelocityStrength = 0.6f;
     private const float SoftDragVelocityTolerance = 0.05f;
+    private static readonly SoundSpecifier BreakoutAttemptSound =
+        new SoundCollectionSpecifier("storageRustle",
+            AudioParams.Default.WithVolume(-8f).WithMaxDistance(4f).WithVariation(0.15f));
 
-    private readonly List<EntityUid> _holdersToRemove = new();
-    private readonly List<Entity<VirtualItemComponent>> _virtualBlockersToDelete = new();
+    private readonly List<EntityUid> _holdersToRemove = [];
+    private readonly List<EntityUid> _holderCooldownsToApply = [];
+    private readonly List<EntityUid> _placeholderIcons = [];
+    private readonly List<Entity<VirtualItemComponent>> _virtualBlockersToDelete = [];
 
     private EntityQuery<BodyComponent> _bodyQuery;
     private EntityQuery<HandsComponent> _handsQuery;
@@ -71,6 +79,7 @@ public sealed class SharedScpHoldingSystem : EntitySystem
     private EntityQuery<PhysicsComponent> _physicsQuery;
     private EntityQuery<ScpHeldComponent> _heldQuery;
     private EntityQuery<ScpHoldComponent> _holdQuery;
+    private EntityQuery<ScpHoldableComponent> _holdableQuery;
     private EntityQuery<ScpHolderComponent> _holderQuery;
 
     public override void Initialize()
@@ -83,6 +92,7 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         _physicsQuery = GetEntityQuery<PhysicsComponent>();
         _heldQuery = GetEntityQuery<ScpHeldComponent>();
         _holdQuery = GetEntityQuery<ScpHoldComponent>();
+        _holdableQuery = GetEntityQuery<ScpHoldableComponent>();
         _holderQuery = GetEntityQuery<ScpHolderComponent>();
 
         SubscribeLocalEvent<ScpHoldComponent, ComponentStartup>(OnHoldStartup);
@@ -97,13 +107,17 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         SubscribeLocalEvent<ScpHeldComponent, MoveInputEvent>(OnHeldMoveInput);
         SubscribeLocalEvent<ScpHeldComponent, HandCountChangedEvent>(OnHandCountChanged);
         SubscribeLocalEvent<ScpHeldComponent, UpdateCanMoveEvent>(OnHeldUpdateCanMove);
+        SubscribeLocalEvent<ScpHeldComponent, AttemptMobCollideEvent>(OnHeldAttemptMobCollide);
+        SubscribeLocalEvent<ScpHeldComponent, AttemptMobTargetCollideEvent>(OnHeldAttemptMobTargetCollide);
         SubscribeLocalEvent<ScpHeldComponent, PreventCollideEvent>(OnHeldPreventCollide);
 
         SubscribeLocalEvent<ScpHolderComponent, ComponentStartup>(OnHolderStartup);
         SubscribeLocalEvent<ScpHolderComponent, ComponentShutdown>(OnHolderShutdown);
         SubscribeLocalEvent<ScpHolderComponent, RefreshMovementSpeedModifiersEvent>(OnHolderRefreshMoveSpeed);
+        SubscribeLocalEvent<ScpHolderComponent, BeforeThrowEvent>(OnHolderBeforeThrow);
         SubscribeLocalEvent<ScpHolderComponent, DidEquipHandEvent>(OnHolderHandsModified);
         SubscribeLocalEvent<ScpHolderComponent, PreventCollideEvent>(OnHolderPreventCollide);
+        SubscribeLocalEvent<ScpHoldHandBlockerComponent, GettingDroppedAttemptEvent>(OnHolderBlockerDropped);
     }
 
     public override void Update(float frameTime)
@@ -133,6 +147,9 @@ public sealed class SharedScpHoldingSystem : EntitySystem
     private void OnHoldStartup(Entity<ScpHoldComponent> ent, ref ComponentStartup args)
     {
         _actions.AddAction(ent.Owner, ref ent.Comp.ActionEntity, ent.Comp.Action);
+
+        if (ent.Comp.ActionEntity != null)
+            _actions.SetUseDelay(ent.Comp.ActionEntity.Value, ent.Comp.HoldActionCooldown);
     }
 
     private void OnHoldShutdown(Entity<ScpHoldComponent> ent, ref ComponentShutdown args)
@@ -170,16 +187,15 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         _actions.RemoveAction(ent.Comp.BreakoutActionEntity);
         _alerts.ClearAlert(ent.Owner, "ScpHoldGrabbed");
         _statusEffects.TryRemoveStatusEffect(ent.Owner, GrabbedStatusEffect);
-        _virtualItem.DeleteInHandsMatching(ent.Owner, ent.Owner);
+        DeleteHeldHandBlockers(ent.Owner);
 
         if (!_timing.ApplyingState)
             CancelBreakoutDoAfter(ent);
 
         if (!_net.IsClient)
         {
-            for (var i = 0; i < ent.Comp.Holders.Count; i++)
+            foreach (var holderUid in ent.Comp.Holders)
             {
-                var holderUid = ent.Comp.Holders[i];
                 if (!TerminatingOrDeleted(holderUid) && _holderQuery.HasComp(holderUid))
                     RemComp<ScpHolderComponent>(holderUid);
             }
@@ -251,6 +267,16 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             args.Cancel();
     }
 
+    private static void OnHeldAttemptMobCollide(Entity<ScpHeldComponent> ent, ref AttemptMobCollideEvent args)
+    {
+        args.Cancelled = true;
+    }
+
+    private static void OnHeldAttemptMobTargetCollide(Entity<ScpHeldComponent> ent, ref AttemptMobTargetCollideEvent args)
+    {
+        args.Cancelled = true;
+    }
+
     private void OnHeldPreventCollide(Entity<ScpHeldComponent> ent, ref PreventCollideEvent args)
     {
         if (args.Cancelled)
@@ -284,6 +310,19 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         args.ModifySpeed(ent.Comp.WalkModifier, ent.Comp.SprintModifier);
     }
 
+    private void OnHolderBeforeThrow(Entity<ScpHolderComponent> ent, ref BeforeThrowEvent args)
+    {
+        if (ent.Comp.Target == null ||
+            !TryComp<ScpHoldHandBlockerComponent>(args.ItemUid, out var blocker) ||
+            blocker.Target != ent.Comp.Target.Value)
+        {
+            return;
+        }
+
+        ReleaseHolderContribution(ent.Owner, ent.Comp.Target.Value, clearIfEmpty: true);
+        args.Cancelled = true;
+    }
+
     private void OnHolderHandsModified(Entity<ScpHolderComponent> ent, ref DidEquipHandEvent args)
     {
         if (ent.Comp.LifeStage > ComponentLifeStage.Running ||
@@ -309,8 +348,23 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         args.Cancelled = true;
     }
 
+    private void OnHolderBlockerDropped(Entity<ScpHoldHandBlockerComponent> ent, ref GettingDroppedAttemptEvent args)
+    {
+        if (!_holderQuery.TryComp(args.User, out var holder) ||
+            holder.Target == null ||
+            holder.Target != ent.Comp.Target)
+        {
+            return;
+        }
+
+        ReleaseHolderContribution(args.User, ent.Comp.Target, clearIfEmpty: true);
+    }
+
     public bool TryToggleHold(Entity<ScpHoldComponent> holder, EntityUid target)
     {
+        if (!CanUseHoldAction(holder))
+            return false;
+
         if (_holderQuery.TryComp(holder.Owner, out var activeHolder) && activeHolder.Target != null)
         {
             if (activeHolder.Target.Value == target)
@@ -332,10 +386,24 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         return true;
     }
 
-    public bool CanToggleHold(Entity<ScpHoldComponent> holder, EntityUid target, bool quiet = false)
+    public bool CanToggleHold(
+        Entity<ScpHoldComponent> holder,
+        EntityUid target,
+        bool quiet = false,
+        bool ignoreHandAvailability = false)
     {
         if (!Exists(target) || holder.Owner == target)
             return false;
+
+        if (!CanUseHoldAction(holder, quiet))
+            return false;
+
+        if (!_holdableQuery.HasComp(target))
+        {
+            if (!quiet)
+                PopupHolder(holder.Owner, "scp-hold-target-not-holdable", ("target", target));
+            return false;
+        }
 
         if (!_moverQuery.HasComp(holder.Owner) ||
             !_moverQuery.HasComp(target) ||
@@ -361,7 +429,7 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             return false;
         }
 
-        if (!HasAvailableHolderHand(holder.Owner))
+        if (!ignoreHandAvailability && !HasAvailableHolderHand(holder.Owner))
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-holder-no-free-hand", ("target", target));
@@ -394,7 +462,7 @@ public sealed class SharedScpHoldingSystem : EntitySystem
     public bool TryBreakOut(Entity<ScpHeldComponent> held, bool viaMovement)
     {
         return held.Comp.FullHold
-            ? TryStartFullBreakout(held, viaMovement)
+            ? TryStartFullBreakout(held)
             : TrySoftBreakOut(held, viaMovement);
     }
 
@@ -427,21 +495,33 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         return true;
     }
 
-    private bool TryStartFullBreakout(Entity<ScpHeldComponent> held, bool viaMovement)
+    private bool TryStartFullBreakout(Entity<ScpHeldComponent> held)
     {
-        if (held.Comp.FullHoldStartedAt == null ||
-            _timing.CurTime < held.Comp.FullHoldStartedAt.Value + held.Comp.FullHoldDelay)
+        if (held.Comp.FullHoldStartedAt == null)
         {
-            if (!viaMovement)
-                PopupTarget(held.Owner, "scp-hold-breakout-too-early");
+            PopupTarget(held.Owner, "scp-hold-breakout-too-early", ("seconds", 1));
+            return false;
+        }
+
+        var breakoutAvailableAt = held.Comp.FullHoldStartedAt.Value + held.Comp.FullHoldDelay;
+        if (_timing.CurTime < breakoutAvailableAt)
+        {
+            var remaining = breakoutAvailableAt - _timing.CurTime;
+            var remainingSeconds = Math.Max(1, (int) Math.Ceiling(remaining.TotalSeconds));
+            PopupTarget(held.Owner, "scp-hold-breakout-too-early", ("seconds", remainingSeconds));
             return false;
         }
 
         if (held.Comp.BreakoutDoAfterId != null)
             return true;
 
-        var doAfter = new DoAfterArgs(EntityManager, held.Owner, held.Comp.FullBreakoutDuration,
-            new ScpHoldBreakoutDoAfterEvent(), held.Owner, target: held.Owner)
+        var doAfter = new DoAfterArgs(
+            EntityManager,
+            held.Owner,
+            held.Comp.FullBreakoutDuration,
+            new ScpHoldBreakoutDoAfterEvent(),
+            held.Owner,
+            target: held.Owner)
         {
             BreakOnMove = true,
             BreakOnDamage = true,
@@ -453,6 +533,8 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             return false;
 
         SetBreakoutDoAfterId(held, id.Value.Index);
+        ShowBreakoutAttemptFeedback(held);
+
         PopupTarget(held.Owner, "scp-hold-breakout-start");
         return true;
     }
@@ -475,10 +557,8 @@ public sealed class SharedScpHoldingSystem : EntitySystem
 
         _holdersToRemove.Clear();
 
-        for (var i = 0; i < held.Comp.Holders.Count; i++)
+        foreach (var holderUid in held.Comp.Holders)
         {
-            var holderUid = held.Comp.Holders[i];
-
             if (!Exists(holderUid) ||
                 !_holdQuery.HasComp(holderUid) ||
                 !_holderQuery.TryComp(holderUid, out var holder) ||
@@ -490,9 +570,9 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             }
         }
 
-        for (var i = 0; i < _holdersToRemove.Count; i++)
+        foreach (var holderUid in _holdersToRemove)
         {
-            ReleaseHolderContribution(_holdersToRemove[i], held.Owner, clearIfEmpty: false);
+            ReleaseHolderContribution(holderUid, held.Owner, clearIfEmpty: false);
 
             if (!_heldQuery.TryComp(held.Owner, out _))
                 return;
@@ -631,10 +711,8 @@ public sealed class SharedScpHoldingSystem : EntitySystem
 
         held.Comp.PrimaryHolder = null;
 
-        for (var i = 0; i < held.Comp.Holders.Count; i++)
+        foreach (var holderUid in held.Comp.Holders)
         {
-            var holderUid = held.Comp.Holders[i];
-
             if (!_holderQuery.TryComp(holderUid, out var holder) ||
                 holder.Target != held.Owner)
             {
@@ -674,8 +752,6 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         var holderVelocity = _physicsQuery.TryComp(primaryHolder, out var holderPhysics)
             ? holderPhysics.LinearVelocity
             : Vector2.Zero;
-        var holderSpeed = holderVelocity.Length();
-
         var direction = GetSoftDragDirection(primaryHolder, holderVelocity, offset, distance);
         var desiredPosition = holderCoords.Position + direction * desiredDistance;
         var correction = desiredPosition - heldCoords.Position;
@@ -709,12 +785,15 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             held = (held.Owner, refreshed);
 
         CancelBreakoutDoAfter(held);
-        _virtualItem.DeleteInHandsMatching(held.Owner, held.Owner);
+        DeleteHeldHandBlockers(held.Owner);
         _actionBlocker.UpdateCanMove(held.Owner);
+        _holderCooldownsToApply.Clear();
 
-        for (var i = 0; i < held.Comp.Holders.Count; i++)
+        foreach (var holderUid in held.Comp.Holders)
         {
-            var holderUid = held.Comp.Holders[i];
+            if (applyImmunity)
+                _holderCooldownsToApply.Add(holderUid);
+
             if (_holderQuery.HasComp(holderUid))
                 RemComp<ScpHolderComponent>(holderUid);
         }
@@ -729,14 +808,18 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             Dirty(held.Owner, immune);
         }
 
+        foreach (var holderUid in _holderCooldownsToApply)
+        {
+            ApplyFullBreakoutHolderCooldown(holderUid);
+        }
+
         RemComp<ScpHeldComponent>(held.Owner);
     }
 
     private void UpdateHolderSlowdowns(Entity<ScpHeldComponent> held)
     {
-        for (var i = 0; i < held.Comp.Holders.Count; i++)
+        foreach (var holderUid in held.Comp.Holders)
         {
-            var holderUid = held.Comp.Holders[i];
             if (!_holderQuery.TryComp(holderUid, out var holder))
                 continue;
 
@@ -762,7 +845,7 @@ public sealed class SharedScpHoldingSystem : EntitySystem
 
     private void SyncPlaceholderHands(Entity<ScpHeldComponent> held)
     {
-        _virtualItem.DeleteInHandsMatching(held.Owner, held.Owner);
+        DeleteHeldHandBlockers(held.Owner);
 
         if (!held.Comp.FullHold || !_handsQuery.TryComp(held.Owner, out var hands))
             return;
@@ -778,9 +861,34 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             _hands.DoDrop((held.Owner, hands), hand, doDropInteraction: true);
         }
 
-        while (_virtualItem.TrySpawnVirtualItemInHand(held.Owner, held.Owner, out var virtualItem, silent: true))
+        _placeholderIcons.Clear();
+        foreach (var holderUid in held.Comp.Holders)
         {
+            if (_holderQuery.TryComp(holderUid, out var holder) && holder.Target == held.Owner)
+                _placeholderIcons.Add(holderUid);
+        }
+
+        if (_placeholderIcons.Count == 0)
+            return;
+
+        var iconIndex = 0;
+        while (_hands.TryGetEmptyHand((held.Owner, hands), out var emptyHand))
+        {
+            var holderUid = _placeholderIcons[iconIndex % _placeholderIcons.Count];
+            if (!_virtualItem.TrySpawnVirtualItemInHand(holderUid, held.Owner, out var virtualItem, empty: emptyHand, silent: true))
+                break;
+
             EnsureComp<UnremoveableComponent>(virtualItem.Value);
+            var blocker = EnsureComp<ScpHeldHandBlockerComponent>(virtualItem.Value);
+
+            if (blocker.Target != held.Owner || blocker.Holder != holderUid)
+            {
+                blocker.Target = held.Owner;
+                blocker.Holder = holderUid;
+                Dirty(virtualItem.Value, blocker);
+            }
+
+            iconIndex++;
         }
     }
 
@@ -818,7 +926,7 @@ public sealed class SharedScpHoldingSystem : EntitySystem
                 if (validBlocker == null)
                 {
                     validBlocker = heldItem;
-                    EnsureComp<UnremoveableComponent>(heldItem);
+                    RemComp<UnremoveableComponent>(heldItem);
                     var blocker = EnsureComp<ScpHoldHandBlockerComponent>(heldItem);
                     var currentTarget = target!.Value;
                     if (blocker.Target != currentTarget)
@@ -834,9 +942,9 @@ public sealed class SharedScpHoldingSystem : EntitySystem
                 _virtualBlockersToDelete.Add((heldItem, virtualItem));
         }
 
-        for (var i = 0; i < _virtualBlockersToDelete.Count; i++)
+        foreach (var virtualItem in _virtualBlockersToDelete)
         {
-            _virtualItem.DeleteVirtualItem(_virtualBlockersToDelete[i], holder.Owner);
+            _virtualItem.DeleteVirtualItem(virtualItem, holder.Owner);
         }
 
         if (holder.Comp.LifeStage > ComponentLifeStage.Running ||
@@ -855,7 +963,6 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         if (!_virtualItem.TrySpawnVirtualItemInHand(holder.Comp.Target.Value, holder.Owner, out var spawnedVirtualItem, silent: true))
             return;
 
-        EnsureComp<UnremoveableComponent>(spawnedVirtualItem.Value);
         var blockerComp = EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
         blockerComp.Target = holder.Comp.Target.Value;
         Dirty(spawnedVirtualItem.Value, blockerComp);
@@ -880,9 +987,28 @@ public sealed class SharedScpHoldingSystem : EntitySystem
             }
         }
 
-        for (var i = 0; i < _virtualBlockersToDelete.Count; i++)
+        foreach (var virtualItem in _virtualBlockersToDelete)
         {
-            _virtualItem.DeleteVirtualItem(_virtualBlockersToDelete[i], holderUid);
+            _virtualItem.DeleteVirtualItem(virtualItem, holderUid);
+        }
+    }
+
+    private void DeleteHeldHandBlockers(EntityUid heldUid)
+    {
+        _virtualBlockersToDelete.Clear();
+
+        foreach (var heldItem in _hands.EnumerateHeld(heldUid))
+        {
+            if (TryComp<ScpHeldHandBlockerComponent>(heldItem, out _) &&
+                TryComp<VirtualItemComponent>(heldItem, out var virtualItem))
+            {
+                _virtualBlockersToDelete.Add((heldItem, virtualItem));
+            }
+        }
+
+        foreach (var virtualItem in _virtualBlockersToDelete)
+        {
+            _virtualItem.DeleteVirtualItem(virtualItem, heldUid);
         }
     }
 
@@ -914,6 +1040,44 @@ public sealed class SharedScpHoldingSystem : EntitySystem
         target.SprintModifier = source.SprintModifier;
         target.SoftEscapeAvailableAt = _timing.CurTime;
         target.FullHoldStartedAt = null;
+    }
+
+    private bool CanUseHoldAction(Entity<ScpHoldComponent> holder, bool quiet = false)
+    {
+        if (!IsHoldActionCoolingDown(holder, out var remaining))
+            return true;
+
+        if (!quiet)
+        {
+            var remainingSeconds = Math.Max(1, (int) Math.Ceiling(remaining.TotalSeconds));
+            PopupHolder(holder.Owner, "scp-hold-holder-action-on-cooldown", ("seconds", remainingSeconds));
+        }
+
+        return false;
+    }
+
+    private bool IsHoldActionCoolingDown(Entity<ScpHoldComponent> holder, out TimeSpan remaining)
+    {
+        remaining = TimeSpan.Zero;
+
+        if (holder.Comp.ActionEntity is not { } actionUid)
+            return false;
+
+        var action = _actions.GetAction(actionUid);
+        if (action?.Comp.Cooldown is not { } cooldown || cooldown.End <= _timing.CurTime)
+            return false;
+
+        remaining = cooldown.End - _timing.CurTime;
+        return true;
+    }
+
+    private void ApplyFullBreakoutHolderCooldown(EntityUid holderUid)
+    {
+        if (!_holdQuery.TryComp(holderUid, out var hold) || hold.ActionEntity == null)
+            return;
+
+        var cooldown = TimeSpan.FromTicks(hold.HoldActionCooldown.Ticks * 2);
+        _actions.SetIfBiggerCooldown(hold.ActionEntity.Value, cooldown);
     }
 
     private float GetDesiredSoftDragDistance(Entity<ScpHeldComponent> held)
@@ -984,6 +1148,28 @@ public sealed class SharedScpHoldingSystem : EntitySystem
 
         held.Comp.BreakoutDoAfterId = breakoutDoAfterId;
         Dirty(held);
+    }
+
+    private void ShowBreakoutAttemptFeedback(Entity<ScpHeldComponent> held)
+    {
+        if (_net.IsClient && !_timing.IsFirstTimePredicted)
+            return;
+
+        foreach (var holderUid in held.Comp.Holders)
+        {
+            if (TerminatingOrDeleted(holderUid) || !_holderQuery.TryComp(holderUid, out var holder) || holder.Target != held.Owner)
+                continue;
+
+            if (_net.IsClient)
+                PredictedSpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
+            else
+                SpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
+        }
+
+        if (_net.IsClient)
+            _audio.PlayPredicted(BreakoutAttemptSound, held.Owner, held.Owner);
+        else
+            _audio.PlayPvs(BreakoutAttemptSound, held.Owner);
     }
 
     private void PopupHolder(EntityUid holder, string key, params (string, object)[] args)

@@ -278,6 +278,8 @@
   - type: CritHeartbeat
   # Sunrise-End
   # Fire start
+  - type: ScpHold
+  - type: ScpHoldable
   - type: FieldOfView
   - type: Blinkable
   - type: SpeakOnEyeStateChange
