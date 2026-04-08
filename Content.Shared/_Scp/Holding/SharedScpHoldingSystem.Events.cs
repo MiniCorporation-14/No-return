@@ -15,13 +15,10 @@ public sealed partial class SharedScpHoldingSystem
      */
     private void SubscribeHoldingEvents()
     {
-        SubscribeLocalEvent<ScpHoldComponent, ComponentStartup>(OnHoldStartup);
         SubscribeLocalEvent<ScpHoldComponent, ComponentShutdown>(OnHoldShutdown);
-        SubscribeLocalEvent<ScpHoldComponent, ScpHoldActionEvent>(OnHoldAction);
 
         SubscribeLocalEvent<ScpHeldComponent, ComponentStartup>(OnHeldStartup);
         SubscribeLocalEvent<ScpHeldComponent, ComponentShutdown>(OnHeldShutdown);
-        SubscribeLocalEvent<ScpHeldComponent, ScpHoldBreakoutActionEvent>(OnBreakoutAction);
         SubscribeLocalEvent<ScpHeldComponent, ScpHoldBreakoutAlertEvent>(OnBreakoutAlert);
         SubscribeLocalEvent<ScpHeldComponent, ScpHoldBreakoutDoAfterEvent>(OnBreakoutDoAfter);
         SubscribeLocalEvent<ScpHeldComponent, MoveInputEvent>(OnHeldMoveInput);
@@ -40,18 +37,8 @@ public sealed partial class SharedScpHoldingSystem
         SubscribeLocalEvent<ScpHoldHandBlockerComponent, GettingDroppedAttemptEvent>(OnHolderBlockerDropped);
     }
 
-    private void OnHoldStartup(Entity<ScpHoldComponent> ent, ref ComponentStartup args)
-    {
-        _actions.AddAction(ent.Owner, ref ent.Comp.ActionEntity, ent.Comp.Action);
-
-        if (ent.Comp.ActionEntity != null)
-            _actions.SetUseDelay(ent.Comp.ActionEntity.Value, ent.Comp.HoldActionCooldown);
-    }
-
     private void OnHoldShutdown(Entity<ScpHoldComponent> ent, ref ComponentShutdown args)
     {
-        _actions.RemoveAction(ent.Comp.ActionEntity);
-
         if (_net.IsClient ||
             TerminatingOrDeleted(ent.Owner) ||
             !_holderQuery.TryComp(ent.Owner, out var holder) ||
@@ -64,23 +51,13 @@ public sealed partial class SharedScpHoldingSystem
         ReleaseHolderContribution(ent.Owner, holder.Target.Value, clearIfEmpty: true);
     }
 
-    private void OnHoldAction(Entity<ScpHoldComponent> ent, ref ScpHoldActionEvent args)
-    {
-        if (args.Handled)
-            return;
-
-        args.Handled = TryToggleHold(ent, args.Target);
-    }
-
     private void OnHeldStartup(Entity<ScpHeldComponent> ent, ref ComponentStartup args)
     {
-        _actions.AddAction(ent.Owner, ref ent.Comp.BreakoutActionEntity, ent.Comp.BreakoutAction);
         RefreshHeldState(ent);
     }
 
     private void OnHeldShutdown(Entity<ScpHeldComponent> ent, ref ComponentShutdown args)
     {
-        _actions.RemoveAction(ent.Comp.BreakoutActionEntity);
         _alerts.ClearAlert(ent.Owner, "ScpHoldGrabbed");
         _statusEffects.TryRemoveStatusEffect(ent.Owner, GrabbedStatusEffect);
         DeleteHeldHandBlockers(ent.Owner);
@@ -101,14 +78,6 @@ public sealed partial class SharedScpHoldingSystem
 
         if (_net.IsClient)
             _physics.UpdateIsPredicted(ent.Owner);
-    }
-
-    private void OnBreakoutAction(Entity<ScpHeldComponent> ent, ref ScpHoldBreakoutActionEvent args)
-    {
-        if (args.Handled)
-            return;
-
-        args.Handled = TryBreakOut(ent, viaMovement: false);
     }
 
     private void OnBreakoutAlert(Entity<ScpHeldComponent> ent, ref ScpHoldBreakoutAlertEvent args)

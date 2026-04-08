@@ -1,6 +1,5 @@
 using Content.Shared.ActionBlocker;
 using Content.Shared.Alert;
-using Content.Shared.Actions;
 using Content.Shared.DoAfter;
 using Content.Shared.Interaction;
 using Content.Shared.Movement.Systems;
@@ -21,7 +20,6 @@ public sealed partial class SharedScpHoldingSystem : EntitySystem
      */
     [Dependency] private readonly ActionBlockerSystem _actionBlocker = default!;
     [Dependency] private readonly AlertsSystem _alerts = default!;
-    [Dependency] private readonly SharedActionsSystem _actions = default!;
     [Dependency] private readonly SharedContainerSystem _container = default!;
     [Dependency] private readonly SharedDoAfterSystem _doAfter = default!;
     [Dependency] private readonly SharedInteractionSystem _interaction = default!;
@@ -46,7 +44,7 @@ public sealed partial class SharedScpHoldingSystem : EntitySystem
         _heldQuery = GetEntityQuery<ScpHeldComponent>();
         _holdQuery = GetEntityQuery<ScpHoldComponent>();
         _holderQuery = GetEntityQuery<ScpHolderComponent>();
-        InitializeActionQueries();
+        InitializeHoldQueries();
         InitializeHandQueries();
         InitializeStateQueries();
         SubscribeHoldingEvents();

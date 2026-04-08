@@ -1,7 +1,5 @@
-using Content.Shared.Actions;
 using Content.Shared.DoAfter;
 using Robust.Shared.GameStates;
-using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom;
 
 namespace Content.Shared._Scp.Holding;
@@ -13,18 +11,6 @@ namespace Content.Shared._Scp.Holding;
 [Access(typeof(SharedScpHoldingSystem))]
 public sealed partial class ScpHeldComponent : Component
 {
-    /// <summary>
-    /// Temporary breakout action prototype granted to the target.
-    /// </summary>
-    [DataField]
-    public EntProtoId BreakoutAction = "ActionScpHoldBreakout";
-
-    /// <summary>
-    /// Runtime breakout action entity.
-    /// </summary>
-    [AutoNetworkedField]
-    public EntityUid? BreakoutActionEntity;
-
     /// <summary>
     /// Whether the target is currently in the immobile full hold stage.
     /// </summary>

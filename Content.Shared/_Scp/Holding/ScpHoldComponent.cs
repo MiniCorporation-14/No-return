@@ -1,27 +1,20 @@
 using Content.Shared.Whitelist;
 using Robust.Shared.GameStates;
-using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Scp.Holding;
 
 /// <summary>
 /// Grants the owner the ability to contribute to SCP holding.
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState, AutoGenerateComponentPause]
 [Access(typeof(SharedScpHoldingSystem))]
 public sealed partial class ScpHoldComponent : Component
 {
     /// <summary>
-    /// Action prototype used to start or release a hold.
+    /// Next timestamp when this entity may start a new hold contribution.
     /// </summary>
-    [DataField]
-    public EntProtoId Action = "ActionScpHoldTarget";
-
-    /// <summary>
-    /// Runtime action entity granted to the holder.
-    /// </summary>
-    [AutoNetworkedField]
-    public EntityUid? ActionEntity;
+    [AutoNetworkedField, AutoPausedField]
+    public TimeSpan? HoldAvailableAt;
 
     /// <summary>
     /// Optional whitelist of entities this holder may grab.
@@ -36,7 +29,7 @@ public sealed partial class ScpHoldComponent : Component
     public EntityWhitelist? HoldableBlacklist;
 
     /// <summary>
-    /// Cooldown applied to the hold action after each successful use.
+    /// Cooldown applied after each successful hold contribution start.
     /// </summary>
     [DataField]
     public TimeSpan HoldActionCooldown = TimeSpan.FromSeconds(1);

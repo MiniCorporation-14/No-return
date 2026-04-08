@@ -8,12 +8,12 @@ namespace Content.Shared._Scp.Holding;
 public sealed partial class SharedScpHoldingSystem
 {
     /*
-     * Action-local query caches, hold toggling API, breakout flow, and cooldown helpers.
+     * Hold-local query caches, hold toggling API, breakout flow, and cooldown helpers.
      */
     private EntityQuery<InputMoverComponent> _moverQuery;
     private EntityQuery<ScpHoldableComponent> _holdableQuery;
 
-    private void InitializeActionQueries()
+    private void InitializeHoldQueries()
     {
         _moverQuery = GetEntityQuery<InputMoverComponent>();
         _holdableQuery = GetEntityQuery<ScpHoldableComponent>();
@@ -21,9 +21,6 @@ public sealed partial class SharedScpHoldingSystem
 
     public bool TryToggleHold(Entity<ScpHoldComponent> holder, EntityUid target, bool attemptChecked = false)
     {
-        if (!CanUseHoldAction(holder))
-            return false;
-
         if (_holderQuery.TryComp(holder.Owner, out var activeHolder) && activeHolder.Target != null)
         {
             if (activeHolder.Target.Value == target)
@@ -36,6 +33,9 @@ public sealed partial class SharedScpHoldingSystem
             return false;
         }
 
+        if (!CanStartHold(holder))
+            return false;
+
         if (!CanToggleHold(holder, target, checkAttempt: !attemptChecked))
             return false;
 
@@ -43,6 +43,7 @@ public sealed partial class SharedScpHoldingSystem
         var held = EnsureHeldState(target, holdable);
         AddHolderContribution(holder.Owner, held);
         SyncHeldState(held);
+        StartHoldCooldown(holder);
         return true;
     }
 
@@ -56,7 +57,7 @@ public sealed partial class SharedScpHoldingSystem
         if (!Exists(target) || holder.Owner == target)
             return false;
 
-        if (!CanUseHoldAction(holder, quiet))
+        if (!CanStartHold(holder, quiet))
             return false;
 
         if (!_holdableQuery.TryComp(target, out var holdable))
@@ -212,9 +213,9 @@ public sealed partial class SharedScpHoldingSystem
         return true;
     }
 
-    private bool CanUseHoldAction(Entity<ScpHoldComponent> holder, bool quiet = false)
+    private bool CanStartHold(Entity<ScpHoldComponent> holder, bool quiet = false)
     {
-        if (!IsHoldActionCoolingDown(holder, out var remaining))
+        if (!IsHoldCoolingDown(holder, out var remaining))
             return true;
 
         if (!quiet)
@@ -226,28 +227,34 @@ public sealed partial class SharedScpHoldingSystem
         return false;
     }
 
-    private bool IsHoldActionCoolingDown(Entity<ScpHoldComponent> holder, out TimeSpan remaining)
+    private bool IsHoldCoolingDown(Entity<ScpHoldComponent> holder, out TimeSpan remaining)
     {
         remaining = TimeSpan.Zero;
 
-        if (holder.Comp.ActionEntity is not { } actionUid)
+        if (holder.Comp.HoldAvailableAt is not { } availableAt || availableAt <= _timing.CurTime)
             return false;
 
-        var action = _actions.GetAction(actionUid);
-        if (action?.Comp.Cooldown is not { } cooldown || cooldown.End <= _timing.CurTime)
-            return false;
-
-        remaining = cooldown.End - _timing.CurTime;
+        remaining = availableAt - _timing.CurTime;
         return true;
+    }
+
+    private void StartHoldCooldown(Entity<ScpHoldComponent> holder)
+    {
+        holder.Comp.HoldAvailableAt = _timing.CurTime + holder.Comp.HoldActionCooldown;
+        Dirty(holder);
     }
 
     private void ApplyFullBreakoutHolderCooldown(EntityUid holderUid)
     {
-        if (!_holdQuery.TryComp(holderUid, out var hold) || hold.ActionEntity == null)
+        if (!_holdQuery.TryComp(holderUid, out var hold))
             return;
 
-        var cooldown = TimeSpan.FromTicks(hold.HoldActionCooldown.Ticks * 2);
-        _actions.SetIfBiggerCooldown(hold.ActionEntity.Value, cooldown);
+        var cooldownEnd = _timing.CurTime + TimeSpan.FromTicks(hold.HoldActionCooldown.Ticks * 2);
+        if (hold.HoldAvailableAt != null && hold.HoldAvailableAt.Value >= cooldownEnd)
+            return;
+
+        hold.HoldAvailableAt = cooldownEnd;
+        Dirty(holderUid, hold);
     }
 
     private bool CanPassHoldAttempt(EntityUid holderUid, EntityUid targetUid)

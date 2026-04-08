@@ -7,13 +7,12 @@ using Content.IntegrationTests.Tests.Helpers;
 using Content.Shared.Alert;
 using Content.Server.Body.Systems;
 using Content.Shared._Scp.Holding;
-using Content.Shared.Actions;
-using Content.Shared.Actions.Components;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Part;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction.Components;
+using Content.Shared.Input;
 using Content.Shared.Inventory.VirtualItem;
 using Content.Shared.Movement.Components;
 using Content.Shared.Movement.Events;
@@ -22,15 +21,18 @@ using Content.Shared.Movement.Pulling.Systems;
 using Content.Shared.Movement.Systems;
 using Content.Shared.StatusEffectNew;
 using Content.Shared.Throwing;
+using Robust.Client.Input;
 using Robust.Server.Console;
 using Robust.Client.Physics;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Input;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
+using Robust.UnitTesting;
 using Content.Shared.Whitelist;
 
 namespace Content.IntegrationTests.Tests._Scp;
@@ -80,7 +82,7 @@ public sealed class ScpHoldingTest
 """;
 
     [Test]
-    public async Task SoftHoldBreakoutByMovementAndActionRespectsCooldown()
+    public async Task SoftHoldBreakoutByMovementAndAlertRespectsCooldown()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
         var server = pair.Server;
@@ -89,7 +91,6 @@ public sealed class ScpHoldingTest
         var timing = server.ResolveDependency<IGameTiming>();
         var statusEffects = server.System<StatusEffectsSystem>();
         var proto = server.ResolveDependency<IPrototypeManager>();
-        var actions = server.System<SharedActionsSystem>();
         var holding = server.System<SharedScpHoldingSystem>();
         var map = await pair.CreateTestMap();
 
@@ -110,7 +111,6 @@ public sealed class ScpHoldingTest
             {
                 Assert.That(held.FullHold, Is.False);
                 Assert.That(held.Holders, Has.Count.EqualTo(1));
-                Assert.That(held.BreakoutActionEntity, Is.Not.Null);
                 Assert.That(statusEffects.HasStatusEffect(target, "StatusEffectScpHeld"), Is.True);
                 Assert.That(alerts.IsShowingAlert(target, "ScpHoldGrabbed"), Is.True);
             });
@@ -143,22 +143,6 @@ public sealed class ScpHoldingTest
         {
             var alert = proto.Index(GrabbedAlertId);
             Assert.That(alerts.ActivateAlert(target, alert), Is.True);
-        });
-        await server.WaitRunTicks(2);
-
-        await server.WaitAssertion(() =>
-        {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.True);
-        });
-
-        await server.WaitPost(() =>
-        {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
-            var action = actions.GetAction(held.BreakoutActionEntity);
-            var targetActions = entMan.GetComponent<ActionsComponent>(target);
-
-            Assert.That(action, Is.Not.Null);
-            actions.PerformAction((target, targetActions), action!.Value);
         });
         await server.WaitRunTicks(2);
 
@@ -886,13 +870,14 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
-    public async Task FullBreakoutByActionStartsAndCompletes()
+    public async Task FullBreakoutByAlertStartsAndCompletes()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
         var server = pair.Server;
         var entMan = server.EntMan;
+        var alerts = server.System<AlertsSystem>();
         var timing = server.ResolveDependency<IGameTiming>();
-        var actions = server.System<SharedActionsSystem>();
+        var proto = server.ResolveDependency<IPrototypeManager>();
         var holding = server.System<SharedScpHoldingSystem>();
         var map = await pair.CreateTestMap();
 
@@ -914,12 +899,8 @@ public sealed class ScpHoldingTest
 
         await server.WaitPost(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
-            var action = actions.GetAction(held.BreakoutActionEntity);
-            var targetActions = entMan.GetComponent<ActionsComponent>(target);
-
-            Assert.That(action, Is.Not.Null);
-            actions.PerformAction((target, targetActions), action!.Value);
+            var alert = proto.Index(GrabbedAlertId);
+            Assert.That(alerts.ActivateAlert(target, alert), Is.True);
         });
         await server.WaitRunTicks(2);
 
@@ -1098,7 +1079,7 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
-    public async Task ClientHoldActionPredictsSoftHoldBeforeServerAck()
+    public async Task ClientPullAttemptPredictsSoftHoldBeforeServerAck()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings
         {
@@ -1111,6 +1092,7 @@ public sealed class ScpHoldingTest
         var client = pair.Client;
         var sEntMan = server.EntMan;
         var cEntMan = client.EntMan;
+        var cTiming = client.ResolveDependency<IGameTiming>();
         var sPhysics = server.System<SharedPhysicsSystem>();
         var cPhysics = client.System<PhysicsSystem>();
         var sTransform = server.System<SharedTransformSystem>();
@@ -1136,14 +1118,6 @@ public sealed class ScpHoldingTest
         await pair.RunTicksSync(10);
         await pair.SyncTicks(targetDelta: 1);
 
-        EntityUid holdAction = default;
-        await server.WaitAssertion(() =>
-        {
-            var hold = sEntMan.GetComponent<ScpHoldComponent>(serverPlayer);
-            Assert.That(hold.ActionEntity, Is.Not.Null);
-            holdAction = hold.ActionEntity!.Value;
-        });
-
         var clientPlayer = EntityUid.Invalid;
         var clientTarget = EntityUid.Invalid;
         await client.WaitAssertion(() =>
@@ -1158,13 +1132,10 @@ public sealed class ScpHoldingTest
             });
         });
 
-        var holdActionNet = sEntMan.GetNetEntity(holdAction);
-        var targetNet = sEntMan.GetNetEntity(target);
+        await PressClientPullKey(client, cEntMan, cTiming, clientTarget);
 
-        await client.WaitPost(() =>
+        await client.WaitAssertion(() =>
         {
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(holdActionNet, targetNet));
-
             var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
             var holderHands = cEntMan.GetComponent<HandsComponent>(clientPlayer);
             Assert.Multiple(() =>
@@ -1252,7 +1223,7 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
-    public async Task ClientHoldActionCooldownAndFullBreakoutPenaltyReplicate()
+    public async Task ClientPullCooldownAndFullBreakoutPenaltyReplicate()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings
         {
@@ -1288,41 +1259,27 @@ public sealed class ScpHoldingTest
         await pair.RunTicksSync(10);
         await pair.SyncTicks(targetDelta: 1);
 
-        EntityUid serverHoldAction = default;
         EntityUid clientPlayer = default;
         EntityUid clientFirstTarget = default;
         EntityUid clientBreakoutTarget = default;
-        EntityUid clientHoldAction = default;
-
-        await server.WaitAssertion(() =>
-        {
-            var hold = sEntMan.GetComponent<ScpHoldComponent>(serverPlayer);
-            Assert.That(hold.ActionEntity, Is.Not.Null);
-            serverHoldAction = hold.ActionEntity!.Value;
-        });
 
         await client.WaitAssertion(() =>
         {
             clientPlayer = client.AttachedEntity!.Value;
             clientFirstTarget = ToClientEntity(sEntMan, cEntMan, firstTarget);
             clientBreakoutTarget = ToClientEntity(sEntMan, cEntMan, breakoutTarget);
-            clientHoldAction = ToClientEntity(sEntMan, cEntMan, serverHoldAction);
         });
 
-        var holdActionNet = sEntMan.GetNetEntity(serverHoldAction);
-        var firstTargetNet = sEntMan.GetNetEntity(firstTarget);
-        var breakoutTargetNet = sEntMan.GetNetEntity(breakoutTarget);
+        await PressClientPullKey(client, cEntMan, cTiming, clientFirstTarget);
+        await PressClientPullKey(client, cEntMan, cTiming, clientBreakoutTarget);
 
-        await client.WaitPost(() =>
+        await client.WaitAssertion(() =>
         {
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(holdActionNet, firstTargetNet));
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(holdActionNet, breakoutTargetNet));
-
             Assert.Multiple(() =>
             {
                 Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientFirstTarget), Is.True);
                 Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientBreakoutTarget), Is.False);
-                Assert.That(GetActionCooldownRemaining(cEntMan, clientHoldAction, cTiming), Is.GreaterThan(TimeSpan.Zero));
+                Assert.That(GetHoldCooldownRemaining(cEntMan, clientPlayer, cTiming), Is.GreaterThan(TimeSpan.Zero));
             });
         });
 
@@ -1335,21 +1292,22 @@ public sealed class ScpHoldingTest
             {
                 Assert.That(sEntMan.HasComponent<ScpHeldComponent>(firstTarget), Is.True);
                 Assert.That(sEntMan.HasComponent<ScpHeldComponent>(breakoutTarget), Is.False);
-                Assert.That(GetActionCooldownRemaining(sEntMan, serverHoldAction, sTiming), Is.GreaterThan(TimeSpan.Zero));
+                Assert.That(GetHoldCooldownRemaining(sEntMan, serverPlayer, sTiming), Is.GreaterThan(TimeSpan.Zero));
             });
         });
 
         await client.WaitAssertion(() =>
         {
-            Assert.That(GetActionCooldownRemaining(cEntMan, clientHoldAction, cTiming), Is.GreaterThan(TimeSpan.Zero));
+            Assert.That(GetHoldCooldownRemaining(cEntMan, clientPlayer, cTiming), Is.GreaterThan(TimeSpan.Zero));
         });
 
         await pair.RunTicksSync(GetTickCount(sTiming, TimeSpan.FromSeconds(1)) + 1);
         await pair.SyncTicks(targetDelta: 1);
 
-        await client.WaitPost(() =>
+        await PressClientPullKey(client, cEntMan, cTiming, clientFirstTarget);
+
+        await client.WaitAssertion(() =>
         {
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(holdActionNet, firstTargetNet));
             Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientFirstTarget), Is.False);
         });
 
@@ -1364,9 +1322,10 @@ public sealed class ScpHoldingTest
         await pair.RunTicksSync(GetTickCount(sTiming, TimeSpan.FromSeconds(1)) + 1);
         await pair.SyncTicks(targetDelta: 1);
 
-        await client.WaitPost(() =>
+        await PressClientPullKey(client, cEntMan, cTiming, clientBreakoutTarget);
+
+        await client.WaitAssertion(() =>
         {
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(holdActionNet, breakoutTargetNet));
             Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientBreakoutTarget), Is.True);
         });
 
@@ -1396,14 +1355,11 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var holderTwoHold = sEntMan.GetComponent<ScpHoldComponent>(holderTwo);
-
             Assert.Multiple(() =>
             {
                 Assert.That(sEntMan.HasComponent<ScpHeldComponent>(breakoutTarget), Is.False);
-                Assert.That(GetActionCooldownRemaining(sEntMan, serverHoldAction, sTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
-                Assert.That(holderTwoHold.ActionEntity, Is.Not.Null);
-                Assert.That(GetActionCooldownRemaining(sEntMan, holderTwoHold.ActionEntity!.Value, sTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
+                Assert.That(GetHoldCooldownRemaining(sEntMan, serverPlayer, sTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
+                Assert.That(GetHoldCooldownRemaining(sEntMan, holderTwo, sTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
             });
         });
 
@@ -1412,13 +1368,14 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientBreakoutTarget), Is.False);
-                Assert.That(GetActionCooldownRemaining(cEntMan, clientHoldAction, cTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
+                Assert.That(GetHoldCooldownRemaining(cEntMan, clientPlayer, cTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
             });
         });
 
-        await client.WaitPost(() =>
+        await PressClientPullKey(client, cEntMan, cTiming, clientFirstTarget);
+
+        await client.WaitAssertion(() =>
         {
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(holdActionNet, firstTargetNet));
             Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientFirstTarget), Is.False);
         });
 
@@ -1434,7 +1391,7 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
-    public async Task ClientSecondHoldActionPredictsFullHoldBeforeServerAck()
+    public async Task ClientSecondPullPredictsFullHoldBeforeServerAck()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings
         {
@@ -1447,6 +1404,7 @@ public sealed class ScpHoldingTest
         var client = pair.Client;
         var sEntMan = server.EntMan;
         var cEntMan = client.EntMan;
+        var cTiming = client.ResolveDependency<IGameTiming>();
         var sTransform = server.System<SharedTransformSystem>();
         var sHandsSystem = server.System<SharedHandsSystem>();
         var cHandsSystem = client.System<SharedHandsSystem>();
@@ -1470,21 +1428,6 @@ public sealed class ScpHoldingTest
         await pair.RunTicksSync(10);
         await pair.SyncTicks(targetDelta: 1);
 
-        EntityUid holdAction = default;
-        await server.WaitAssertion(() =>
-        {
-            var hold = sEntMan.GetComponent<ScpHoldComponent>(serverPlayer);
-            Assert.That(hold.ActionEntity, Is.Not.Null);
-            holdAction = hold.ActionEntity!.Value;
-
-            var held = sEntMan.GetComponent<ScpHeldComponent>(target);
-            Assert.Multiple(() =>
-            {
-                Assert.That(held.FullHold, Is.False);
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
-            });
-        });
-
         var clientPlayer = EntityUid.Invalid;
         var clientTarget = EntityUid.Invalid;
         var clientHolderOne = EntityUid.Invalid;
@@ -1502,13 +1445,10 @@ public sealed class ScpHoldingTest
             });
         });
 
-        var holdActionNet = sEntMan.GetNetEntity(holdAction);
-        var targetNet = sEntMan.GetNetEntity(target);
+        await PressClientPullKey(client, cEntMan, cTiming, clientTarget);
 
-        await client.WaitPost(() =>
+        await client.WaitAssertion(() =>
         {
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(holdActionNet, targetNet));
-
             var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
             var hands = cEntMan.GetComponent<HandsComponent>(clientTarget);
 
@@ -1707,7 +1647,7 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
-    public async Task ClientFullBreakoutActionPredictsDoAfterAndReconciles()
+    public async Task ClientFullBreakoutAlertPredictsDoAfterAndReconciles()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings
         {
@@ -1742,18 +1682,13 @@ public sealed class ScpHoldingTest
         await pair.SyncTicks(targetDelta: 1);
         await pair.RunTicksSync(GetTickCount(timing, TimeSpan.FromSeconds(10)));
         await pair.SyncTicks(targetDelta: 1);
-
-        EntityUid breakoutAction = default;
         await server.WaitAssertion(() =>
         {
             var held = sEntMan.GetComponent<ScpHeldComponent>(serverPlayer);
             Assert.Multiple(() =>
             {
                 Assert.That(held.FullHold, Is.True);
-                Assert.That(held.BreakoutActionEntity, Is.Not.Null);
             });
-
-            breakoutAction = held.BreakoutActionEntity!.Value;
         });
 
         var clientPlayer = EntityUid.Invalid;
@@ -1768,11 +1703,9 @@ public sealed class ScpHoldingTest
             Assert.That(held.FullHold, Is.True);
         });
 
-        var breakoutActionNet = sEntMan.GetNetEntity(breakoutAction);
-
         await client.WaitPost(() =>
         {
-            cEntMan.RaisePredictiveEvent(new RequestPerformActionEvent(breakoutActionNet));
+            cEntMan.RaisePredictiveEvent(new ClickAlertEvent("ScpHoldGrabbed"));
 
             var held = cEntMan.GetComponent<ScpHeldComponent>(clientPlayer);
             Assert.Multiple(() =>
@@ -2109,16 +2042,47 @@ public sealed class ScpHoldingTest
         return Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds / timing.TickPeriod.TotalSeconds) + 1);
     }
 
-    private static TimeSpan GetActionCooldownRemaining(IEntityManager entMan, EntityUid action, IGameTiming timing)
+    private static TimeSpan GetHoldCooldownRemaining(IEntityManager entMan, EntityUid holder, IGameTiming timing)
     {
-        if (!entMan.TryGetComponent(action, out ActionComponent? actionComp) ||
-            actionComp.Cooldown is not { } cooldown ||
-            cooldown.End <= timing.CurTime)
+        if (!entMan.TryGetComponent(holder, out ScpHoldComponent? holdComp) ||
+            holdComp.HoldAvailableAt is not { } cooldownEnd ||
+            cooldownEnd <= timing.CurTime)
         {
             return TimeSpan.Zero;
         }
 
-        return cooldown.End - timing.CurTime;
+        return cooldownEnd - timing.CurTime;
+    }
+
+    private static async Task PressClientPullKey(
+        RobustIntegrationTest.ClientIntegrationInstance client,
+        IEntityManager entMan,
+        IGameTiming timing,
+        EntityUid cursorEntity)
+    {
+        await SendClientPullInput(client, entMan, timing, cursorEntity, BoundKeyState.Down);
+        await SendClientPullInput(client, entMan, timing, cursorEntity, BoundKeyState.Up);
+    }
+
+    private static async Task SendClientPullInput(
+        RobustIntegrationTest.ClientIntegrationInstance client,
+        IEntityManager entMan,
+        IGameTiming timing,
+        EntityUid cursorEntity,
+        BoundKeyState state)
+    {
+        var inputManager = client.ResolveDependency<IInputManager>();
+        var funcId = inputManager.NetworkBindMap.KeyFunctionID(ContentKeyFunctions.TryPullObject);
+        var transform = entMan.GetComponent<TransformComponent>(cursorEntity);
+        var inputSystem = client.System<Robust.Client.GameObjects.InputSystem>();
+        var message = new ClientFullInputCmdMessage(timing.CurTick, timing.TickFraction, funcId)
+        {
+            State = state,
+            Coordinates = transform.Coordinates,
+            Uid = cursorEntity,
+        };
+
+        await client.WaitPost(() => inputSystem.HandleInputCommand(client.Session!, ContentKeyFunctions.TryPullObject, message));
     }
 
     private static void SetSoftEscapeAvailableAt(ScpHeldComponent held, TimeSpan value)
