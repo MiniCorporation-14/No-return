@@ -41,7 +41,10 @@ public sealed partial class PullingSystem
             return true;
         }
 
-        if (!_scpHolding.CanToggleHold(holder, pullableUid, ignoreHandAvailability: pullerComp.Pulling != null))
+        if (!_scpHolding.CanToggleHold(holder,
+                pullableUid,
+                ignoreHandAvailability: pullerComp.Pulling != null,
+                checkAttempt: true))
             return true;
 
         if (pullerComp.Pulling is { } currentPullUid &&
@@ -57,7 +60,7 @@ public sealed partial class PullingSystem
             return true;
         }
 
-        result = _scpHolding.TryToggleHold(holder, pullableUid);
+        result = _scpHolding.TryToggleHold(holder, pullableUid, attemptChecked: true);
         return true;
     }
 }

@@ -62,31 +62,31 @@ public sealed partial class ScpHeldComponent : Component
     public int RequiredHolderCount = 2;
 
     /// <summary>
-    /// Copied soft breakout cooldown configuration from the initial holder.
+    /// Copied soft breakout cooldown configuration from the initial holdable target.
     /// </summary>
     [AutoNetworkedField]
     public TimeSpan SoftEscapeCooldown = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// Copied full hold delay configuration from the initial holder.
+    /// Copied full hold delay configuration from the initial holdable target.
     /// </summary>
     [AutoNetworkedField]
     public TimeSpan FullHoldDelay = TimeSpan.FromSeconds(10);
 
     /// <summary>
-    /// Copied full breakout duration configuration from the initial holder.
+    /// Copied full breakout duration configuration from the initial holdable target.
     /// </summary>
     [AutoNetworkedField]
     public TimeSpan FullBreakoutDuration = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Copied post-breakout immunity duration from the initial holder.
+    /// Copied post-breakout immunity duration from the initial holdable target.
     /// </summary>
     [AutoNetworkedField]
     public TimeSpan PostBreakoutImmunity = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Copied maximum hold range from the initial holder.
+    /// Copied maximum hold range from the initial holdable target.
     /// </summary>
     [AutoNetworkedField]
     public float HoldRange = 1f;

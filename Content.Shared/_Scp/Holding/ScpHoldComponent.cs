@@ -1,4 +1,4 @@
-using Content.Shared.Actions;
+using Content.Shared.Whitelist;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 
@@ -24,50 +24,20 @@ public sealed partial class ScpHoldComponent : Component
     public EntityUid? ActionEntity;
 
     /// <summary>
+    /// Optional whitelist of entities this holder may grab.
+    /// </summary>
+    [DataField]
+    public EntityWhitelist? HoldableWhitelist;
+
+    /// <summary>
+    /// Optional blacklist of entities this holder may not grab.
+    /// </summary>
+    [DataField]
+    public EntityWhitelist? HoldableBlacklist;
+
+    /// <summary>
     /// Cooldown applied to the hold action after each successful use.
     /// </summary>
     [DataField]
     public TimeSpan HoldActionCooldown = TimeSpan.FromSeconds(1);
-
-    /// <summary>
-    /// Minimum delay between soft breakout attempts while the hold is active.
-    /// </summary>
-    [DataField]
-    public TimeSpan SoftEscapeCooldown = TimeSpan.FromSeconds(1);
-
-    /// <summary>
-    /// Minimum uninterrupted full hold duration before a breakout do-after may start.
-    /// </summary>
-    [DataField]
-    public TimeSpan FullHoldDelay = TimeSpan.FromSeconds(10);
-
-    /// <summary>
-    /// Duration of the visible breakout do-after for a full hold.
-    /// </summary>
-    [DataField]
-    public TimeSpan FullBreakoutDuration = TimeSpan.FromSeconds(5);
-
-    /// <summary>
-    /// Duration of immunity after a successful full breakout.
-    /// </summary>
-    [DataField]
-    public TimeSpan PostBreakoutImmunity = TimeSpan.FromSeconds(5);
-
-    /// <summary>
-    /// Maximum unobstructed range allowed between holder and target.
-    /// </summary>
-    [DataField]
-    public float HoldRange = 1f;
-
-    /// <summary>
-    /// Walk speed modifier applied to holders when this system supplies slowdown.
-    /// </summary>
-    [DataField]
-    public float WalkModifier = 0.5f;
-
-    /// <summary>
-    /// Sprint speed modifier applied to holders when this system supplies slowdown.
-    /// </summary>
-    [DataField]
-    public float SprintModifier = 0.5f;
 }

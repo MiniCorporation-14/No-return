@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using Content.IntegrationTests.Tests.Helpers;
 using Content.Shared.Alert;
 using Content.Server.Body.Systems;
 using Content.Shared._Scp.Holding;
@@ -17,6 +18,7 @@ using Content.Shared.Inventory.VirtualItem;
 using Content.Shared.Movement.Components;
 using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Pulling.Components;
+using Content.Shared.Movement.Pulling.Systems;
 using Content.Shared.Movement.Systems;
 using Content.Shared.StatusEffectNew;
 using Content.Shared.Throwing;
@@ -29,6 +31,7 @@ using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
+using Content.Shared.Whitelist;
 
 namespace Content.IntegrationTests.Tests._Scp;
 
@@ -36,8 +39,20 @@ namespace Content.IntegrationTests.Tests._Scp;
 public sealed class ScpHoldingTest
 {
     private const string HolderPrototype = "ScpHoldingTestHolder";
+    private const string HoldableWhitelistedHolderPrototype = "ScpHoldingTestHolderHoldableWhitelisted";
+    private const string HoldableBlacklistedHolderPrototype = "ScpHoldingTestHolderHoldableBlacklisted";
+    private const string TestListenerComponentName = "TestListener";
+    private static readonly ProtoId<AlertPrototype> GrabbedAlertId = "ScpHoldGrabbed";
     private static readonly FieldInfo SoftEscapeAvailableAtField =
         typeof(ScpHeldComponent).GetField(nameof(ScpHeldComponent.SoftEscapeAvailableAt))!;
+
+    private static EntityWhitelist CreateComponentWhitelist(params string[] components)
+    {
+        return new EntityWhitelist
+        {
+            Components = components,
+        };
+    }
 
     [TestPrototypes]
     private const string Prototypes = """
@@ -46,6 +61,22 @@ public sealed class ScpHoldingTest
   parent: MobHuman
   components:
   - type: ScpHold
+- type: entity
+  id: ScpHoldingTestHolderHoldableWhitelisted
+  parent: ScpHoldingTestHolder
+  components:
+  - type: ScpHold
+    holdableWhitelist:
+      components:
+      - TestListener
+- type: entity
+  id: ScpHoldingTestHolderHoldableBlacklisted
+  parent: ScpHoldingTestHolder
+  components:
+  - type: ScpHold
+    holdableBlacklist:
+      components:
+      - TestListener
 """;
 
     [Test]
@@ -110,7 +141,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitPost(() =>
         {
-            var alert = proto.Index<AlertPrototype>("ScpHoldGrabbed");
+            var alert = proto.Index(GrabbedAlertId);
             Assert.That(alerts.ActivateAlert(target, alert), Is.True);
         });
         await server.WaitRunTicks(2);
@@ -140,7 +171,7 @@ public sealed class ScpHoldingTest
         {
             var held = entMan.GetComponent<ScpHeldComponent>(target);
             SetSoftEscapeAvailableAt(held, timing.CurTime);
-            var alert = proto.Index<AlertPrototype>("ScpHoldGrabbed");
+            var alert = proto.Index(GrabbedAlertId);
             Assert.That(alerts.ActivateAlert(target, alert), Is.True);
         });
         await server.WaitRunTicks(2);
@@ -521,6 +552,157 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
+    public async Task HolderAndHoldableFiltersUseCheckBoth()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var holding = server.System<SharedScpHoldingSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid successHolder = default;
+        EntityUid blockedHolder = default;
+        EntityUid blacklistHolder = default;
+        EntityUid successTarget = default;
+        EntityUid blockedTarget = default;
+        EntityUid blacklistTarget = default;
+        EntityUid holderBlacklistTarget = default;
+
+        await server.WaitPost(() =>
+        {
+            successHolder = entMan.SpawnEntity(HoldableWhitelistedHolderPrototype, map.GridCoords);
+            blockedHolder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            blacklistHolder = entMan.SpawnEntity(HoldableBlacklistedHolderPrototype, map.GridCoords);
+            successTarget = entMan.SpawnEntity("MobHuman", map.GridCoords);
+            blockedTarget = entMan.SpawnEntity("MobHuman", map.GridCoords);
+            blacklistTarget = entMan.SpawnEntity("MobHuman", map.GridCoords);
+            holderBlacklistTarget = entMan.SpawnEntity("MobHuman", map.GridCoords);
+
+            entMan.AddComponent<TestListenerComponent>(successHolder);
+            entMan.AddComponent<TestListenerComponent>(blacklistHolder);
+            entMan.AddComponent<TestListenerComponent>(successTarget);
+            entMan.AddComponent<TestListenerComponent>(blacklistTarget);
+            entMan.AddComponent<TestListenerComponent>(holderBlacklistTarget);
+
+            var successTargetHoldable = entMan.GetComponent<ScpHoldableComponent>(successTarget);
+            successTargetHoldable.HolderWhitelist = CreateComponentWhitelist(TestListenerComponentName);
+
+            var holderBlacklistHoldable = entMan.GetComponent<ScpHoldableComponent>(holderBlacklistTarget);
+            holderBlacklistHoldable.HolderBlacklist = CreateComponentWhitelist(TestListenerComponentName);
+        });
+
+        await server.WaitAssertion(() =>
+        {
+            var successHold = entMan.GetComponent<ScpHoldComponent>(successHolder);
+            var blockedHold = entMan.GetComponent<ScpHoldComponent>(blockedHolder);
+            var blacklistHold = entMan.GetComponent<ScpHoldComponent>(blacklistHolder);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(holding.CanToggleHold((successHolder, successHold), blockedTarget, quiet: true), Is.False);
+                Assert.That(holding.TryToggleHold((successHolder, successHold), blockedTarget), Is.False);
+
+                Assert.That(holding.CanToggleHold((blockedHolder, blockedHold), successTarget, quiet: true), Is.False);
+                Assert.That(holding.TryToggleHold((blockedHolder, blockedHold), successTarget), Is.False);
+
+                Assert.That(holding.CanToggleHold((blacklistHolder, blacklistHold), blacklistTarget, quiet: true), Is.False);
+                Assert.That(holding.TryToggleHold((blacklistHolder, blacklistHold), blacklistTarget), Is.False);
+
+                Assert.That(holding.CanToggleHold((successHolder, successHold), holderBlacklistTarget, quiet: true), Is.False);
+                Assert.That(holding.TryToggleHold((successHolder, successHold), holderBlacklistTarget), Is.False);
+
+                Assert.That(holding.CanToggleHold((successHolder, successHold), successTarget, quiet: true), Is.True);
+                Assert.That(holding.TryToggleHold((successHolder, successHold), successTarget), Is.True);
+
+                Assert.That(entMan.HasComponent<ScpHeldComponent>(blockedTarget), Is.False);
+                Assert.That(entMan.HasComponent<ScpHeldComponent>(successTarget), Is.True);
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
+    public async Task HoldAttemptEventCanCancelGrab()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var holding = server.System<SharedScpHoldingSystem>();
+        var attempts = server.System<ScpHoldAttemptListenerSystem>();
+        _ = server.System<ScpHoldAttemptCancelSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid holder = default;
+        EntityUid target = default;
+
+        await server.WaitPost(() =>
+        {
+            holder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            target = entMan.SpawnEntity("MobHuman", map.GridCoords);
+            entMan.AddComponent<TestListenerComponent>(holder);
+            entMan.AddComponent<TestListenerComponent>(target);
+            entMan.AddComponent<ScpHoldAttemptCancelTestComponent>(target);
+        });
+
+        await server.WaitAssertion(() =>
+        {
+            var holdComp = entMan.GetComponent<ScpHoldComponent>(holder);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(holding.TryToggleHold((holder, holdComp), target), Is.False);
+                Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+                Assert.That(attempts.Count(target), Is.EqualTo(1));
+                Assert.That(attempts.Count(holder), Is.EqualTo(1));
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
+    public async Task BreakoutEventRaisedWhenTargetEscapes()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var holding = server.System<SharedScpHoldingSystem>();
+        var breakouts = server.System<ScpHoldBreakoutListenerSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid holder = default;
+        EntityUid target = default;
+
+        await server.WaitPost(() =>
+        {
+            holder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            target = entMan.SpawnEntity("MobHuman", map.GridCoords);
+            entMan.AddComponent<TestListenerComponent>(target);
+            StartHold(entMan, holding, holder, target);
+        });
+
+        await server.WaitPost(() => RaiseMoveInput(entMan, target));
+        await server.WaitRunTicks(2);
+
+        await server.WaitAssertion(() =>
+        {
+            var breakout = breakouts.GetEvents(target).Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+                Assert.That(breakouts.Count(target), Is.EqualTo(1));
+                Assert.That(breakout.ViaMovement, Is.True);
+                Assert.That(breakout.WasFullHold, Is.False);
+                Assert.That(breakout.AppliedImmunity, Is.False);
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
     public async Task MultiHandTargetNeedsMatchingHolderCountAndResyncsOnHandLoss()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
@@ -870,6 +1052,7 @@ public sealed class ScpHoldingTest
                 Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.True);
                 Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientTarget), Is.True);
                 Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands), Is.EqualTo(1));
+                Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
             });
         });
 
@@ -877,14 +1060,16 @@ public sealed class ScpHoldingTest
         {
             var hands = cEntMan.GetComponent<HandsComponent>(clientPlayer);
             var blocker = FindHolderHandBlocker(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands);
+            var dropLocation = new EntityCoordinates(clientPlayer, new Vector2(0.5f, 0f));
 
             Assert.That(blocker, Is.Not.EqualTo(EntityUid.Invalid));
-            Assert.That(cHandsSystem.TryDrop((clientPlayer, hands), blocker), Is.True);
+            Assert.That(cHandsSystem.TryDrop((clientPlayer, hands), blocker, dropLocation), Is.True);
             Assert.Multiple(() =>
             {
                 Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientTarget), Is.False);
                 Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.False);
                 Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands), Is.EqualTo(0));
+                Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
             });
         });
 
@@ -903,7 +1088,11 @@ public sealed class ScpHoldingTest
             });
         }
 
-        Assert.That(maxClientBlockers, Is.EqualTo(0));
+        Assert.Multiple(() =>
+        {
+            Assert.That(maxClientBlockers, Is.EqualTo(0));
+            Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
+        });
 
         await pair.CleanReturnAsync();
     }
@@ -1847,6 +2036,23 @@ public sealed class ScpHoldingTest
         return count;
     }
 
+    private static int CountPrototypeEntities(IEntityManager entMan, string prototypeId)
+    {
+        var count = 0;
+        var query = entMan.AllEntityQueryEnumerator<MetaDataComponent>();
+
+        while (query.MoveNext(out _, out var metadata))
+        {
+            if (!metadata.Deleted &&
+                metadata.EntityPrototype?.ID == prototypeId)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private static int CountHolderHandBlockers(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid holder, EntityUid target, HandsComponent hands)
     {
         return handsSystem.EnumerateHeld((holder, hands)).Count(item =>
@@ -1900,7 +2106,7 @@ public sealed class ScpHoldingTest
 
     private static int GetTickCount(IGameTiming timing, TimeSpan duration)
     {
-        return Math.Max(1, (int) Math.Ceiling(duration.TotalSeconds / timing.TickPeriod.TotalSeconds) + 1);
+        return Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds / timing.TickPeriod.TotalSeconds) + 1);
     }
 
     private static TimeSpan GetActionCooldownRemaining(IEntityManager entMan, EntityUid action, IGameTiming timing)
@@ -1936,5 +2142,25 @@ public sealed class ScpHoldingTest
     private static EntityUid ToClientEntity(IEntityManager serverEntMan, IEntityManager clientEntMan, EntityUid serverEntity)
     {
         return clientEntMan.GetEntity(serverEntMan.GetNetEntity(serverEntity));
+    }
+}
+
+[RegisterComponent]
+public sealed partial class ScpHoldAttemptCancelTestComponent : Component;
+
+public sealed class ScpHoldAttemptListenerSystem : TestListenerSystem<ScpHoldAttemptEvent>;
+
+public sealed class ScpHoldBreakoutListenerSystem : TestListenerSystem<ScpHoldBreakoutEvent>;
+
+public sealed class ScpHoldAttemptCancelSystem : EntitySystem
+{
+    public override void Initialize()
+    {
+        SubscribeLocalEvent<ScpHoldAttemptCancelTestComponent, ScpHoldAttemptEvent>(OnAttempt);
+    }
+
+    private static void OnAttempt(Entity<ScpHoldAttemptCancelTestComponent> ent, ref ScpHoldAttemptEvent args)
+    {
+        args.Cancel();
     }
 }
