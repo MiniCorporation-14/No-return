@@ -10210,3 +10210,11 @@
   id: 417
   time: '2026-04-11T16:00:07.0000000+00:00'
   url: https://github.com/space-sunrise/project-fire/pull/940
+- author: mellstroy67timur67228drun
+  changes:
+  - message: "\u041D\u0435\u043C\u043D\u043E\u0433\u043E \u0443\u043C\u0435\u043D\u044C\
+      \u0448\u0435\u043D \u0440\u0430\u0437\u0431\u0440\u043E\u0441 P-90"
+    type: Fix
+  id: 418
+  time: '2026-04-11T21:29:34.0000000+00:00'
+  url: https://github.com/space-sunrise/project-fire/pull/937
