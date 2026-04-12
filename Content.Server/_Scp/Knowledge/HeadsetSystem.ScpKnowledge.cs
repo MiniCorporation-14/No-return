@@ -1,6 +1,5 @@
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 using Content.Server._Scp.Knowledge;
-using Content.Server.Radio.EntitySystems;
 using Content.Shared.Chat;
 
 namespace Content.Server.Radio.EntitySystems;

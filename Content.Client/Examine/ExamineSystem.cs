@@ -30,9 +30,10 @@ namespace Content.Client.Examine
         [Dependency] private readonly IUserInterfaceManager _userInterfaceManager = default!;
         [Dependency] private readonly IPlayerManager _playerManager = default!;
         [Dependency] private readonly IEyeManager _eyeManager = default!;
-        [Dependency] private readonly ScpKnowledgeSystem _scpKnowledge = default!;
         [Dependency] private readonly VerbSystem _verbSystem = default!;
         [Dependency] private readonly SpriteSystem _sprite = default!;
+
+        [Dependency] private readonly ScpKnowledgeSystem _scpKnowledge = default!; // Fire added
 
         private List<Verb> _verbList = new();
 
@@ -168,6 +169,7 @@ namespace Content.Client.Examine
             }
             // Fire added end
 
+            // Fire edit - added name override for OpenTooltip
             OpenTooltip(player.Value, entity, ev.CenterAtCursor, ev.OpenAtOldTooltip, ev.KnowTarget, ev.NameOverride);
             UpdateTooltipInfo(player.Value, entity, ev.Message, ev.Verbs, getVerbs: false);
         }
@@ -183,7 +185,7 @@ namespace Content.Client.Examine
         ///     not fill it with information. This is done when the server sends examine info/verbs,
         ///     or immediately if it's entirely clientside.
         /// </summary>
-        public void OpenTooltip(EntityUid player, EntityUid target, bool centeredOnCursor=true, bool openAtOldTooltip=true, bool knowTarget = true, string? nameOverride = null)
+        public void OpenTooltip(EntityUid player, EntityUid target, bool centeredOnCursor=true, bool openAtOldTooltip=true, bool knowTarget = true, string? nameOverride = null) // Fire edit - added nameOverride field
         {
             // Close any examine tooltip that might already be opened
             // Before we do that, save its position. We'll prioritize opening any new popups there if
@@ -248,6 +250,7 @@ namespace Content.Client.Examine
 
             if (knowTarget)
             {
+                // Fire edit - added nameOverride for knowledge system
                 var itemName = FormattedMessage.EscapeText(nameOverride ?? Identity.Name(target, EntityManager, player));
                 var labelMessage = FormattedMessage.FromMarkupPermissive($"[bold]{itemName}[/bold]");
                 var label = new RichTextLabel();

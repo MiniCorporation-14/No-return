@@ -31,53 +31,28 @@ public readonly record struct ScpKnowledgeMessageRecord(
     ScpKnowledgeAcquisitionChannel Channel,
     string NormalizedMessage);
 
-public sealed class ScpKnowledgeUnlockedEvent : EntityEventArgs
-{
-    public readonly ProtoId<ScpKnowledgePrototype> KnowledgeId;
-    public readonly ScpKnowledgeAcquisitionChannel Channel;
-    public readonly EntityUid? Source;
+[ByRefEvent]
+public readonly record struct ScpKnowledgeUnlockedEvent(
+    ProtoId<ScpKnowledgePrototype> KnowledgeId,
+    ScpKnowledgeAcquisitionChannel Channel,
+    EntityUid? Source = null);
 
-    public ScpKnowledgeUnlockedEvent(
-        ProtoId<ScpKnowledgePrototype> knowledgeId,
-        ScpKnowledgeAcquisitionChannel channel,
-        EntityUid? source = null)
-    {
-        KnowledgeId = knowledgeId;
-        Channel = channel;
-        Source = source;
-    }
+[Serializable, NetSerializable]
+public readonly struct ScpKnowledgeStateEntry(
+    string knowledgeId,
+    bool known,
+    int progress,
+    ScpKnowledgeExposureFlags exposureFlags)
+{
+    public readonly string KnowledgeId = knowledgeId;
+    public readonly bool Known = known;
+    public readonly int Progress = progress;
+    public readonly ScpKnowledgeExposureFlags ExposureFlags = exposureFlags;
 }
 
 [Serializable, NetSerializable]
-public readonly struct ScpKnowledgeStateEntry
+public sealed class ScpKnowledgeStateSyncEvent(NetEntity entity, ScpKnowledgeStateEntry[] entries) : EntityEventArgs
 {
-    public readonly string KnowledgeId;
-    public readonly bool Known;
-    public readonly int Progress;
-    public readonly ScpKnowledgeExposureFlags ExposureFlags;
-
-    public ScpKnowledgeStateEntry(
-        string knowledgeId,
-        bool known,
-        int progress,
-        ScpKnowledgeExposureFlags exposureFlags)
-    {
-        KnowledgeId = knowledgeId;
-        Known = known;
-        Progress = progress;
-        ExposureFlags = exposureFlags;
-    }
-}
-
-[Serializable, NetSerializable]
-public sealed class ScpKnowledgeStateSyncEvent : EntityEventArgs
-{
-    public readonly NetEntity Entity;
-    public readonly ScpKnowledgeStateEntry[] Entries;
-
-    public ScpKnowledgeStateSyncEvent(NetEntity entity, ScpKnowledgeStateEntry[] entries)
-    {
-        Entity = entity;
-        Entries = entries;
-    }
+    public readonly NetEntity Entity = entity;
+    public readonly ScpKnowledgeStateEntry[] Entries = entries;
 }

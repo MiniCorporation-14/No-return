@@ -246,7 +246,7 @@ namespace Content.Client.Paper.UI
         ///     Initialize the paper contents, i.e. the text typed by the
         ///     user and any stamps that have peen put on the page.
         /// </summary>
-        public void Populate(PaperComponent.PaperBoundUserInterfaceState state, string? highlightedText = null)
+        public void Populate(PaperComponent.PaperBoundUserInterfaceState state, string? highlightedText = null) // Fire edit - added highlightedText field
         {
             bool isEditing = state.Mode == PaperComponent.PaperAction.Write;
             bool wasEditing = InputContainer.Visible;
@@ -254,7 +254,7 @@ namespace Content.Client.Paper.UI
             EditButtons.Visible = isEditing;
 
             var msg = new FormattedMessage();
-            msg.AddMarkupPermissive(highlightedText ?? state.Text);
+            msg.AddMarkupPermissive(highlightedText ?? state.Text); // Fire edit
 
             // For premade documents, we want to be able to edit them rather than
             // replace them.

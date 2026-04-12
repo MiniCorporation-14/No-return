@@ -1,12 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using Content.Server.Chat.Systems;
+using Content.Server.Examine;
+using Content.Server.Mind;
+using Content.Server.Popups;
 using Content.Shared._Scp.Knowledge;
 using Content.Shared._Scp.Knowledge.Components;
 using Content.Shared.Examine;
 using Content.Shared.Mind;
-using Content.Shared.Mind.Components;
 using Content.Shared.Paper;
-using Content.Shared.Popups;
 using Content.Shared.UserInterface;
 using Content.Shared.Verbs;
 using Robust.Shared.Player;
@@ -17,14 +18,14 @@ namespace Content.Server._Scp.Knowledge;
 
 public sealed partial class ScpKnowledgeSystem : EntitySystem
 {
-    [Dependency] private readonly ExamineSystemShared _examine = default!;
-    [Dependency] private readonly SharedMindSystem _mind = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
+    [Dependency] private readonly ExamineSystem _examine = default!;
+    [Dependency] private readonly MindSystem _mind = default!;
+    [Dependency] private readonly PopupSystem _popup = default!;
     [Dependency] private readonly IPrototypeManager _prototype = default!;
 
     private readonly Dictionary<EntProtoId, List<ProtoId<ScpKnowledgePrototype>>> _knowledgeByEntityPrototype = new();
-    private readonly List<CachedKnowledgePhrase> _knowledgePhrases = new();
-    private readonly HashSet<ProtoId<ScpKnowledgePrototype>> _matchedKnowledgeBuffer = new();
+    private readonly List<CachedKnowledgePhrase> _knowledgePhrases = [];
+    private readonly HashSet<ProtoId<ScpKnowledgePrototype>> _matchedKnowledgeBuffer = [];
 
     public override void Initialize()
     {
@@ -47,7 +48,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         [NotNullWhen(true)] out EntityUid? holderUid,
         [NotNullWhen(true)] out ScpKnowledgeComponent? knowledge)
     {
-        if (TryComp<ScpKnowledgeComponent>(uid, out knowledge))
+        if (TryComp(uid, out knowledge))
         {
             holderUid = uid;
             return true;
@@ -55,7 +56,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
 
         if (TryComp<MindComponent>(uid, out var mind) &&
             mind.CurrentEntity is { } currentEntity &&
-            TryComp<ScpKnowledgeComponent>(currentEntity, out knowledge))
+            TryComp(currentEntity, out knowledge))
         {
             holderUid = currentEntity;
             return true;
@@ -68,7 +69,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
             return false;
         }
 
-        if (TryComp<ScpKnowledgeComponent>(resolvedMindUid, out knowledge))
+        if (TryComp(resolvedMindUid, out knowledge))
         {
             holderUid = resolvedMindUid;
             return true;
@@ -76,7 +77,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
 
         if (TryComp<MindComponent>(resolvedMindUid, out var resolvedMind) &&
             resolvedMind.CurrentEntity is { } resolvedCurrentEntity &&
-            TryComp<ScpKnowledgeComponent>(resolvedCurrentEntity, out knowledge))
+            TryComp(resolvedCurrentEntity, out knowledge))
         {
             holderUid = resolvedCurrentEntity;
             return true;
@@ -209,7 +210,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         if (progress <= 0)
             return false;
 
-        if (!TryGetKnowledgeState(uid, out var holderUid, out var knowledgeState) || holderUid == null)
+        if (!TryGetKnowledgeState(uid, out var holderUid, out var knowledgeState))
             return false;
 
         if (!TryComp<ScpKnowledgeAcquisitionComponent>(holderUid.Value, out var acquisition))
@@ -285,7 +286,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         if (showUnlockFeedback)
         {
             var unlockEvent = new ScpKnowledgeUnlockedEvent(knowledgeId, channel, source);
-            RaiseLocalEvent(holderUid.Value, unlockEvent, true);
+            RaiseLocalEvent(holderUid.Value, ref unlockEvent, true);
             ShowKnowledgeUnlockedFeedback(holderUid.Value, acquisition, knowledge);
         }
 
@@ -344,7 +345,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         {
             if (!_knowledgeByEntityPrototype.TryGetValue(entityPrototype, out var knowledgeIds))
             {
-                knowledgeIds = new List<ProtoId<ScpKnowledgePrototype>>();
+                knowledgeIds = [];
                 _knowledgeByEntityPrototype[entityPrototype] = knowledgeIds;
             }
 
@@ -409,7 +410,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
 
     private void SyncKnowledgeState(EntityUid uid)
     {
-        if (!TryGetKnowledgeState(uid, out var holderUid, out var knowledgeState) || holderUid == null)
+        if (!TryGetKnowledgeState(uid, out var holderUid, out var knowledgeState))
         {
             if (TryComp<ActorComponent>(uid, out var actor))
                 RaiseNetworkEvent(new ScpKnowledgeStateSyncEvent(GetNetEntity(uid), []), actor.PlayerSession);

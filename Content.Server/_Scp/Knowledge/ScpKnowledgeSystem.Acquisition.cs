@@ -139,9 +139,8 @@ public sealed partial class ScpKnowledgeSystem
         _matchedKnowledgeBuffer.Clear();
 
         var wrappedMessage = ScpKnowledgeText.WrapForPhraseSearch(normalizedMessage);
-        for (var i = 0; i < _knowledgePhrases.Count; i++)
+        foreach (var knowledgePhrase in _knowledgePhrases)
         {
-            var knowledgePhrase = _knowledgePhrases[i];
             if (!wrappedMessage.Contains(knowledgePhrase.WrappedPhrase, StringComparison.Ordinal))
                 continue;
 

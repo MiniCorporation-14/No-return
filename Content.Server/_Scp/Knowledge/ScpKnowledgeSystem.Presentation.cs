@@ -1,11 +1,11 @@
 using Content.Shared._Scp.Knowledge;
 using Content.Shared._Scp.Knowledge.Components;
 using Content.Shared.Mind;
-using Content.Shared.Mind.Components;
 using Content.Shared.Paper;
 using Content.Shared.Popups;
 using Content.Shared.UserInterface;
-using Robust.Shared.Audio.Systems;
+using Robust.Server.Audio;
+using Robust.Server.GameObjects;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
@@ -14,12 +14,12 @@ namespace Content.Server._Scp.Knowledge;
 
 public sealed partial class ScpKnowledgeSystem
 {
-    [Dependency] private readonly SharedAudioSystem _audio = default!;
-    [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
+    [Dependency] private readonly AudioSystem _audio = default!;
+    [Dependency] private readonly UserInterfaceSystem _ui = default!;
 
     private const string KnowledgeHighlightColor = "#8b0000";
     private readonly Dictionary<ProtoId<ScpKnowledgePrototype>, List<CachedHighlightPhrase>> _highlightPhrasesByKnowledge = new();
-    private readonly List<TextHighlightRange> _highlightRanges = new();
+    private readonly List<TextHighlightRange> _highlightRanges = [];
 
     public string HighlightUnknownKnowledgeText(EntityUid viewer, string text, EntityUid? source = null)
     {
@@ -134,12 +134,11 @@ public sealed partial class ScpKnowledgeSystem
             if (!_highlightPhrasesByKnowledge.TryGetValue(knowledgeId, out var phrases))
                 continue;
 
-            for (var i = 0; i < phrases.Count; i++)
+            foreach (var phrase in phrases)
             {
-                var phrase = escapeText ? phrases[i].EscapedPhrase : phrases[i].Phrase;
                 AddHighlightRanges(
                     renderedText,
-                    phrase,
+                    escapeText ? phrase.EscapedPhrase : phrase.Phrase,
                     matchFilter == null ? null : (start, length) => matchFilter(knowledgeId, start, length));
             }
         }
@@ -160,7 +159,7 @@ public sealed partial class ScpKnowledgeSystem
     {
         if (!_highlightPhrasesByKnowledge.TryGetValue(knowledge.ID, out var phrases))
         {
-            phrases = new List<CachedHighlightPhrase>();
+            phrases = [];
             _highlightPhrasesByKnowledge[knowledge.ID] = phrases;
         }
 
@@ -190,9 +189,9 @@ public sealed partial class ScpKnowledgeSystem
 
     private static bool ContainsPhrase(List<string> phrases, string phrase)
     {
-        for (var i = 0; i < phrases.Count; i++)
+        foreach (var containedPhrases in phrases)
         {
-            if (string.Equals(phrases[i], phrase, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(containedPhrases, phrase, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -226,11 +225,11 @@ public sealed partial class ScpKnowledgeSystem
         if (!_highlightPhrasesByKnowledge.TryGetValue(knowledgeId, out var phrases))
             return false;
 
-        for (var i = 0; i < phrases.Count; i++)
+        foreach (var phrase in phrases)
         {
             if (HasMatchedTextRange(
                     paper.Content,
-                    phrases[i].Phrase,
+                    phrase.Phrase,
                     (start, length) => DoesPaperRangeProvideKnowledge(paper, knowledgeId, start, length)))
             {
                 return true;
@@ -251,9 +250,9 @@ public sealed partial class ScpKnowledgeSystem
 
         var end = start + length;
         var coveredUntil = start;
-        for (var i = 0; i < authorRanges.Count; i++)
+
+        foreach (var range in authorRanges)
         {
-            var range = authorRanges[i];
             if (range.End <= start)
                 continue;
 
