@@ -120,7 +120,8 @@ public sealed partial class HeadsetSystem : SharedHeadsetSystem
 
         if (TryComp(parent, out ActorComponent? actor))
         {
-            _netMan.ServerSendMessage(args.ChatMsg, actor.PlayerSession.Channel);
+            var chatMessage = GetScpKnowledgeRadioChatMessage(parent, args.MessageSource, args.Message, args.ChatMsg);
+            _netMan.ServerSendMessage(chatMessage, actor.PlayerSession.Channel);
             if (parent != args.MessageSource && HasComp<TTSComponent>(args.MessageSource))
             {
                 args.Receivers.Add(parent);

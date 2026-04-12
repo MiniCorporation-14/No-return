@@ -12,6 +12,7 @@ public sealed class PaperBoundUserInterface : BoundUserInterface
 {
     [ViewVariables]
     private PaperWindow? _window;
+    private PaperKnowledgeHighlightMessage? _highlightMessage;
 
     public PaperBoundUserInterface(EntityUid owner, Enum uiKey) : base(owner, uiKey)
     {
@@ -37,7 +38,28 @@ public sealed class PaperBoundUserInterface : BoundUserInterface
     protected override void UpdateState(BoundUserInterfaceState state)
     {
         base.UpdateState(state);
-        _window?.Populate((PaperBoundUserInterfaceState) state);
+        var paperState = (PaperBoundUserInterfaceState) state;
+        string? highlightedText = null;
+
+        if (_highlightMessage != null && paperState.Text == _highlightMessage.RawText)
+            highlightedText = _highlightMessage.HighlightedText;
+        else
+            _highlightMessage = null;
+
+        _window?.Populate(paperState, highlightedText);
+    }
+
+    protected override void ReceiveMessage(BoundUserInterfaceMessage message)
+    {
+        base.ReceiveMessage(message);
+
+        if (message is not PaperKnowledgeHighlightMessage highlight)
+            return;
+
+        _highlightMessage = highlight;
+
+        if (State is PaperBoundUserInterfaceState state)
+            _window?.Populate(state, state.Text == highlight.RawText ? highlight.HighlightedText : null);
     }
 
     private void InputOnTextEntered(string text)
