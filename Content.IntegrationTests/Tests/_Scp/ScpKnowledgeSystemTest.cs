@@ -31,8 +31,23 @@ public sealed class ScpKnowledgeSystemTest
     private static readonly ProtoId<ScpKnowledgePrototype> KnowledgeClassDZone = "ScpKnowledgeLocationClassDContainmentZone";
     private static readonly ProtoId<ScpKnowledgePrototype> KnowledgeHeavyContainment = "ScpKnowledgeTermHeavyContainmentZone";
     private static readonly ProtoId<ScpKnowledgePrototype> KnowledgeScp131 = "ScpKnowledgeEntityScp131";
-    private static readonly ProtoId<ScpKnowledgePrototype> KnowledgeScp106 = "ScpKnowledgeEntityScp106";
     private static readonly ProtoId<ScpKnowledgePrototype> KnowledgeScp173 = "ScpKnowledgeEntityScp173";
+
+    [Test]
+    public void RecognitionPhraseVariantsExpandAlternativeGroups()
+    {
+        var variants = ScpKnowledgeText.GetRecognitionPhraseVariants("(object|anomaly item|containment object)-173");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(variants, Does.Contain("object-173"));
+            Assert.That(variants, Does.Contain("object 173"));
+            Assert.That(variants, Does.Contain("anomaly item-173"));
+            Assert.That(variants, Does.Contain("anomaly item 173"));
+            Assert.That(variants, Does.Contain("containment object-173"));
+            Assert.That(variants, Does.Contain("containment object 173"));
+        });
+    }
 
     [Test]
     public async Task HumanKnowledgeIsConfiguredOnBodyViaJobSpecial()
@@ -236,7 +251,7 @@ public sealed class ScpKnowledgeSystemTest
         var knowledge = pair.Server.System<ScpKnowledgeSystem>();
         EntityUid ignorantWriter = default;
         EntityUid knowledgeableWriter = default;
-        EntityUid scp106 = default;
+        EntityUid scp131 = default;
 
         EntityUid ignorantPaper = default;
         EntityUid knowledgeablePaper = default;
@@ -250,14 +265,14 @@ public sealed class ScpKnowledgeSystemTest
             ignorantPaper = entMan.SpawnEntity("Paper", coordinates);
             knowledgeablePaper = entMan.SpawnEntity("Paper", coordinates);
             codePaper = entMan.SpawnEntity("Paper", coordinates);
-            scp106 = entMan.SpawnEntity("Scp106", coordinates);
+            scp131 = entMan.SpawnEntity("Scp131A", coordinates);
 
-            Assert.That(knowledge.TryGrantKnowledgeProgress(knowledgeableWriter, KnowledgeScp106, 2), Is.True);
+            Assert.That(knowledge.TryGrantKnowledgeProgress(knowledgeableWriter, KnowledgeScp131, 2), Is.True);
 
             var paperSystem = pair.Server.System<PaperSystem>();
-            paperSystem.SetContent(ignorantPaper, "scp 106", ignorantWriter);
-            paperSystem.SetContent(knowledgeablePaper, "scp 106", knowledgeableWriter);
-            paperSystem.SetContent(codePaper, "scp 106");
+            paperSystem.SetContent(ignorantPaper, "scp 131", ignorantWriter);
+            paperSystem.SetContent(knowledgeablePaper, "scp 131", knowledgeableWriter);
+            paperSystem.SetContent(codePaper, "scp 131");
         });
 
         await pair.Server.WaitPost(() =>
@@ -272,7 +287,7 @@ public sealed class ScpKnowledgeSystemTest
 
         await pair.Server.WaitAssertion(() =>
         {
-            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp106, out _), Is.False);
+            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp131, out _), Is.False);
         });
 
         await pair.Server.WaitPost(() =>
@@ -287,9 +302,9 @@ public sealed class ScpKnowledgeSystemTest
 
         await pair.Server.WaitAssertion(() =>
         {
-            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp106, out var progress), Is.True);
+            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp131, out var progress), Is.True);
             Assert.That(progress, Is.EqualTo(1));
-            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp106), Is.False);
+            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp131), Is.False);
         });
 
         await pair.Server.WaitPost(() =>
@@ -304,9 +319,9 @@ public sealed class ScpKnowledgeSystemTest
 
         await pair.Server.WaitAssertion(() =>
         {
-            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp106, out var progress), Is.True);
+            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp131, out var progress), Is.True);
             Assert.That(progress, Is.EqualTo(1));
-            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp106), Is.False);
+            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp131), Is.False);
         });
 
         await pair.Server.WaitPost(() =>
@@ -321,23 +336,23 @@ public sealed class ScpKnowledgeSystemTest
 
         await pair.Server.WaitAssertion(() =>
         {
-            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp106, out var progress), Is.True);
+            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp131, out var progress), Is.True);
             Assert.That(progress, Is.EqualTo(1));
-            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp106), Is.False);
+            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp131), Is.False);
         });
 
         await pair.Server.WaitPost(() =>
         {
-            Assert.That(knowledge.TryGrantExamineKnowledge(setup.Body, scp106), Is.True);
+            Assert.That(knowledge.TryGrantExamineKnowledge(setup.Body, scp131), Is.True);
         });
 
         await pair.RunTicksSync(2);
 
         await pair.Server.WaitAssertion(() =>
         {
-            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp106, out var progress), Is.True);
+            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp131, out var progress), Is.True);
             Assert.That(progress, Is.EqualTo(2));
-            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp106), Is.True);
+            Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp131), Is.True);
         });
 
         await pair.CleanReturnAsync();
@@ -359,11 +374,11 @@ public sealed class ScpKnowledgeSystemTest
             paper = entMan.SpawnEntity("Paper", coordinates);
             knowledgeableWriter = entMan.SpawnEntity(PlayerPrototype, coordinates);
 
-            Assert.That(knowledge.TryGrantKnowledgeProgress(knowledgeableWriter, KnowledgeScp106, 2), Is.True);
+            Assert.That(knowledge.TryGrantKnowledgeProgress(knowledgeableWriter, KnowledgeScp131, 2), Is.True);
 
             var paperSystem = pair.Server.System<PaperSystem>();
-            paperSystem.SetContent(paper, "абзац про еду\nSCP-106", setup.Body);
-            paperSystem.SetContent(paper, "правка\nSCP-106", knowledgeableWriter);
+            paperSystem.SetContent(paper, "абзац про еду\nSCP-131", setup.Body);
+            paperSystem.SetContent(paper, "правка\nSCP-131", knowledgeableWriter);
         });
 
         await pair.Server.WaitPost(() =>
@@ -378,7 +393,7 @@ public sealed class ScpKnowledgeSystemTest
 
         await pair.Server.WaitAssertion(() =>
         {
-            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp106, out _), Is.False);
+            Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp131, out _), Is.False);
         });
 
         await pair.CleanReturnAsync();
@@ -502,6 +517,8 @@ public sealed class ScpKnowledgeSystemTest
                 Assert.That(knowledge.HighlightUnknownKnowledgeText(setup.Body, "сцп 173"), Does.Contain("[color="));
                 Assert.That(knowledge.HighlightUnknownKnowledgeText(setup.Body, "объект 173"), Does.Contain("[color="));
                 Assert.That(knowledge.HighlightUnknownKnowledgeText(setup.Body, "объекту 173"), Does.Contain("[color="));
+                Assert.That(knowledge.HighlightUnknownKnowledgeText(setup.Body, "объектом 173"), Does.Contain("[color="));
+                Assert.That(knowledge.HighlightUnknownKnowledgeText(setup.Body, "объекте 173"), Does.Contain("[color="));
                 Assert.That(knowledge.HighlightUnknownKnowledgeText(setup.Body, "объект 131"), Does.Contain("[color="));
                 Assert.That(knowledge.HighlightUnknownKnowledgeText(setup.Body, "абсолютно неизвестный термин"), Is.EqualTo("абсолютно неизвестный термин"));
                 Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp131), Is.False);

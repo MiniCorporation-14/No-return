@@ -1,4 +1,3 @@
-#pragma warning disable IDE0130 // Namespace does not match folder structure
 using System.Text;
 using Robust.Shared.Utility;
 
@@ -6,15 +5,6 @@ namespace Content.Shared._Scp.Knowledge;
 
 public static class ScpKnowledgeText
 {
-    private static readonly string[] RussianObjectForms =
-    [
-        "объект",
-        "объекта",
-        "объекту",
-        "объектом",
-        "объекте",
-    ];
-
     public static string NormalizeRecognitionText(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -59,10 +49,16 @@ public static class ScpKnowledgeText
 
     public static List<string> GetRecognitionPhraseVariants(string phrase)
     {
+        var expandedPhrases = new List<string>();
+        AddExpandedPhraseVariants(expandedPhrases, phrase);
+
         var variants = new List<string>();
-        AddPhraseVariant(variants, phrase);
-        AddPhraseVariant(variants, BuildSeparatorVariant(phrase));
-        AddRussianObjectVariants(variants);
+        foreach (var expandedPhrase in expandedPhrases)
+        {
+            AddPhraseVariant(variants, expandedPhrase);
+            AddPhraseVariant(variants, BuildSeparatorVariant(expandedPhrase));
+        }
+
         return variants;
     }
 
@@ -129,38 +125,76 @@ public static class ScpKnowledgeText
         return builder.ToString().Trim();
     }
 
-    private static void AddRussianObjectVariants(List<string> variants)
+    private static void AddExpandedPhraseVariants(List<string> variants, string phrase)
     {
-        var snapshotCount = variants.Count;
-
-        for (var index = 0; index < snapshotCount; index++)
+        var groupStart = FindAlternativeGroup(phrase, out var groupEnd, out var options);
+        if (groupStart == -1 || options == null)
         {
-            var variant = variants[index];
-            var separatorIndex = GetFirstSeparatorIndex(variant);
-            if (separatorIndex <= 0)
-                continue;
+            AddPhraseVariant(variants, phrase);
+            return;
+        }
 
-            var head = NormalizeRecognitionText(variant[..separatorIndex]);
-            if (!string.Equals(head, RussianObjectForms[0], StringComparison.Ordinal))
-                continue;
-
-            var tail = variant[separatorIndex..];
-            foreach (var form in RussianObjectForms)
-            {
-                AddPhraseVariant(variants, $"{form}{tail}");
-            }
+        var prefix = phrase[..groupStart];
+        var suffix = phrase[(groupEnd + 1)..];
+        for (var i = 0; i < options.Count; i++)
+        {
+            AddExpandedPhraseVariants(variants, $"{prefix}{options[i]}{suffix}");
         }
     }
 
-    private static int GetFirstSeparatorIndex(string phrase)
+    private static int FindAlternativeGroup(string phrase, out int groupEnd, out List<string>? options)
     {
+        groupEnd = -1;
+        options = null;
+
         for (var i = 0; i < phrase.Length; i++)
         {
-            if (!char.IsLetterOrDigit(phrase[i]))
-                return i;
+            if (phrase[i] != '(')
+                continue;
+
+            if (!TryParseAlternativeGroup(phrase, i, out groupEnd, out options))
+                continue;
+
+            return i;
         }
 
         return -1;
+    }
+
+    private static bool TryParseAlternativeGroup(string phrase, int groupStart, out int groupEnd, out List<string>? options)
+    {
+        groupEnd = -1;
+        options = null;
+
+        var depth = 0;
+        var optionStart = groupStart + 1;
+        var hasSeparator = false;
+        var parsedOptions = new List<string>();
+
+        for (var i = groupStart; i < phrase.Length; i++)
+        {
+            switch (phrase[i])
+            {
+                case '(':
+                    depth++;
+                    break;
+                case ')' when depth == 1:
+                    parsedOptions.Add(phrase[optionStart..i]);
+                    groupEnd = i;
+                    options = hasSeparator ? parsedOptions : null;
+                    return hasSeparator;
+                case ')':
+                    depth--;
+                    break;
+                case '|' when depth == 1:
+                    parsedOptions.Add(phrase[optionStart..i]);
+                    optionStart = i + 1;
+                    hasSeparator = true;
+                    break;
+            }
+        }
+
+        return false;
     }
 
     private static bool ContainsVariant(List<string> variants, string phrase)

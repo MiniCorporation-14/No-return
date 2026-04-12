@@ -36,23 +36,3 @@ public readonly record struct ScpKnowledgeUnlockedEvent(
     ProtoId<ScpKnowledgePrototype> KnowledgeId,
     ScpKnowledgeAcquisitionChannel Channel,
     EntityUid? Source = null);
-
-[Serializable, NetSerializable]
-public readonly struct ScpKnowledgeStateEntry(
-    string knowledgeId,
-    bool known,
-    int progress,
-    ScpKnowledgeExposureFlags exposureFlags)
-{
-    public readonly string KnowledgeId = knowledgeId;
-    public readonly bool Known = known;
-    public readonly int Progress = progress;
-    public readonly ScpKnowledgeExposureFlags ExposureFlags = exposureFlags;
-}
-
-[Serializable, NetSerializable]
-public sealed class ScpKnowledgeStateSyncEvent(NetEntity entity, ScpKnowledgeStateEntry[] entries) : EntityEventArgs
-{
-    public readonly NetEntity Entity = entity;
-    public readonly ScpKnowledgeStateEntry[] Entries = entries;
-}

@@ -1,5 +1,5 @@
 using System.Linq;
-using Content.Server._Scp.Knowledge;
+using Content.Server._Scp.Knowledge; // Fire added - knowledge-gated SCP examine responses
 using Content.Server.Verbs;
 using Content.Shared.Examine;
 using Content.Shared.Verbs;
@@ -12,8 +12,7 @@ namespace Content.Server.Examine
     [UsedImplicitly]
     public sealed class ExamineSystem : ExamineSystemShared
     {
-        // Fire added - SCP knowledge examine filter
-        [Dependency] private readonly ScpKnowledgeSystem _scpKnowledge = default!;
+        [Dependency] private readonly ScpKnowledgeSystem _scpKnowledge = default!; // Fire added - filter SCP identity and known examine name overrides
         [Dependency] private readonly VerbSystem _verbSystem = default!;
 
         private readonly FormattedMessage _entityNotFoundMessage = new();
@@ -88,10 +87,12 @@ namespace Content.Server.Examine
             if (request.GetVerbs)
                 verbs = _verbSystem.GetLocalVerbs(entity, playerEnt, typeof(ExamineVerb));
 
+            // Fire added start - attach knowledge-based name override for known SCP examine responses
             _scpKnowledge.TryGetKnownExamineNameOverride(playerEnt, entity, out var nameOverride);
             var text = GetExamineText(entity, player.AttachedEntity);
             RaiseNetworkEvent(new ExamineSystemMessages.ExamineInfoResponseMessage(
                 request.NetEntity, request.Id, text, verbs?.ToList(), nameOverride: nameOverride), channel);
+            // Fire added end
         }
     }
 }

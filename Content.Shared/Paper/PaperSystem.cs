@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Numerics;
 using Content.Shared.Administration.Logs;
-using Content.Shared._Scp.Knowledge;
+using Content.Shared._Scp.Knowledge; // Fire added - paper read events for SCP knowledge sources
 using Content.Shared.UserInterface;
 using Content.Shared.Database;
 using Content.Shared.Examine;
@@ -196,12 +196,11 @@ public sealed class PaperSystem : EntitySystem
         if (ev.Cancelled)
             return;
 
+        // Fire edit start - normalize text once and preserve authored content for knowledge-gated paper reading
         var normalizedText = NormalizePaperContent(args.Text);
         if (normalizedText.Length <= entity.Comp.ContentSize)
         {
-            // Fire edit start - preserve authored ranges for SCP knowledge paper sources
             SetContent(entity, normalizedText, args.Actor);
-            // Fire edit end
 
             var paperStatus = string.IsNullOrWhiteSpace(normalizedText) ? PaperStatus.Blank : PaperStatus.Written;
 
@@ -217,6 +216,7 @@ public sealed class PaperSystem : EntitySystem
 
             _audio.PlayPvs(entity.Comp.Sound, entity);
         }
+        // Fire edit end
 
         entity.Comp.Mode = PaperAction.Read;
         UpdateUserInterface(entity);
@@ -290,17 +290,17 @@ public sealed class PaperSystem : EntitySystem
         }
     }
 
-    public void SetContent(EntityUid entity, string content, EntityUid? author = null)
+    public void SetContent(EntityUid entity, string content, EntityUid? author = null) // Fire edit - allow callers to record paper authorship for knowledge gating
     {
         if (!TryComp<PaperComponent>(entity, out var paper))
             return;
         SetContent((entity, paper), content, author);
     }
 
-    public void SetContent(Entity<PaperComponent> entity, string content, EntityUid? author = null)
+    public void SetContent(Entity<PaperComponent> entity, string content, EntityUid? author = null) // Fire edit - propagate paper authorship through shared content updates
     {
+        // Fire added start - normalize content before author-range tracking so stored offsets stay stable
         content = NormalizePaperContent(content);
-        // Fire added start - preserve paper authorship for SCP knowledge paper sources
         UpdateKnowledgeAuthorRanges(entity, content, author);
         // Fire added end
         entity.Comp.Content = content;

@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Content.Client.Examine;
 using Content.Shared._Scp.Knowledge;
+using Content.Shared._Scp.Knowledge.Components;
 using Content.Shared.Examine;
 using Content.Shared.Verbs;
 using Robust.Client.Player;
-using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
 
@@ -16,19 +16,12 @@ public sealed class ScpKnowledgeSystem : EntitySystem
     [Dependency] private readonly IPlayerManager _player = default!;
     [Dependency] private readonly IPrototypeManager _prototype = default!;
 
-    private readonly Dictionary<EntProtoId, List<string>> _knowledgeByEntityPrototype = new();
-    private readonly Dictionary<string, ScpKnowledgeExposureFlags> _exposureFlags = new();
-    private readonly HashSet<string> _knownKnowledge = [];
-
-    private NetEntity _syncedEntity;
-    private bool _stateInitialized;
+    private readonly Dictionary<EntProtoId, List<ProtoId<ScpKnowledgePrototype>>> _knowledgeByEntityPrototype = new();
 
     public override void Initialize()
     {
         base.Initialize();
 
-        SubscribeNetworkEvent<ScpKnowledgeStateSyncEvent>(OnKnowledgeStateSync);
-        SubscribeLocalEvent<LocalPlayerAttachedEvent>(OnLocalPlayerAttached);
         SubscribeLocalEvent<PrototypesReloadedEventArgs>(OnPrototypesReloaded);
 
         RebuildCaches();
@@ -44,9 +37,7 @@ public sealed class ScpKnowledgeSystem : EntitySystem
         nameOverride = null;
         message = null;
 
-        if (!_stateInitialized ||
-            _player.LocalEntity is not { } localEntity ||
-            GetNetEntity(localEntity) != _syncedEntity ||
+        if (!TryGetLocalKnowledgeState(out var knowledgeState) ||
             !TryGetKnowledgeIdsForEntity(target, out var knowledgeIds))
         {
             return false;
@@ -56,12 +47,12 @@ public sealed class ScpKnowledgeSystem : EntitySystem
         for (var i = 0; i < knowledgeIds.Count; i++)
         {
             var knowledgeId = knowledgeIds[i];
-            var knowledge = _prototype.Index<ScpKnowledgePrototype>(knowledgeId);
+            var knowledge = _prototype.Index(knowledgeId);
             if (!knowledge.HideIdentityUntilKnown)
                 continue;
 
             requiresKnowledge = true;
-            if (!IsPredictedKnownAfterExamine(knowledgeId, knowledge))
+            if (!ScpKnowledgeLogic.WillBeKnownAfterExamine(knowledgeState, knowledgeId, knowledge))
                 continue;
 
             nameOverride = Loc.GetString(knowledge.DisplayName);
@@ -79,8 +70,8 @@ public sealed class ScpKnowledgeSystem : EntitySystem
 
     public void AddPredictedExamineVerbs(EntityUid user, EntityUid target, List<Verb> verbs)
     {
-        if (!_stateInitialized ||
-            GetNetEntity(user) != _syncedEntity ||
+        if (_player.LocalEntity != user ||
+            !TryComp(user, out ScpKnowledgeComponent? knowledgeState) ||
             !TryGetKnowledgeIdsForEntity(target, out var knowledgeIds))
         {
             return;
@@ -89,8 +80,8 @@ public sealed class ScpKnowledgeSystem : EntitySystem
         for (var i = 0; i < knowledgeIds.Count; i++)
         {
             var knowledgeId = knowledgeIds[i];
-            var knowledge = _prototype.Index<ScpKnowledgePrototype>(knowledgeId);
-            if (!IsPredictedKnownAfterExamine(knowledgeId, knowledge) ||
+            var knowledge = _prototype.Index(knowledgeId);
+            if (!ScpKnowledgeLogic.WillBeKnownAfterExamine(knowledgeState, knowledgeId, knowledge) ||
                 knowledge.KnownExamineVerbText == null ||
                 knowledge.KnownExamineText == null)
             {
@@ -113,37 +104,6 @@ public sealed class ScpKnowledgeSystem : EntitySystem
         }
     }
 
-    private void OnKnowledgeStateSync(ScpKnowledgeStateSyncEvent args)
-    {
-        _syncedEntity = args.Entity;
-        _stateInitialized = true;
-        _knownKnowledge.Clear();
-        _exposureFlags.Clear();
-
-        for (var i = 0; i < args.Entries.Length; i++)
-        {
-            var entry = args.Entries[i];
-            if (entry.Known)
-                _knownKnowledge.Add(entry.KnowledgeId);
-
-            if (entry.ExposureFlags == ScpKnowledgeExposureFlags.None)
-                continue;
-
-            _exposureFlags[entry.KnowledgeId] = entry.ExposureFlags;
-        }
-    }
-
-    private void OnLocalPlayerAttached(LocalPlayerAttachedEvent args)
-    {
-        if (_stateInitialized && _syncedEntity == GetNetEntity(args.Entity))
-            return;
-
-        _stateInitialized = false;
-        _syncedEntity = default;
-        _knownKnowledge.Clear();
-        _exposureFlags.Clear();
-    }
-
     private void OnPrototypesReloaded(PrototypesReloadedEventArgs args)
     {
         if (!args.WasModified<ScpKnowledgePrototype>())
@@ -152,20 +112,10 @@ public sealed class ScpKnowledgeSystem : EntitySystem
         RebuildCaches();
     }
 
-    private bool IsPredictedKnownAfterExamine(string knowledgeId, ScpKnowledgePrototype knowledge)
+    private bool TryGetLocalKnowledgeState([NotNullWhen(true)] out ScpKnowledgeComponent? knowledgeState)
     {
-        if (_knownKnowledge.Contains(knowledgeId))
-            return true;
-
-        if (!ScpKnowledgeLogic.RequiresTextAndExamine(knowledge) ||
-            !knowledge.AllowExamine ||
-            knowledge.ExamineProgress <= 0)
-        {
-            return false;
-        }
-
-        var exposureFlags = _exposureFlags.GetValueOrDefault(knowledgeId, ScpKnowledgeExposureFlags.None);
-        return (exposureFlags & ScpKnowledgeExposureFlags.Text) != 0;
+        knowledgeState = null;
+        return _player.LocalEntity is { } localEntity && TryComp(localEntity, out knowledgeState);
     }
 
     private void RebuildCaches()
@@ -179,7 +129,7 @@ public sealed class ScpKnowledgeSystem : EntitySystem
                 var entityPrototype = knowledge.EntityPrototypes[i];
                 if (!_knowledgeByEntityPrototype.TryGetValue(entityPrototype, out var knowledgeIds))
                 {
-                    knowledgeIds = new List<string>();
+                    knowledgeIds = [];
                     _knowledgeByEntityPrototype[entityPrototype] = knowledgeIds;
                 }
 
@@ -190,7 +140,7 @@ public sealed class ScpKnowledgeSystem : EntitySystem
 
     private bool TryGetKnowledgeIdsForEntity(
         EntityUid target,
-        [NotNullWhen(true)] out List<string>? knowledgeIds)
+        [NotNullWhen(true)] out List<ProtoId<ScpKnowledgePrototype>>? knowledgeIds)
     {
         knowledgeIds = null;
         var prototypeId = Prototype(target)?.ID;

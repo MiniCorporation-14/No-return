@@ -48,7 +48,8 @@ public sealed partial class ChatSystem
         if (normalizedMessage.Length == 0)
             return;
 
-        RaiseLocalEvent(new ScpKnowledgeSpeechHeardEvent(source, normalizedMessage, listeners.ToArray()));
+        var ev = new ScpKnowledgeSpeechHeardEvent(source, normalizedMessage, listeners.ToArray());
+        RaiseLocalEvent(ref ev);
     }
 
     private string GetScpKnowledgeWrappedMessage(EntityUid listener, EntityUid source, string message, string wrappedMessage)

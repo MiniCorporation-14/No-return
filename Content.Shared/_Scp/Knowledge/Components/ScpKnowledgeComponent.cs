@@ -1,18 +1,21 @@
 using Content.Shared._Scp.Knowledge;
+using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Scp.Knowledge.Components;
 
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ScpKnowledgeComponent : Component
 {
-    [DataField]
+    public override bool SendOnlyToOwner => true;
+
+    [DataField, AutoNetworkedField]
     public HashSet<ProtoId<ScpKnowledgePrototype>> KnownKnowledge = [];
 
-    [DataField]
+    [DataField, AutoNetworkedField]
     public Dictionary<ProtoId<ScpKnowledgePrototype>, int> Progress = new();
 
-    [DataField]
+    [DataField, AutoNetworkedField]
     public Dictionary<ProtoId<ScpKnowledgePrototype>, ScpKnowledgeExposureFlags> ExposureFlags = new();
 
     [NonSerialized]

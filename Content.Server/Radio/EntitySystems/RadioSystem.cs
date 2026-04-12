@@ -1,5 +1,5 @@
 using System.Globalization;
-using Content.Server._Scp.Knowledge;
+using Content.Server._Scp.Knowledge; // Fire added - SCP knowledge-aware radio chat highlighting
 using Content.Server._Sunrise.Chat.Sanitization;
 using Content.Server.Administration.Logs;
 using Content.Server.Chat.Systems;
@@ -36,7 +36,7 @@ public sealed class RadioSystem : EntitySystem
     [Dependency] private readonly IPrototypeManager _prototype = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
     [Dependency] private readonly ChatSystem _chat = default!;
-    [Dependency] private readonly ScpKnowledgeSystem _knowledge = default!;
+    [Dependency] private readonly ScpKnowledgeSystem _knowledge = default!; // Fire added - personalize radio chat by listener knowledge
     [Dependency] private readonly AccessReaderSystem _accessReader = default!;
 
     // set used to prevent radio feedback loops.

@@ -10,7 +10,7 @@ namespace Content.Server._Scp.Knowledge;
 
 public sealed partial class ScpKnowledgeSystem
 {
-    private void OnSpeechHeard(ScpKnowledgeSpeechHeardEvent args)
+    private void OnSpeechHeard(ref ScpKnowledgeSpeechHeardEvent args)
     {
         if (args.NormalizedMessage.Length == 0)
             return;

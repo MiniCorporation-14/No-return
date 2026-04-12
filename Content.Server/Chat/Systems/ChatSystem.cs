@@ -69,7 +69,7 @@ public sealed partial class ChatSystem : SharedChatSystem
     [Dependency] private readonly SharedPopupSystem _popupSystem = default!;
     [Dependency] private readonly AnnouncementSpeakerSystem _announcementSpeaker = default!;
 
-    public const string DefaultAnnouncementSound = "/Audio/_Scp/Effects/announcement.ogg"; // Fire edit
+    public const string DefaultAnnouncementSound = "/Audio/_Scp/Effects/announcement.ogg"; // Fire edit - use the SCP announcement asset instead of the upstream default sound
 
     private bool _loocEnabled = true;
     private bool _deadLoocEnabled;
@@ -1068,7 +1068,7 @@ public sealed partial class ChatSystem : SharedChatSystem
 
         var msg = message;
 
-        /* Fire edit - В ПИЗДУ
+        /* Fire edit - keep the Sunrise replacement accent disabled until its curated replacement set is restored
         msg = _wordreplacement.ApplyReplacements(msg, ChatSanitizeAccent);
         */
 

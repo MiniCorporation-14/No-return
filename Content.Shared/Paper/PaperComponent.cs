@@ -87,6 +87,7 @@ public sealed partial class PaperComponent : Component
         }
     }
 
+    // Fire added start - send paper knowledge highlight markup separately from the replicated paper state
     [Serializable, NetSerializable]
     public sealed class PaperKnowledgeHighlightMessage : BoundUserInterfaceMessage
     {
@@ -99,6 +100,7 @@ public sealed partial class PaperComponent : Component
             HighlightedText = highlightedText;
         }
     }
+    // Fire added end
 
     [Serializable, NetSerializable]
     public enum PaperUiKey

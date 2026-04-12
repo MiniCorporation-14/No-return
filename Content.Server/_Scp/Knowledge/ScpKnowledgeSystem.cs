@@ -94,7 +94,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
             return false;
 
         var knowledge = _prototype.Index(knowledgeId);
-        return IsKnowledgeKnown(knowledgeState, knowledgeId, knowledge);
+        return ScpKnowledgeLogic.IsKnowledgeKnown(knowledgeState, knowledgeId, knowledge);
     }
 
     public bool TryGetKnowledgeProgress(EntityUid uid, ProtoId<ScpKnowledgePrototype> knowledgeId, out int progress)
@@ -105,7 +105,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
             return false;
 
         var knowledgePrototype = _prototype.Index(knowledgeId);
-        progress = GetKnowledgeProgress(knowledge, knowledgeId, knowledgePrototype);
+        progress = ScpKnowledgeLogic.GetKnowledgeProgress(knowledge, knowledgeId, knowledgePrototype);
         return progress > 0;
     }
 
@@ -243,8 +243,8 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
             return false;
         }
 
-        var currentProgress = GetKnowledgeProgress(knowledgeState, knowledgeId, knowledge);
-        var currentExposureFlags = GetExposureFlags(knowledgeState, knowledgeId);
+        var currentProgress = ScpKnowledgeLogic.GetKnowledgeProgress(knowledgeState, knowledgeId, knowledge);
+        var currentExposureFlags = ScpKnowledgeLogic.GetKnowledgeExposureFlags(knowledgeState, knowledgeId);
         var updatedExposureFlags = currentExposureFlags;
 
         if (ScpKnowledgeLogic.RequiresTextAndExamine(knowledge) &&
@@ -273,7 +273,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         if (clampedProgress < knowledge.RequiredProgress)
         {
             knowledgeState.Progress[knowledgeId] = clampedProgress;
-            SyncKnowledgeState(holderUid.Value, knowledgeState);
+            Dirty(holderUid.Value, knowledgeState);
             return true;
         }
 
@@ -281,7 +281,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         knowledgeState.ExposureFlags.Remove(knowledgeId);
         knowledgeState.KnownKnowledge.Add(knowledgeId);
 
-        SyncKnowledgeState(holderUid.Value, knowledgeState);
+        Dirty(holderUid.Value, knowledgeState);
 
         if (showUnlockFeedback)
         {
@@ -372,14 +372,17 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
 
     private void OnPlayerAttached(PlayerAttachedEvent args)
     {
-        SyncKnowledgeState(args.Entity);
+        if (!TryGetKnowledgeState(args.Entity, out var holderUid, out var knowledgeState))
+            return;
+
+        Dirty(holderUid.Value, knowledgeState);
     }
 
     private static ScpKnowledgeExposureFlags GetExposureFlags(
         ScpKnowledgeComponent knowledgeState,
         ProtoId<ScpKnowledgePrototype> knowledgeId)
     {
-        return knowledgeState.ExposureFlags.GetValueOrDefault(knowledgeId, ScpKnowledgeExposureFlags.None);
+        return ScpKnowledgeLogic.GetKnowledgeExposureFlags(knowledgeState, knowledgeId);
     }
 
     private static bool IsKnowledgeKnown(
@@ -387,8 +390,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         ProtoId<ScpKnowledgePrototype> knowledgeId,
         ScpKnowledgePrototype knowledge)
     {
-        return knowledgeState.KnownKnowledge.Contains(knowledgeId) ||
-               GetKnowledgeProgress(knowledgeState, knowledgeId, knowledge) >= knowledge.RequiredProgress;
+        return ScpKnowledgeLogic.IsKnowledgeKnown(knowledgeState, knowledgeId, knowledge);
     }
 
     private static int GetKnowledgeProgress(
@@ -396,74 +398,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         ProtoId<ScpKnowledgePrototype> knowledgeId,
         ScpKnowledgePrototype knowledge)
     {
-        if (knowledgeState.KnownKnowledge.Contains(knowledgeId))
-            return knowledge.RequiredProgress;
-
-        knowledgeState.Progress.TryGetValue(knowledgeId, out var progress);
-
-        if (!ScpKnowledgeLogic.RequiresTextAndExamine(knowledge))
-            return progress;
-
-        var exposureProgress = ScpKnowledgeLogic.GetExposureProgress(GetExposureFlags(knowledgeState, knowledgeId));
-        return Math.Max(progress, exposureProgress);
-    }
-
-    private void SyncKnowledgeState(EntityUid uid)
-    {
-        if (!TryGetKnowledgeState(uid, out var holderUid, out var knowledgeState))
-        {
-            if (TryComp<ActorComponent>(uid, out var actor))
-                RaiseNetworkEvent(new ScpKnowledgeStateSyncEvent(GetNetEntity(uid), []), actor.PlayerSession);
-
-            return;
-        }
-
-        SyncKnowledgeState(holderUid.Value, knowledgeState);
-    }
-
-    private void SyncKnowledgeState(EntityUid holderUid, ScpKnowledgeComponent knowledgeState)
-    {
-        if (!TryComp<ActorComponent>(holderUid, out var actor))
-            return;
-
-        var entries = BuildKnowledgeStateEntries(knowledgeState);
-        RaiseNetworkEvent(new ScpKnowledgeStateSyncEvent(GetNetEntity(holderUid), entries), actor.PlayerSession);
-    }
-
-    private ScpKnowledgeStateEntry[] BuildKnowledgeStateEntries(ScpKnowledgeComponent knowledgeState)
-    {
-        var knownIds = new HashSet<string>();
-        foreach (var knowledgeId in knowledgeState.KnownKnowledge)
-        {
-            knownIds.Add(knowledgeId);
-        }
-
-        foreach (var knowledgeId in knowledgeState.Progress.Keys)
-        {
-            knownIds.Add(knowledgeId);
-        }
-
-        foreach (var knowledgeId in knowledgeState.ExposureFlags.Keys)
-        {
-            knownIds.Add(knowledgeId);
-        }
-
-        var entries = new ScpKnowledgeStateEntry[knownIds.Count];
-        var index = 0;
-
-        foreach (var knowledgeId in knownIds)
-        {
-            var prototypeId = new ProtoId<ScpKnowledgePrototype>(knowledgeId);
-            var knowledge = _prototype.Index(prototypeId);
-            entries[index] = new ScpKnowledgeStateEntry(
-                knowledgeId,
-                knowledgeState.KnownKnowledge.Contains(prototypeId),
-                GetKnowledgeProgress(knowledgeState, prototypeId, knowledge),
-                GetExposureFlags(knowledgeState, prototypeId));
-            index++;
-        }
-
-        return entries;
+        return ScpKnowledgeLogic.GetKnowledgeProgress(knowledgeState, knowledgeId, knowledge);
     }
 
     private readonly record struct CachedKnowledgePhrase(string WrappedPhrase, ProtoId<ScpKnowledgePrototype> KnowledgeId);
