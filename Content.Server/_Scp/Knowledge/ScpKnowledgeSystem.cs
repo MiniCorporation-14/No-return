@@ -23,9 +23,13 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
     [Dependency] private readonly PopupSystem _popup = default!;
     [Dependency] private readonly IPrototypeManager _prototype = default!;
 
-    private readonly Dictionary<EntProtoId, List<ProtoId<ScpKnowledgePrototype>>> _knowledgeByEntityPrototype = new();
-    private readonly List<CachedKnowledgePhrase> _knowledgePhrases = [];
-    private readonly HashSet<ProtoId<ScpKnowledgePrototype>> _matchedKnowledgeBuffer = [];
+    private readonly Dictionary<EntProtoId, List<ProtoId<ScpKnowledgePrototype>>> _knowledgeByEntityPrototype = [];
+    private readonly Dictionary<string, List<CachedRecognitionPattern>> _knowledgePatternsByFirstToken = [];
+    private readonly Dictionary<EntityUid, CachedPaperAnalysis> _paperAnalysisCache = [];
+    private readonly List<CachedKnowledgeMatch> _matchedKnowledgeBuffer = [];
+    private readonly HashSet<ProtoId<ScpKnowledgePrototype>> _matchedKnowledgeIdsBuffer = [];
+    private readonly List<ScpKnowledgeTextMatch> _recognitionMatchesBuffer = [];
+    private readonly ScpKnowledgePatternMatchContext _patternMatchContext = new();
 
     public override void Initialize()
     {
@@ -34,6 +38,7 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         SubscribeLocalEvent<PrototypesReloadedEventArgs>(OnPrototypesReloaded);
         SubscribeLocalEvent<ScpKnowledgePaperReadEvent>(OnPaperRead);
         SubscribeLocalEvent<PaperComponent, AfterActivatableUIOpenEvent>(OnPaperUiOpened);
+        SubscribeLocalEvent<PaperComponent, ComponentShutdown>(OnPaperShutdown);
         SubscribeLocalEvent<MetaDataComponent, ExaminedEvent>(OnExamined);
         SubscribeLocalEvent<MetaDataComponent, GetVerbsEvent<ExamineVerb>>(OnGetExamineVerbs);
         SubscribeLocalEvent<ScpKnowledgeSpeechHeardEvent>(OnSpeechHeard);
@@ -311,32 +316,45 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
     private void RebuildCaches()
     {
         _knowledgeByEntityPrototype.Clear();
-        _knowledgePhrases.Clear();
-        _highlightPhrasesByKnowledge.Clear();
+        _knowledgePatternsByFirstToken.Clear();
+        _paperAnalysisCache.Clear();
 
         foreach (var knowledge in _prototype.EnumeratePrototypes<ScpKnowledgePrototype>())
         {
-            CacheKnowledgePhrases(knowledge);
+            CacheKnowledgePatterns(knowledge);
             CacheKnowledgeEntities(knowledge);
-            CacheKnowledgeHighlightPhrases(knowledge);
         }
     }
 
-    private void CacheKnowledgePhrases(ScpKnowledgePrototype knowledge)
+    private void CacheKnowledgePatterns(ScpKnowledgePrototype knowledge)
     {
-        foreach (var phraseId in knowledge.RecognitionPhrases)
+        var compiledPatternCount = 0;
+        foreach (var patternId in knowledge.RecognitionPatterns)
         {
-            foreach (var variant in ScpKnowledgeText.GetRecognitionPhraseVariants(Loc.GetString(phraseId)))
+            var localizedPattern = Loc.GetString(patternId);
+            if (!ScpKnowledgeText.TryCompileRecognitionPattern(localizedPattern, out var compiledPattern, out var error))
             {
-                var normalized = ScpKnowledgeText.NormalizeRecognitionText(variant);
-                if (normalized.Length == 0)
-                    continue;
+                Log.Error(
+                    $"Failed to compile SCP knowledge recognition pattern '{patternId}' for knowledge '{knowledge.ID}': {error}");
+                continue;
+            }
 
-                _knowledgePhrases.Add(new CachedKnowledgePhrase(
-                    ScpKnowledgeText.WrapForPhraseSearch(normalized),
-                    knowledge.ID));
+            compiledPatternCount++;
+
+            foreach (var firstToken in compiledPattern.FirstTokens)
+            {
+                if (!_knowledgePatternsByFirstToken.TryGetValue(firstToken, out var patterns))
+                {
+                    patterns = [];
+                    _knowledgePatternsByFirstToken[firstToken] = patterns;
+                }
+
+                patterns.Add(new CachedRecognitionPattern(knowledge.ID, compiledPattern));
             }
         }
+
+        if (compiledPatternCount == 0)
+            Log.Error($"SCP knowledge '{knowledge.ID}' has no valid recognition patterns.");
     }
 
     private void CacheKnowledgeEntities(ScpKnowledgePrototype knowledge)
@@ -378,6 +396,11 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         Dirty(holderUid.Value, knowledgeState);
     }
 
+    private void OnPaperShutdown(Entity<PaperComponent> ent, ref ComponentShutdown args)
+    {
+        _paperAnalysisCache.Remove(ent.Owner);
+    }
+
     private static ScpKnowledgeExposureFlags GetExposureFlags(
         ScpKnowledgeComponent knowledgeState,
         ProtoId<ScpKnowledgePrototype> knowledgeId)
@@ -401,5 +424,89 @@ public sealed partial class ScpKnowledgeSystem : EntitySystem
         return ScpKnowledgeLogic.GetKnowledgeProgress(knowledgeState, knowledgeId, knowledge);
     }
 
-    private readonly record struct CachedKnowledgePhrase(string WrappedPhrase, ProtoId<ScpKnowledgePrototype> KnowledgeId);
+    public ScpKnowledgeTextAnalysis AnalyzeRecognitionText(string text, bool includeMatches = true)
+    {
+        return AnalyzeRecognitionText(ScpKnowledgeText.TokenizeRecognitionText(text), includeMatches);
+    }
+
+    public ScpKnowledgeTextAnalysis GetOrCreatePaperAnalysis(EntityUid paperUid, string content)
+    {
+        if (_paperAnalysisCache.TryGetValue(paperUid, out var cachedAnalysis) &&
+            string.Equals(cachedAnalysis.Content, content, StringComparison.Ordinal))
+        {
+            return cachedAnalysis.Analysis;
+        }
+
+        var analysis = AnalyzeRecognitionText(content);
+        _paperAnalysisCache[paperUid] = new CachedPaperAnalysis(content, analysis);
+        return analysis;
+    }
+
+    private ScpKnowledgeTextAnalysis AnalyzeRecognitionText(
+        ScpKnowledgeTokenizedText tokenizedText,
+        bool includeMatches)
+    {
+        CollectKnowledgeMatches(tokenizedText, includeMatches);
+
+        if (_matchedKnowledgeIdsBuffer.Count == 0)
+            return new ScpKnowledgeTextAnalysis(tokenizedText, [], []);
+
+        var matchedKnowledgeIds = new ProtoId<ScpKnowledgePrototype>[_matchedKnowledgeIdsBuffer.Count];
+        _matchedKnowledgeIdsBuffer.CopyTo(matchedKnowledgeIds);
+        if (!includeMatches || _matchedKnowledgeBuffer.Count == 0)
+            return new ScpKnowledgeTextAnalysis(tokenizedText, [], matchedKnowledgeIds);
+
+        var matches = new ScpKnowledgeAnalyzedMatch[_matchedKnowledgeBuffer.Count];
+        var matchIndex = 0;
+        foreach (var match in _matchedKnowledgeBuffer)
+        {
+            matches[matchIndex++] = new ScpKnowledgeAnalyzedMatch(match.KnowledgeId, match.Start, match.Length);
+        }
+
+        return new ScpKnowledgeTextAnalysis(tokenizedText, matches, matchedKnowledgeIds);
+    }
+
+    private void CollectKnowledgeMatches(ScpKnowledgeTokenizedText tokenizedText, bool includeMatches)
+    {
+        _matchedKnowledgeBuffer.Clear();
+        _matchedKnowledgeIdsBuffer.Clear();
+
+        if (tokenizedText.Tokens.Count == 0)
+            return;
+
+        for (var tokenIndex = 0; tokenIndex < tokenizedText.Tokens.Count; tokenIndex++)
+        {
+            var token = tokenizedText.Tokens[tokenIndex].Value;
+            if (!_knowledgePatternsByFirstToken.TryGetValue(token, out var patterns))
+                continue;
+
+            foreach (var pattern in patterns)
+            {
+                _recognitionMatchesBuffer.Clear();
+                ScpKnowledgeText.AddPatternMatchesAt(pattern.Pattern, tokenizedText, tokenIndex, _recognitionMatchesBuffer, _patternMatchContext);
+
+                foreach (var match in _recognitionMatchesBuffer)
+                {
+                    if (includeMatches)
+                        _matchedKnowledgeBuffer.Add(new CachedKnowledgeMatch(pattern.KnowledgeId, match.SourceStart, match.Length));
+
+                    _matchedKnowledgeIdsBuffer.Add(pattern.KnowledgeId);
+                }
+            }
+        }
+    }
+
+    private readonly record struct CachedRecognitionPattern(
+        ProtoId<ScpKnowledgePrototype> KnowledgeId,
+        ScpKnowledgeCompiledPattern Pattern);
+
+    private readonly record struct CachedPaperAnalysis(string Content, ScpKnowledgeTextAnalysis Analysis);
+
+    private readonly record struct CachedKnowledgeMatch(
+        ProtoId<ScpKnowledgePrototype> KnowledgeId,
+        int Start,
+        int Length)
+    {
+        public int End => Start + Length;
+    }
 }

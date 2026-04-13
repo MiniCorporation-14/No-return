@@ -13,10 +13,10 @@ public sealed partial class ScpKnowledgeComponent : Component
     public HashSet<ProtoId<ScpKnowledgePrototype>> KnownKnowledge = [];
 
     [DataField, AutoNetworkedField]
-    public Dictionary<ProtoId<ScpKnowledgePrototype>, int> Progress = new();
+    public Dictionary<ProtoId<ScpKnowledgePrototype>, int> Progress = [];
 
     [DataField, AutoNetworkedField]
-    public Dictionary<ProtoId<ScpKnowledgePrototype>, ScpKnowledgeExposureFlags> ExposureFlags = new();
+    public Dictionary<ProtoId<ScpKnowledgePrototype>, ScpKnowledgeExposureFlags> ExposureFlags = [];
 
     [NonSerialized]
     public HashSet<ScpKnowledgeSourceRecord> ProcessedSources = [];

@@ -1,3 +1,4 @@
+using System.Text;
 using Content.Shared._Scp.Knowledge;
 using Content.Shared._Scp.Knowledge.Components;
 using Content.Shared.Mind;
@@ -18,25 +19,29 @@ public sealed partial class ScpKnowledgeSystem
     [Dependency] private readonly UserInterfaceSystem _ui = default!;
 
     private const string KnowledgeHighlightColor = "#8b0000";
-    private readonly Dictionary<ProtoId<ScpKnowledgePrototype>, List<CachedHighlightPhrase>> _highlightPhrasesByKnowledge = new();
     private readonly List<TextHighlightRange> _highlightRanges = [];
 
     public string HighlightUnknownKnowledgeText(EntityUid viewer, string text, EntityUid? source = null)
     {
-        return BuildHighlightedText(viewer, text, escapeText: false, source);
+        return BuildHighlightedText(viewer, text, escapeText: false, source, analysis: null);
     }
 
-    public string HighlightWrappedChatMessage(EntityUid viewer, string message, string wrappedMessage, EntityUid? source = null)
+    public string HighlightWrappedChatMessage(
+        EntityUid viewer,
+        string message,
+        string wrappedMessage,
+        EntityUid? source = null,
+        ScpKnowledgeTextAnalysis? analysis = null)
     {
         if (message.Length == 0 || wrappedMessage.Length == 0)
             return wrappedMessage;
 
         var escapedMessage = FormattedMessage.EscapeText(message);
-        var highlightedEscapedMessage = BuildHighlightedText(viewer, message, escapeText: true, source);
+        var highlightedEscapedMessage = BuildHighlightedText(viewer, message, escapeText: true, source, analysis: analysis);
         if (!string.Equals(highlightedEscapedMessage, escapedMessage, StringComparison.Ordinal))
             return ReplaceFirstOccurrence(wrappedMessage, escapedMessage, highlightedEscapedMessage);
 
-        var highlightedMessage = BuildHighlightedText(viewer, message, escapeText: false, source);
+        var highlightedMessage = BuildHighlightedText(viewer, message, escapeText: false, source, analysis: analysis);
         if (!string.Equals(highlightedMessage, message, StringComparison.Ordinal))
             return ReplaceFirstOccurrence(wrappedMessage, message, highlightedMessage);
 
@@ -48,7 +53,8 @@ public sealed partial class ScpKnowledgeSystem
         if (ent.Comp.Content.Length == 0)
             return;
 
-        var highlightedText = HighlightUnknownPaperKnowledgeText(args.User, ent);
+        var analysis = GetOrCreatePaperAnalysis(ent.Owner, ent.Comp.Content);
+        var highlightedText = HighlightUnknownPaperKnowledgeText(args.User, ent, analysis);
         if (string.Equals(highlightedText, ent.Comp.Content, StringComparison.Ordinal))
             return;
 
@@ -84,14 +90,18 @@ public sealed partial class ScpKnowledgeSystem
         }
     }
 
-    private string HighlightUnknownPaperKnowledgeText(EntityUid viewer, Entity<PaperComponent> paper)
+    private string HighlightUnknownPaperKnowledgeText(
+        EntityUid viewer,
+        Entity<PaperComponent> paper,
+        ScpKnowledgeTextAnalysis analysis)
     {
         return BuildHighlightedText(
             viewer,
             paper.Comp.Content,
             escapeText: false,
             source: null,
-            matchFilter: (knowledgeId, start, length) => DoesPaperRangeProvideKnowledge(paper.Comp, knowledgeId, start, length));
+            matchFilter: (knowledgeId, start, length) => DoesPaperRangeProvideKnowledge(paper.Comp, knowledgeId, start, length),
+            analysis: analysis);
     }
 
     private string BuildHighlightedText(
@@ -99,52 +109,42 @@ public sealed partial class ScpKnowledgeSystem
         string text,
         bool escapeText,
         EntityUid? source,
-        Func<ProtoId<ScpKnowledgePrototype>, int, int, bool>? matchFilter = null)
+        Func<ProtoId<ScpKnowledgePrototype>, int, int, bool>? matchFilter = null,
+        ScpKnowledgeTextAnalysis? analysis = null)
     {
-        var renderedText = escapeText ? FormattedMessage.EscapeText(text) : text;
-        if (renderedText.Length == 0)
-            return renderedText;
+        if (text.Length == 0)
+            return text;
 
         if (!TryGetKnowledgeState(viewer, out _, out var knowledgeState))
-            return renderedText;
+            return escapeText ? FormattedMessage.EscapeText(text) : text;
 
         ScpKnowledgeComponent? sourceKnowledgeState = null;
         if (source != null && !TryGetKnowledgeState(source.Value, out _, out sourceKnowledgeState))
-            return renderedText;
+            return escapeText ? FormattedMessage.EscapeText(text) : text;
 
-        var normalizedMessage = ScpKnowledgeText.NormalizeRecognitionText(text);
-        if (normalizedMessage.Length == 0)
-            return renderedText;
-
-        CollectKnowledgeIdsFromText(normalizedMessage);
-        if (_matchedKnowledgeBuffer.Count == 0)
-            return renderedText;
+        analysis ??= AnalyzeRecognitionText(text);
+        if (!analysis.HasMatches)
+            return escapeText ? FormattedMessage.EscapeText(text) : text;
 
         _highlightRanges.Clear();
 
-        foreach (var knowledgeId in _matchedKnowledgeBuffer)
+        foreach (var match in analysis.Matches)
         {
-            var knowledge = _prototype.Index(knowledgeId);
-            if (IsKnowledgeKnown(knowledgeState, knowledgeId, knowledge))
+            var knowledge = _prototype.Index(match.KnowledgeId);
+            if (IsKnowledgeKnown(knowledgeState, match.KnowledgeId, knowledge))
                 continue;
 
-            if (sourceKnowledgeState != null && !IsKnowledgeKnown(sourceKnowledgeState, knowledgeId, knowledge))
+            if (sourceKnowledgeState != null && !IsKnowledgeKnown(sourceKnowledgeState, match.KnowledgeId, knowledge))
                 continue;
 
-            if (!_highlightPhrasesByKnowledge.TryGetValue(knowledgeId, out var phrases))
+            if (matchFilter != null && !matchFilter(match.KnowledgeId, match.Start, match.Length))
                 continue;
 
-            foreach (var phrase in phrases)
-            {
-                AddHighlightRanges(
-                    renderedText,
-                    escapeText ? phrase.EscapedPhrase : phrase.Phrase,
-                    matchFilter == null ? null : (start, length) => matchFilter(knowledgeId, start, length));
-            }
+            _highlightRanges.Add(new TextHighlightRange(match.Start, match.End));
         }
 
         if (_highlightRanges.Count == 0)
-            return renderedText;
+            return escapeText ? FormattedMessage.EscapeText(text) : text;
 
         _highlightRanges.Sort(static (left, right) =>
         {
@@ -152,88 +152,21 @@ public sealed partial class ScpKnowledgeSystem
             return compare != 0 ? compare : right.End.CompareTo(left.End);
         });
 
-        return RenderHighlightedText(renderedText);
+        return RenderHighlightedText(text, escapeText);
     }
 
-    private void CacheKnowledgeHighlightPhrases(ScpKnowledgePrototype knowledge)
+    private bool HasPaperKnowledgeMatch(
+        PaperComponent paper,
+        ScpKnowledgeTextAnalysis analysis,
+        ProtoId<ScpKnowledgePrototype> knowledgeId)
     {
-        if (!_highlightPhrasesByKnowledge.TryGetValue(knowledge.ID, out var phrases))
+        foreach (var match in analysis.Matches)
         {
-            phrases = [];
-            _highlightPhrasesByKnowledge[knowledge.ID] = phrases;
-        }
+            if (match.KnowledgeId != knowledgeId)
+                continue;
 
-        var seenPhrases = new List<string>();
-        foreach (var phraseId in knowledge.RecognitionPhrases)
-        {
-            foreach (var variant in ScpKnowledgeText.GetRecognitionPhraseVariants(Loc.GetString(phraseId)))
-            {
-                CacheKnowledgeHighlightPhrase(phrases, seenPhrases, variant);
-            }
-        }
-    }
-
-    private static void CacheKnowledgeHighlightPhrase(
-        List<CachedHighlightPhrase> phrases,
-        List<string> seenPhrases,
-        string phrase)
-    {
-        if (phrase.Length == 0 || ContainsPhrase(seenPhrases, phrase))
-            return;
-
-        seenPhrases.Add(phrase);
-        phrases.Add(new CachedHighlightPhrase(
-            phrase,
-            FormattedMessage.EscapeText(phrase)));
-    }
-
-    private static bool ContainsPhrase(List<string> phrases, string phrase)
-    {
-        foreach (var containedPhrases in phrases)
-        {
-            if (string.Equals(containedPhrases, phrase, StringComparison.OrdinalIgnoreCase))
+            if (DoesPaperRangeProvideKnowledge(paper, knowledgeId, match.Start, match.Length))
                 return true;
-        }
-
-        return false;
-    }
-
-    private void AddHighlightRanges(string text, string phrase, Func<int, int, bool>? matchFilter = null)
-    {
-        if (phrase.Length == 0)
-            return;
-
-        var startIndex = 0;
-        while (startIndex < text.Length)
-        {
-            startIndex = text.IndexOf(phrase, startIndex, StringComparison.OrdinalIgnoreCase);
-            if (startIndex == -1)
-                return;
-
-            if (IsBoundedMatch(text, startIndex, phrase.Length) &&
-                (matchFilter == null || matchFilter(startIndex, phrase.Length)))
-            {
-                _highlightRanges.Add(new TextHighlightRange(startIndex, startIndex + phrase.Length));
-            }
-
-            startIndex += phrase.Length;
-        }
-    }
-
-    private bool HasPaperKnowledgePhraseMatch(PaperComponent paper, ProtoId<ScpKnowledgePrototype> knowledgeId)
-    {
-        if (!_highlightPhrasesByKnowledge.TryGetValue(knowledgeId, out var phrases))
-            return false;
-
-        foreach (var phrase in phrases)
-        {
-            if (HasMatchedTextRange(
-                    paper.Content,
-                    phrase.Phrase,
-                    (start, length) => DoesPaperRangeProvideKnowledge(paper, knowledgeId, start, length)))
-            {
-                return true;
-            }
         }
 
         return false;
@@ -277,33 +210,9 @@ public sealed partial class ScpKnowledgeSystem
         return coveredUntil >= end;
     }
 
-    private static bool HasMatchedTextRange(string text, string phrase, Func<int, int, bool>? matchFilter = null)
+    private string RenderHighlightedText(string text, bool escapeText)
     {
-        if (phrase.Length == 0)
-            return false;
-
-        var startIndex = 0;
-        while (startIndex < text.Length)
-        {
-            startIndex = text.IndexOf(phrase, startIndex, StringComparison.OrdinalIgnoreCase);
-            if (startIndex == -1)
-                return false;
-
-            if (IsBoundedMatch(text, startIndex, phrase.Length) &&
-                (matchFilter == null || matchFilter(startIndex, phrase.Length)))
-            {
-                return true;
-            }
-
-            startIndex += phrase.Length;
-        }
-
-        return false;
-    }
-
-    private string RenderHighlightedText(string text)
-    {
-        var builder = new System.Text.StringBuilder(text.Length + _highlightRanges.Count * 32);
+        var builder = new StringBuilder(text.Length + _highlightRanges.Count * 32);
         var currentIndex = 0;
         var currentRange = _highlightRanges[0];
 
@@ -316,32 +225,67 @@ public sealed partial class ScpKnowledgeSystem
                 continue;
             }
 
-            AppendHighlightedRange(builder, text, ref currentIndex, currentRange);
+            AppendHighlightedRange(builder, text, ref currentIndex, currentRange, escapeText);
             currentRange = nextRange;
         }
 
-        AppendHighlightedRange(builder, text, ref currentIndex, currentRange);
+        AppendHighlightedRange(builder, text, ref currentIndex, currentRange, escapeText);
         if (currentIndex < text.Length)
-            builder.Append(text, currentIndex, text.Length - currentIndex);
+            AppendRenderedSegment(builder, text, currentIndex, text.Length - currentIndex, escapeText);
 
         return builder.ToString();
     }
 
     private static void AppendHighlightedRange(
-        System.Text.StringBuilder builder,
+        StringBuilder builder,
         string text,
         ref int currentIndex,
-        TextHighlightRange range)
+        TextHighlightRange range,
+        bool escapeText)
     {
         if (range.Start > currentIndex)
-            builder.Append(text, currentIndex, range.Start - currentIndex);
+            AppendRenderedSegment(builder, text, currentIndex, range.Start - currentIndex, escapeText);
 
         builder.Append("[color=");
         builder.Append(KnowledgeHighlightColor);
         builder.Append(']');
-        builder.Append(text, range.Start, range.End - range.Start);
+        AppendRenderedSegment(builder, text, range.Start, range.End - range.Start, escapeText);
         builder.Append("[/color]");
         currentIndex = range.End;
+    }
+
+    private static void AppendRenderedSegment(
+        StringBuilder builder,
+        string text,
+        int start,
+        int length,
+        bool escapeText)
+    {
+        if (length <= 0)
+            return;
+
+        if (!escapeText)
+        {
+            builder.Append(text, start, length);
+            return;
+        }
+
+        var end = start + length;
+        foreach (var character in text.AsSpan(start, length))
+        {
+            switch (character)
+            {
+                case '\\':
+                    builder.Append("\\\\");
+                    break;
+                case '[':
+                    builder.Append("\\[");
+                    break;
+                default:
+                    builder.Append(character);
+                    break;
+            }
+        }
     }
 
     private static string ReplaceFirstOccurrence(string text, string oldValue, string newValue)
@@ -356,14 +300,5 @@ public sealed partial class ScpKnowledgeSystem
             text.AsSpan(index + oldValue.Length));
     }
 
-    private static bool IsBoundedMatch(string text, int start, int length)
-    {
-        var leftBounded = start == 0 || !char.IsLetterOrDigit(text[start - 1]);
-        var end = start + length;
-        var rightBounded = end >= text.Length || !char.IsLetterOrDigit(text[end]);
-        return leftBounded && rightBounded;
-    }
-
-    private readonly record struct CachedHighlightPhrase(string Phrase, string EscapedPhrase);
     private readonly record struct TextHighlightRange(int Start, int End);
 }

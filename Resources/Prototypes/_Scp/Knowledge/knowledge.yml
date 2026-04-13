@@ -34,9 +34,10 @@
   abbreviations:
   - scp-knowledge-term-tzs-name
   description: scp-knowledge-term-tzs-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-tzs-name
   - scp-knowledge-term-tzs-full
+  - scp-knowledge-term-tzs-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermLightContainmentZone
@@ -45,9 +46,10 @@
   abbreviations:
   - scp-knowledge-term-lzs-name
   description: scp-knowledge-term-lzs-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-lzs-name
   - scp-knowledge-term-lzs-full
+  - scp-knowledge-term-lzs-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermExternalAdministrativeZone
@@ -56,9 +58,10 @@
   abbreviations:
   - scp-knowledge-term-vaz-name
   description: scp-knowledge-term-vaz-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-vaz-name
   - scp-knowledge-term-vaz-full
+  - scp-knowledge-term-vaz-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermAdministrativeZone
@@ -67,9 +70,10 @@
   abbreviations:
   - scp-knowledge-term-az-name
   description: scp-knowledge-term-az-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-az-name
   - scp-knowledge-term-az-full
+  - scp-knowledge-term-az-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermSpecialContainmentProcedures
@@ -78,9 +82,10 @@
   abbreviations:
   - scp-knowledge-term-ous-name
   description: scp-knowledge-term-ous-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-ous-name
   - scp-knowledge-term-ous-full
+  - scp-knowledge-term-ous-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermContainmentBreach
@@ -89,9 +94,10 @@
   abbreviations:
   - scp-knowledge-term-nus-name
   description: scp-knowledge-term-nus-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-nus-name
   - scp-knowledge-term-nus-full
+  - scp-knowledge-term-nus-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermContainmentRestoration
@@ -100,9 +106,10 @@
   abbreviations:
   - scp-knowledge-term-vus-name
   description: scp-knowledge-term-vus-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-vus-name
   - scp-knowledge-term-vus-full
+  - scp-knowledge-term-vus-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermContainmentChamber
@@ -111,9 +118,10 @@
   abbreviations:
   - scp-knowledge-term-ks-name
   description: scp-knowledge-term-ks-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-ks-name
   - scp-knowledge-term-ks-full
+  - scp-knowledge-term-ks-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermRegionalAdministration
@@ -122,9 +130,10 @@
   abbreviations:
   - scp-knowledge-term-ru-name
   description: scp-knowledge-term-ru-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-ru-name
   - scp-knowledge-term-ru-full
+  - scp-knowledge-term-ru-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermChaosInsurgency
@@ -133,9 +142,10 @@
   abbreviations:
   - scp-knowledge-term-ph-name
   description: scp-knowledge-term-ph-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-ph-name
   - scp-knowledge-term-ph-full
+  - scp-knowledge-term-ph-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermGlobalOccultCoalition
@@ -144,9 +154,10 @@
   abbreviations:
   - scp-knowledge-term-gok-name
   description: scp-knowledge-term-gok-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-gok-name
   - scp-knowledge-term-gok-full
+  - scp-knowledge-term-gok-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermPersonalArtificialIntelligence
@@ -155,9 +166,10 @@
   abbreviations:
   - scp-knowledge-term-pii-name
   description: scp-knowledge-term-pii-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-pii-name
   - scp-knowledge-term-pii-full
+  - scp-knowledge-term-pii-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermLegalCode
@@ -166,9 +178,10 @@
   abbreviations:
   - scp-knowledge-term-pk-name
   description: scp-knowledge-term-pk-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-pk-name
   - scp-knowledge-term-pk-full
+  - scp-knowledge-term-pk-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeTermCodeOfEthics
@@ -177,9 +190,10 @@
   abbreviations:
   - scp-knowledge-term-ke-name
   description: scp-knowledge-term-ke-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-ke-name
   - scp-knowledge-term-ke-full
+  - scp-knowledge-term-ke-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeLocationHeavyContainmentZone
@@ -188,9 +202,10 @@
   abbreviations:
   - scp-knowledge-term-tzs-name
   description: scp-knowledge-location-tzs-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-tzs-name
   - scp-knowledge-location-tzs-name
+  - scp-knowledge-location-tzs-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeLocationLightContainmentZone
@@ -199,9 +214,10 @@
   abbreviations:
   - scp-knowledge-term-lzs-name
   description: scp-knowledge-location-lzs-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-term-lzs-name
   - scp-knowledge-location-lzs-name
+  - scp-knowledge-location-lzs-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeLocationClassDContainmentZone
@@ -210,18 +226,18 @@
   abbreviations:
   - scp-knowledge-location-zsd-abbr
   description: scp-knowledge-location-zsd-desc
-  recognitionPhrases:
+  recognitionPatterns:
   - scp-knowledge-location-zsd-abbr
   - scp-knowledge-location-zsd-name
+  - scp-knowledge-location-zsd-patterns
 
 - type: scpKnowledge
   id: ScpKnowledgeEntityScp035
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp035-name
   description: scp-knowledge-scp035-desc
-  recognitionPhrases:
-  - scp-knowledge-scp035-name
-  - scp-knowledge-scp035-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp035-designation
   - scp-knowledge-scp035-object
   entityPrototypes:
   - ClothingMaskScp035
@@ -233,9 +249,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp049-name
   description: scp-knowledge-scp049-desc
-  recognitionPhrases:
-  - scp-knowledge-scp049-name
-  - scp-knowledge-scp049-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp049-designation
   - scp-knowledge-scp049-object
   entityPrototypes:
   - Scp049
@@ -249,9 +264,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp082-name
   description: scp-knowledge-scp082-desc
-  recognitionPhrases:
-  - scp-knowledge-scp082-name
-  - scp-knowledge-scp082-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp082-designation
   - scp-knowledge-scp082-object
   entityPrototypes:
   - Scp082
@@ -262,9 +276,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp096-name
   description: scp-knowledge-scp096-desc
-  recognitionPhrases:
-  - scp-knowledge-scp096-name
-  - scp-knowledge-scp096-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp096-designation
   - scp-knowledge-scp096-object
   entityPrototypes:
   - Scp096
@@ -275,9 +288,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp106-name
   description: scp-knowledge-scp106-desc
-  recognitionPhrases:
-  - scp-knowledge-scp106-name
-  - scp-knowledge-scp106-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp106-designation
   - scp-knowledge-scp106-object
   entityPrototypes:
   - Scp106
@@ -288,9 +300,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp131-name
   description: scp-knowledge-scp131-desc
-  recognitionPhrases:
-  - scp-knowledge-scp131-name
-  - scp-knowledge-scp131-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp131-designation
   - scp-knowledge-scp131-object
   entityPrototypes:
   - Scp131A
@@ -302,9 +313,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp173-name
   description: scp-knowledge-scp173-desc
-  recognitionPhrases:
-  - scp-knowledge-scp173-name
-  - scp-knowledge-scp173-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp173-designation
   - scp-knowledge-scp173-object
   - scp-knowledge-scp173-nickname
   entityPrototypes:
@@ -316,9 +326,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp247-name
   description: scp-knowledge-scp247-desc
-  recognitionPhrases:
-  - scp-knowledge-scp247-name
-  - scp-knowledge-scp247-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp247-designation
   - scp-knowledge-scp247-object
   entityPrototypes:
   - Scp247
@@ -329,9 +338,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp457-name
   description: scp-knowledge-scp457-desc
-  recognitionPhrases:
-  - scp-knowledge-scp457-name
-  - scp-knowledge-scp457-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp457-designation
   - scp-knowledge-scp457-object
   entityPrototypes:
   - Scp457
@@ -342,9 +350,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp939-name
   description: scp-knowledge-scp939-desc
-  recognitionPhrases:
-  - scp-knowledge-scp939-name
-  - scp-knowledge-scp939-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp939-designation
   - scp-knowledge-scp939-object
   entityPrototypes:
   - Scp939
@@ -355,9 +362,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp999-name
   description: scp-knowledge-scp999-desc
-  recognitionPhrases:
-  - scp-knowledge-scp999-name
-  - scp-knowledge-scp999-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp999-designation
   - scp-knowledge-scp999-object
   entityPrototypes:
   - Scp999
@@ -368,9 +374,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp079-name
   description: scp-knowledge-scp079-desc
-  recognitionPhrases:
-  - scp-knowledge-scp079-name
-  - scp-knowledge-scp079-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp079-designation
   - scp-knowledge-scp079-object
   entityPrototypes:
   - Scp079Held
@@ -386,9 +391,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp005-name
   description: scp-knowledge-scp005-desc
-  recognitionPhrases:
-  - scp-knowledge-scp005-name
-  - scp-knowledge-scp005-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp005-designation
   - scp-knowledge-scp005-object
   entityPrototypes:
   - Scp005
@@ -399,9 +403,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp012-name
   description: scp-knowledge-scp012-desc
-  recognitionPhrases:
-  - scp-knowledge-scp012-name
-  - scp-knowledge-scp012-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp012-designation
   - scp-knowledge-scp012-object
   entityPrototypes:
   - Scp012
@@ -412,9 +415,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp018-name
   description: scp-knowledge-scp018-desc
-  recognitionPhrases:
-  - scp-knowledge-scp018-name
-  - scp-knowledge-scp018-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp018-designation
   - scp-knowledge-scp018-object
   entityPrototypes:
   - Scp018
@@ -425,9 +427,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp101-name
   description: scp-knowledge-scp101-desc
-  recognitionPhrases:
-  - scp-knowledge-scp101-name
-  - scp-knowledge-scp101-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp101-designation
   - scp-knowledge-scp101-object
   entityPrototypes:
   - Scp101
@@ -438,9 +439,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp109-name
   description: scp-knowledge-scp109-desc
-  recognitionPhrases:
-  - scp-knowledge-scp109-name
-  - scp-knowledge-scp109-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp109-designation
   - scp-knowledge-scp109-object
   entityPrototypes:
   - Scp109
@@ -451,9 +451,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp124-name
   description: scp-knowledge-scp124-desc
-  recognitionPhrases:
-  - scp-knowledge-scp124-name
-  - scp-knowledge-scp124-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp124-designation
   - scp-knowledge-scp124-object
   entityPrototypes:
   - Scp124
@@ -465,9 +464,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp127-name
   description: scp-knowledge-scp127-desc
-  recognitionPhrases:
-  - scp-knowledge-scp127-name
-  - scp-knowledge-scp127-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp127-designation
   - scp-knowledge-scp127-object
   entityPrototypes:
   - Scp127
@@ -479,9 +477,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp2022-name
   description: scp-knowledge-scp2022-desc
-  recognitionPhrases:
-  - scp-knowledge-scp2022-name
-  - scp-knowledge-scp2022-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp2022-designation
   - scp-knowledge-scp2022-object
   entityPrototypes:
   - PillScp2022
@@ -493,9 +490,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp207-name
   description: scp-knowledge-scp207-desc
-  recognitionPhrases:
-  - scp-knowledge-scp207-name
-  - scp-knowledge-scp207-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp207-designation
   - scp-knowledge-scp207-object
   entityPrototypes:
   - Scp207Bottle
@@ -506,9 +502,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp2398-name
   description: scp-knowledge-scp2398-desc
-  recognitionPhrases:
-  - scp-knowledge-scp2398-name
-  - scp-knowledge-scp2398-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp2398-designation
   - scp-knowledge-scp2398-object
   entityPrototypes:
   - Scp2398
@@ -519,9 +514,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp261-name
   description: scp-knowledge-scp261-desc
-  recognitionPhrases:
-  - scp-knowledge-scp261-name
-  - scp-knowledge-scp261-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp261-designation
   - scp-knowledge-scp261-object
   entityPrototypes:
   - Scp261
@@ -532,9 +526,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp268-name
   description: scp-knowledge-scp268-desc
-  recognitionPhrases:
-  - scp-knowledge-scp268-name
-  - scp-knowledge-scp268-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp268-designation
   - scp-knowledge-scp268-object
   entityPrototypes:
   - Scp268
@@ -545,9 +538,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp330-name
   description: scp-knowledge-scp330-desc
-  recognitionPhrases:
-  - scp-knowledge-scp330-name
-  - scp-knowledge-scp330-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp330-designation
   - scp-knowledge-scp330-object
   entityPrototypes:
   - Scp330Bowl
@@ -563,9 +555,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp427-name
   description: scp-knowledge-scp427-desc
-  recognitionPhrases:
-  - scp-knowledge-scp427-name
-  - scp-knowledge-scp427-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp427-designation
   - scp-knowledge-scp427-object
   entityPrototypes:
   - Scp427
@@ -576,9 +567,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp500-name
   description: scp-knowledge-scp500-desc
-  recognitionPhrases:
-  - scp-knowledge-scp500-name
-  - scp-knowledge-scp500-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp500-designation
   - scp-knowledge-scp500-object
   entityPrototypes:
   - PillScp500
@@ -590,9 +580,8 @@
   parent: BaseScpKnowledgeEntity
   displayName: scp-knowledge-scp714-name
   description: scp-knowledge-scp714-desc
-  recognitionPhrases:
-  - scp-knowledge-scp714-name
-  - scp-knowledge-scp714-name-ru
+  recognitionPatterns:
+  - scp-knowledge-scp714-designation
   - scp-knowledge-scp714-object
   entityPrototypes:
   - Scp714

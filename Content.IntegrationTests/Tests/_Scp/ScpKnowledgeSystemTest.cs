@@ -34,19 +34,40 @@ public sealed class ScpKnowledgeSystemTest
     private static readonly ProtoId<ScpKnowledgePrototype> KnowledgeScp173 = "ScpKnowledgeEntityScp173";
 
     [Test]
-    public void RecognitionPhraseVariantsExpandAlternativeGroups()
+    public async Task SpeechDoesNotMatchArbitraryGapsInScpDesignation()
     {
-        var variants = ScpKnowledgeText.GetRecognitionPhraseVariants("(object|anomaly item|containment object)-173");
+        await using var pair = await GetKnowledgePair();
+        var setup = await SpawnPlayerMind(pair);
+        var knowledge = pair.Server.System<ScpKnowledgeSystem>();
+        EntityUid speaker = default;
 
-        Assert.Multiple(() =>
+        await pair.Server.WaitPost(() =>
         {
-            Assert.That(variants, Does.Contain("object-173"));
-            Assert.That(variants, Does.Contain("object 173"));
-            Assert.That(variants, Does.Contain("anomaly item-173"));
-            Assert.That(variants, Does.Contain("anomaly item 173"));
-            Assert.That(variants, Does.Contain("containment object-173"));
-            Assert.That(variants, Does.Contain("containment object 173"));
+            var coordinates = pair.Server.EntMan.GetComponent<TransformComponent>(setup.Body).Coordinates;
+            speaker = pair.Server.EntMan.SpawnEntity(PlayerPrototype, coordinates);
+            Assert.That(knowledge.TryGrantKnowledgeProgress(speaker, KnowledgeScp173, 2), Is.True);
+
+            var chat = pair.Server.System<ChatSystem>();
+            chat.TrySendInGameICMessage(
+                speaker,
+                "scp many random words 173",
+                InGameICChatType.Speak,
+                ChatTransmitRange.Normal,
+                ignoreActionBlocker: true);
         });
+
+        await pair.RunTicksSync(5);
+
+        await pair.Server.WaitAssertion(() =>
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(knowledge.TryGetKnowledgeProgress(setup.Body, KnowledgeScp173, out _), Is.False);
+                Assert.That(knowledge.HasKnowledge(setup.Body, KnowledgeScp173), Is.False);
+            });
+        });
+
+        await pair.CleanReturnAsync();
     }
 
     [Test]

@@ -24,18 +24,18 @@ public sealed partial class ScpKnowledgePrototype : IPrototype, IInheritingProto
 
     [DataField]
     [AlwaysPushInheritance]
-    public List<LocId> Abbreviations = new();
+    public List<LocId> Abbreviations = [];
 
     [DataField(required: true)]
     public LocId Description;
 
     [DataField(required: true)]
     [AlwaysPushInheritance]
-    public List<LocId> RecognitionPhrases = new();
+    public List<LocId> RecognitionPatterns = [];
 
     [DataField]
     [AlwaysPushInheritance]
-    public List<EntProtoId> EntityPrototypes = new();
+    public List<EntProtoId> EntityPrototypes = [];
 
     [DataField]
     public int RequiredProgress = 2;

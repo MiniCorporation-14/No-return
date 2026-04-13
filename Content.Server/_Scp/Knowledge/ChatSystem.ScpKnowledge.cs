@@ -10,8 +10,17 @@ public sealed partial class ChatSystem
 {
     [Dependency] private readonly ScpKnowledgeSystem _knowledge = default!;
 
-    private void RaiseScpKnowledgeSpeakEvent(EntityUid source, string message, ChatTransmitRange range)
+    private ScpKnowledgeTextAnalysis? CreateScpKnowledgeTextAnalysis(string message)
     {
+        var analysis = _knowledge.AnalyzeRecognitionText(message);
+        return analysis.HasMatchedKnowledge ? analysis : null;
+    }
+
+    private void RaiseScpKnowledgeSpeakEvent(EntityUid source, ScpKnowledgeTextAnalysis? analysis, ChatTransmitRange range)
+    {
+        if (analysis == null)
+            return;
+
         using var listeners = ListPool<EntityUid>.Rent();
 
         foreach (var (session, data) in GetRecipients(source, VoiceRange))
@@ -25,35 +34,39 @@ public sealed partial class ChatSystem
             listeners.Value.Add(attachedEntity);
         }
 
-        RaiseScpKnowledgeSpeechEvent(source, message, listeners.Value);
+        RaiseScpKnowledgeSpeechEvent(source, analysis, listeners.Value);
     }
 
     private void RaiseScpKnowledgeWhisperEvent(
         EntityUid source,
         List<EntityUid> clearListeners,
         List<EntityUid> obfuscatedListeners,
-        string clearMessage,
-        string obfuscatedMessage)
+        ScpKnowledgeTextAnalysis? clearAnalysis,
+        ScpKnowledgeTextAnalysis? obfuscatedAnalysis)
     {
-        RaiseScpKnowledgeSpeechEvent(source, clearMessage, clearListeners);
-        RaiseScpKnowledgeSpeechEvent(source, obfuscatedMessage, obfuscatedListeners);
+        RaiseScpKnowledgeSpeechEvent(source, clearAnalysis, clearListeners);
+        RaiseScpKnowledgeSpeechEvent(source, obfuscatedAnalysis, obfuscatedListeners);
     }
 
-    private void RaiseScpKnowledgeSpeechEvent(EntityUid source, string heardMessage, List<EntityUid> listeners)
+    private void RaiseScpKnowledgeSpeechEvent(
+        EntityUid source,
+        ScpKnowledgeTextAnalysis? analysis,
+        List<EntityUid> listeners)
     {
-        if (listeners.Count == 0)
+        if (analysis == null || listeners.Count == 0)
             return;
 
-        var normalizedMessage = ScpKnowledgeText.NormalizeRecognitionText(heardMessage);
-        if (normalizedMessage.Length == 0)
-            return;
-
-        var ev = new ScpKnowledgeSpeechHeardEvent(source, normalizedMessage, listeners.ToArray());
+        var ev = new ScpKnowledgeSpeechHeardEvent(source, analysis, listeners.ToArray());
         RaiseLocalEvent(ref ev);
     }
 
-    private string GetScpKnowledgeWrappedMessage(EntityUid listener, EntityUid source, string message, string wrappedMessage)
+    private string GetScpKnowledgeWrappedMessage(
+        EntityUid listener,
+        EntityUid source,
+        string message,
+        string wrappedMessage,
+        ScpKnowledgeTextAnalysis? analysis = null)
     {
-        return _knowledge.HighlightWrappedChatMessage(listener, message, wrappedMessage, source);
+        return _knowledge.HighlightWrappedChatMessage(listener, message, wrappedMessage, source, analysis);
     }
 }

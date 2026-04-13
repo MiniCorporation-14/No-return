@@ -597,9 +597,10 @@ public sealed partial class ChatSystem : SharedChatSystem
             ("fontSize", speech.FontSize),
             ("message", isFormatted ? message : FormattedMessage.EscapeText(message))); //sunrise-edit
 
-        SendInVoiceRange(ChatChannel.Local, message, wrappedMessage, source, range);
-        // Fire added start - deliver local speech to SCP knowledge listeners
-        RaiseScpKnowledgeSpeakEvent(source, message, range);
+        // Fire added start - reuse one SCP knowledge analysis for local speech delivery and learning
+        var scpKnowledgeAnalysis = CreateScpKnowledgeTextAnalysis(message);
+        SendInVoiceRange(ChatChannel.Local, message, wrappedMessage, source, range, scpKnowledgeAnalysis: scpKnowledgeAnalysis);
+        RaiseScpKnowledgeSpeakEvent(source, scpKnowledgeAnalysis, range);
         // Fire added end
 
         var ev = new EntitySpokeEvent(source, message, null, null);
@@ -678,6 +679,11 @@ public sealed partial class ChatSystem : SharedChatSystem
         var obfuscatedListeners = new List<EntityUid>();
         // Fire added end
 
+        // Fire added start - reuse SCP knowledge analysis for whisper delivery and learning
+        var clearScpKnowledgeAnalysis = CreateScpKnowledgeTextAnalysis(message);
+        var obfuscatedScpKnowledgeAnalysis = CreateScpKnowledgeTextAnalysis(obfuscatedMessage);
+        // Fire added end
+
         foreach (var (session, data) in GetRecipients(source, WhisperMuffledRange))
         {
             EntityUid listener;
@@ -691,7 +697,7 @@ public sealed partial class ChatSystem : SharedChatSystem
 
             if (data.Range <= WhisperClearRange || data.Observer)
             {
-                var deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, message, wrappedMessage);
+                var deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, message, wrappedMessage, clearScpKnowledgeAnalysis);
                 _chatManager.ChatMessageToOne(ChatChannel.Whisper, message, deliveredWrappedMessage, source, false, session.Channel);
                 // Fire added - clear whisper recognition
                 clearListeners.Add(listener);
@@ -699,7 +705,7 @@ public sealed partial class ChatSystem : SharedChatSystem
             //If listener is too far, they only hear fragments of the message
             else if (_examineSystem.InRangeUnOccluded(source, listener, WhisperMuffledRange))
             {
-                var deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, obfuscatedMessage, wrappedobfuscatedMessage);
+                var deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, obfuscatedMessage, wrappedobfuscatedMessage, obfuscatedScpKnowledgeAnalysis);
                 _chatManager.ChatMessageToOne(ChatChannel.Whisper, obfuscatedMessage, deliveredWrappedMessage, source, false, session.Channel);
                 // Fire added - muffled whisper recognition
                 obfuscatedListeners.Add(listener);
@@ -707,7 +713,7 @@ public sealed partial class ChatSystem : SharedChatSystem
             //If listener is too far and has no line of sight, they can't identify the whisperer's identity
             else
             {
-                var deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, obfuscatedMessage, wrappedUnknownMessage);
+                var deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, obfuscatedMessage, wrappedUnknownMessage, obfuscatedScpKnowledgeAnalysis);
                 _chatManager.ChatMessageToOne(ChatChannel.Whisper, obfuscatedMessage, deliveredWrappedMessage, source, false, session.Channel);
                 // Fire added - unknown whisper recognition still uses obfuscated text
                 obfuscatedListeners.Add(listener);
@@ -715,7 +721,7 @@ public sealed partial class ChatSystem : SharedChatSystem
         }
 
         // Fire added start - deliver whisper text to SCP knowledge listeners
-        RaiseScpKnowledgeWhisperEvent(source, clearListeners, obfuscatedListeners, message, obfuscatedMessage);
+        RaiseScpKnowledgeWhisperEvent(source, clearListeners, obfuscatedListeners, clearScpKnowledgeAnalysis, obfuscatedScpKnowledgeAnalysis);
         // Fire added end
 
         _replay.RecordServerMessage(new ChatMessage(ChatChannel.Whisper, message, wrappedMessage, GetNetEntity(source), null, MessageRangeHideChatForReplay(range)));
@@ -944,7 +950,15 @@ public sealed partial class ChatSystem : SharedChatSystem
     /// <summary>
     ///     Sends a chat message to the given players in range of the source entity.
     /// </summary>
-    public void SendInVoiceRange(ChatChannel channel, string message, string wrappedMessage, EntityUid source, ChatTransmitRange range, NetUserId? author = null, Color? color = null)
+    public void SendInVoiceRange(
+        ChatChannel channel,
+        string message,
+        string wrappedMessage,
+        EntityUid source,
+        ChatTransmitRange range,
+        NetUserId? author = null,
+        Color? color = null,
+        Content.Server._Scp.Knowledge.ScpKnowledgeTextAnalysis? scpKnowledgeAnalysis = null)
     {
         foreach (var (session, data) in GetRecipients(source, VoiceRange))
         {
@@ -958,7 +972,7 @@ public sealed partial class ChatSystem : SharedChatSystem
             if (channel == ChatChannel.Local &&
                 session.AttachedEntity is { Valid: true } listener)
             {
-                deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, message, wrappedMessage);
+                deliveredWrappedMessage = GetScpKnowledgeWrappedMessage(listener, source, message, wrappedMessage, scpKnowledgeAnalysis);
             }
             // Fire added end
 

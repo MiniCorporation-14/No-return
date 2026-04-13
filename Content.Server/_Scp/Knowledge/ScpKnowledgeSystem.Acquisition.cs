@@ -12,24 +12,24 @@ public sealed partial class ScpKnowledgeSystem
 {
     private void OnSpeechHeard(ref ScpKnowledgeSpeechHeardEvent args)
     {
-        if (args.NormalizedMessage.Length == 0)
+        if (!args.Analysis.HasMatchedKnowledge)
             return;
 
         foreach (var listener in args.Listeners)
         {
-            GrantKnowledgeFromText(listener, args.NormalizedMessage, args.Source, ScpKnowledgeAcquisitionChannel.Listen);
+            GrantKnowledgeFromText(listener, args.Analysis, args.Source, ScpKnowledgeAcquisitionChannel.Listen);
         }
     }
 
     private void OnRadioSpoke(RadioSpokeEvent args)
     {
-        var normalizedMessage = ScpKnowledgeText.NormalizeRecognitionText(args.Message);
-        if (normalizedMessage.Length == 0)
+        var analysis = AnalyzeRecognitionText(args.Message, includeMatches: false);
+        if (!analysis.HasMatchedKnowledge)
             return;
 
         foreach (var receiver in args.Receivers)
         {
-            GrantKnowledgeFromText(receiver, normalizedMessage, args.Source, ScpKnowledgeAcquisitionChannel.Listen);
+            GrantKnowledgeFromText(receiver, analysis, args.Source, ScpKnowledgeAcquisitionChannel.Listen);
         }
     }
 
@@ -38,15 +38,13 @@ public sealed partial class ScpKnowledgeSystem
         if (!TryComp<PaperComponent>(args.Paper, out var paper))
             return;
 
-        var normalizedMessage = ScpKnowledgeText.NormalizeRecognitionText(args.Content);
-        if (normalizedMessage.Length == 0)
+        var analysis = GetOrCreatePaperAnalysis(args.Paper, args.Content);
+        if (!analysis.HasMatchedKnowledge)
             return;
 
-        CollectKnowledgeIdsFromText(normalizedMessage);
-
-        foreach (var knowledgeId in _matchedKnowledgeBuffer)
+        foreach (var knowledgeId in analysis.MatchedKnowledgeIds)
         {
-            if (!HasPaperKnowledgePhraseMatch(paper, knowledgeId))
+            if (!HasPaperKnowledgeMatch(paper, analysis, knowledgeId))
                 continue;
 
             var knowledge = _prototype.Index(knowledgeId);
@@ -97,11 +95,12 @@ public sealed partial class ScpKnowledgeSystem
 
     private void GrantKnowledgeFromText(
         EntityUid uid,
-        string normalizedMessage,
+        ScpKnowledgeTextAnalysis analysis,
         EntityUid source,
         ScpKnowledgeAcquisitionChannel channel)
     {
-        CollectKnowledgeIdsFromText(normalizedMessage);
+        if (!analysis.HasMatchedKnowledge)
+            return;
 
         ScpKnowledgeComponent? sourceKnowledgeState = null;
         if (channel == ScpKnowledgeAcquisitionChannel.Listen &&
@@ -110,7 +109,7 @@ public sealed partial class ScpKnowledgeSystem
             return;
         }
 
-        foreach (var knowledgeId in _matchedKnowledgeBuffer)
+        foreach (var knowledgeId in analysis.MatchedKnowledgeIds)
         {
             var knowledge = _prototype.Index(knowledgeId);
             if (channel == ScpKnowledgeAcquisitionChannel.Listen &&
@@ -130,21 +129,7 @@ public sealed partial class ScpKnowledgeSystem
             if (progress <= 0)
                 continue;
 
-            TryGrantKnowledgeProgress(uid, knowledgeId, progress, channel, source, normalizedMessage);
-        }
-    }
-
-    private void CollectKnowledgeIdsFromText(string normalizedMessage)
-    {
-        _matchedKnowledgeBuffer.Clear();
-
-        var wrappedMessage = ScpKnowledgeText.WrapForPhraseSearch(normalizedMessage);
-        foreach (var knowledgePhrase in _knowledgePhrases)
-        {
-            if (!wrappedMessage.Contains(knowledgePhrase.WrappedPhrase, StringComparison.Ordinal))
-                continue;
-
-            _matchedKnowledgeBuffer.Add(knowledgePhrase.KnowledgeId);
+            TryGrantKnowledgeProgress(uid, knowledgeId, progress, channel, source, analysis.TokenizedText.NormalizedText);
         }
     }
 }
