@@ -6,7 +6,7 @@ namespace Content.Shared._Scp.Holding;
 /// <summary>
 /// Grants the owner the ability to contribute to SCP holding.
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState, AutoGenerateComponentPause]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(fieldDeltas: true), AutoGenerateComponentPause]
 [Access(typeof(SharedScpHoldingSystem))]
 public sealed partial class ScpHoldComponent : Component
 {

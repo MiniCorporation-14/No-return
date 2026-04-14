@@ -1,4 +1,3 @@
-using Content.Shared.DoAfter;
 using Robust.Shared.GameStates;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom;
 
@@ -44,13 +43,11 @@ public sealed partial class ScpHeldComponent : Component
     /// <summary>
     /// Required contributor count for entering full hold.
     /// </summary>
-    [AutoNetworkedField]
     public int RequiredHolderCount = 2;
 
     /// <summary>
     /// Copied soft breakout cooldown configuration from the initial holdable target.
     /// </summary>
-    [AutoNetworkedField]
     public TimeSpan SoftEscapeCooldown = TimeSpan.FromSeconds(1);
 
     /// <summary>
@@ -68,7 +65,6 @@ public sealed partial class ScpHeldComponent : Component
     /// <summary>
     /// Copied post-breakout immunity duration from the initial holdable target.
     /// </summary>
-    [AutoNetworkedField]
     public TimeSpan PostBreakoutImmunity = TimeSpan.FromSeconds(5);
 
     /// <summary>
@@ -80,13 +76,11 @@ public sealed partial class ScpHeldComponent : Component
     /// <summary>
     /// Copied walk slowdown applied through <see cref="ScpHolderComponent"/>.
     /// </summary>
-    [AutoNetworkedField]
     public float WalkModifier = 0.5f;
 
     /// <summary>
     /// Copied sprint slowdown applied through <see cref="ScpHolderComponent"/>.
     /// </summary>
-    [AutoNetworkedField]
     public float SprintModifier = 0.5f;
 
     /// <summary>

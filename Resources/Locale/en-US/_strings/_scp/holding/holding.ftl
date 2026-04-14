@@ -9,5 +9,6 @@ scp-hold-holder-action-on-cooldown = You can grab again in {$seconds} s.
 scp-hold-breakout-too-early = You can try to break free in {$seconds} s.
 scp-hold-breakout-start = You start trying to break free.
 scp-hold-breakout-interrupted = Your breakout attempt was interrupted.
+scp-hold-action-restricted = You cannot do that while being held.
 alerts-scp-held-name = Forcefully restrained
 alerts-scp-held-desc = Someone is physically gripping you. Move or click this alert to try to break free. In a hard restraint you must endure the hold before the breakout starts.

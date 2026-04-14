@@ -1918,6 +1918,127 @@ public sealed class ScpHoldingTest
         await pair.CleanReturnAsync();
     }
 
+    [Test]
+    public async Task SoftHoldTargetTeleportClearsStateOnServerAndClient()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings
+        {
+            Fresh = true,
+            Connected = true,
+            DummyTicker = false,
+        });
+
+        var server = pair.Server;
+        var client = pair.Client;
+        var sEntMan = server.EntMan;
+        var cEntMan = client.EntMan;
+        var holding = server.System<SharedScpHoldingSystem>();
+        var sTransform = server.System<SharedTransformSystem>();
+        var sAlerts = server.System<AlertsSystem>();
+        var cAlerts = client.System<AlertsSystem>();
+        var sStatusEffects = server.System<StatusEffectsSystem>();
+        var cStatusEffects = client.System<StatusEffectsSystem>();
+        var sHandsSystem = server.System<SharedHandsSystem>();
+        var cHandsSystem = client.System<SharedHandsSystem>();
+        var map = await pair.CreateTestMap();
+
+        var serverPlayer = pair.Player!.AttachedEntity!.Value;
+        EntityUid holder = default;
+
+        await server.WaitPost(() =>
+        {
+            sTransform.SetCoordinates(serverPlayer, map.GridCoords);
+            holder = sEntMan.SpawnEntity(HolderPrototype, map.GridCoords.Offset(new Vector2(0.1f, 0f)));
+            StartHold(sEntMan, holding, holder, serverPlayer);
+        });
+
+        await pair.RunTicksSync(10);
+        await pair.SyncTicks(targetDelta: 1);
+
+        await server.WaitAssertion(() =>
+        {
+            var held = sEntMan.GetComponent<ScpHeldComponent>(serverPlayer);
+            var holderState = sEntMan.GetComponent<ScpHolderComponent>(holder);
+            var holderHands = sEntMan.GetComponent<HandsComponent>(holder);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(held.FullHold, Is.False);
+                Assert.That(held.Holders, Has.Count.EqualTo(1));
+                Assert.That(holderState.Target, Is.EqualTo(serverPlayer));
+                Assert.That(CountHolderHandBlockers(sEntMan, sHandsSystem, holder, serverPlayer, holderHands), Is.EqualTo(1));
+                Assert.That(CountHolderTargetVirtualItems(sEntMan, sHandsSystem, holder, serverPlayer, holderHands), Is.EqualTo(1));
+                Assert.That(sStatusEffects.HasStatusEffect(serverPlayer, "StatusEffectScpHeld"), Is.True);
+                Assert.That(sAlerts.IsShowingAlert(serverPlayer, "ScpHoldGrabbed"), Is.True);
+            });
+        });
+
+        var clientPlayer = EntityUid.Invalid;
+        var clientHolder = EntityUid.Invalid;
+        await client.WaitAssertion(() =>
+        {
+            clientPlayer = client.AttachedEntity!.Value;
+            clientHolder = ToClientEntity(sEntMan, cEntMan, holder);
+
+            var held = cEntMan.GetComponent<ScpHeldComponent>(clientPlayer);
+            var holderState = cEntMan.GetComponent<ScpHolderComponent>(clientHolder);
+            var holderHands = cEntMan.GetComponent<HandsComponent>(clientHolder);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(held.FullHold, Is.False);
+                Assert.That(held.Holders, Has.Count.EqualTo(1));
+                Assert.That(holderState.Target, Is.EqualTo(clientPlayer));
+                Assert.That(CountHolderHandBlockers(cEntMan, cHandsSystem, clientHolder, clientPlayer, holderHands), Is.EqualTo(1));
+                Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientHolder, clientPlayer, holderHands), Is.EqualTo(1));
+                Assert.That(cStatusEffects.HasStatusEffect(clientPlayer, "StatusEffectScpHeld"), Is.True);
+                Assert.That(cAlerts.IsShowingAlert(clientPlayer, "ScpHoldGrabbed"), Is.True);
+            });
+        });
+
+        await server.WaitPost(() =>
+        {
+            sTransform.SetCoordinates(serverPlayer, map.GridCoords.Offset(new Vector2(10f, 0f)));
+        });
+
+        await pair.RunTicksSync(10);
+        await pair.SyncTicks(targetDelta: 1);
+
+        await server.WaitAssertion(() =>
+        {
+            var holderHands = sEntMan.GetComponent<HandsComponent>(holder);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(sEntMan.HasComponent<ScpHeldComponent>(serverPlayer), Is.False);
+                Assert.That(sEntMan.HasComponent<ScpHoldImmuneComponent>(serverPlayer), Is.False);
+                Assert.That(sEntMan.HasComponent<ScpHolderComponent>(holder), Is.False);
+                Assert.That(CountHolderHandBlockers(sEntMan, sHandsSystem, holder, serverPlayer, holderHands), Is.EqualTo(0));
+                Assert.That(CountHolderTargetVirtualItems(sEntMan, sHandsSystem, holder, serverPlayer, holderHands), Is.EqualTo(0));
+                Assert.That(sStatusEffects.HasStatusEffect(serverPlayer, "StatusEffectScpHeld"), Is.False);
+                Assert.That(sAlerts.IsShowingAlert(serverPlayer, "ScpHoldGrabbed"), Is.False);
+            });
+        });
+
+        await client.WaitAssertion(() =>
+        {
+            var holderHands = cEntMan.GetComponent<HandsComponent>(clientHolder);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ScpHoldImmuneComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientHolder), Is.False);
+                Assert.That(CountHolderHandBlockers(cEntMan, cHandsSystem, clientHolder, clientPlayer, holderHands), Is.EqualTo(0));
+                Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientHolder, clientPlayer, holderHands), Is.EqualTo(0));
+                Assert.That(cStatusEffects.HasStatusEffect(clientPlayer, "StatusEffectScpHeld"), Is.False);
+                Assert.That(cAlerts.IsShowingAlert(clientPlayer, "ScpHoldGrabbed"), Is.False);
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
     private static int CountBlockingVirtualHands(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid uid, HandsComponent hands)
     {
         return handsSystem.EnumerateHeld((uid, hands)).Count(item =>

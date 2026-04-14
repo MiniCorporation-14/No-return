@@ -64,13 +64,56 @@ public sealed partial class SharedScpHoldingSystem : EntitySystem
         var heldQuery = EntityQueryEnumerator<ScpHeldComponent>();
         while (heldQuery.MoveNext(out var uid, out var held))
         {
-            if (_net.IsClient &&
-                (!_physicsQuery.TryComp(uid, out var physics) || !physics.Predict))
-            {
+            if (ShouldSkipHeldUpdate(uid))
                 continue;
-            }
 
             UpdateHeld((uid, held));
         }
+    }
+
+    private bool ShouldSkipHeldUpdate(EntityUid uid)
+    {
+        if (!_net.IsClient)
+            return false;
+
+        if (!_physicsQuery.TryComp(uid, out var physics))
+            return true;
+
+        return !physics.Predict;
+    }
+
+    private void DirtyHoldField(Entity<ScpHoldComponent> holder, string fieldName)
+    {
+        DirtyField(holder.AsNullable(), fieldName);
+    }
+
+    private void DirtyHeldField(Entity<ScpHeldComponent> held, string fieldName)
+    {
+        Dirty(held);
+    }
+
+    private void DirtyHeldField(EntityUid uid, ScpHeldComponent held, string fieldName)
+    {
+        Dirty(uid, held);
+    }
+
+    private void DirtyHeldFields(Entity<ScpHeldComponent> held, params string[] fieldNames)
+    {
+        Dirty(held);
+    }
+
+    private void DirtyHolderField(Entity<ScpHolderComponent> holder, string fieldName)
+    {
+        Dirty(holder);
+    }
+
+    private void DirtyImmuneField(Entity<ScpHoldImmuneComponent> immune, string fieldName)
+    {
+        Dirty(immune);
+    }
+
+    private void DirtyHandBlockerField(Entity<ScpHoldHandBlockerComponent> blocker, string fieldName)
+    {
+        Dirty(blocker);
     }
 }

@@ -1,6 +1,7 @@
+using Content.Shared.Actions.Events;
+using Content.Shared.CombatMode;
 using Content.Shared.Hands;
 using Content.Shared.Hands.EntitySystems;
-using Content.Shared.Interaction.Components;
 using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Systems;
 using Content.Shared.Throwing;
@@ -26,7 +27,9 @@ public sealed partial class SharedScpHoldingSystem
         SubscribeLocalEvent<ScpHeldComponent, UpdateCanMoveEvent>(OnHeldUpdateCanMove);
         SubscribeLocalEvent<ScpHeldComponent, AttemptMobCollideEvent>(OnHeldAttemptMobCollide);
         SubscribeLocalEvent<ScpHeldComponent, AttemptMobTargetCollideEvent>(OnHeldAttemptMobTargetCollide);
+        SubscribeLocalEvent<ScpHeldComponent, CombatModeChangedEvent>(OnHeldCombatModeChanged);
         SubscribeLocalEvent<ScpHeldComponent, PreventCollideEvent>(OnHeldPreventCollide);
+        SubscribeLocalEvent<ScpHoldRestrictedComponent, ActionAttemptEvent>(OnHoldRestrictedActionAttempt);
 
         SubscribeLocalEvent<ScpHolderComponent, ComponentStartup>(OnHolderStartup);
         SubscribeLocalEvent<ScpHolderComponent, ComponentShutdown>(OnHolderShutdown);
@@ -39,14 +42,14 @@ public sealed partial class SharedScpHoldingSystem
 
     private void OnHoldShutdown(Entity<ScpHoldComponent> ent, ref ComponentShutdown args)
     {
-        if (_net.IsClient ||
-            TerminatingOrDeleted(ent.Owner) ||
-            !_holderQuery.TryComp(ent.Owner, out var holder) ||
-            holder.Target == null ||
-            TerminatingOrDeleted(holder.Target.Value))
-        {
+        if (_net.IsClient)
             return;
-        }
+
+        if (!_holderQuery.TryComp(ent.Owner, out var holder))
+            return;
+
+        if (holder.Target == null)
+            return;
 
         ReleaseHolderContribution(ent.Owner, holder.Target.Value, clearIfEmpty: true);
     }
@@ -59,8 +62,8 @@ public sealed partial class SharedScpHoldingSystem
     private void OnHeldShutdown(Entity<ScpHeldComponent> ent, ref ComponentShutdown args)
     {
         _alerts.ClearAlert(ent.Owner, "ScpHoldGrabbed");
-        _statusEffects.TryRemoveStatusEffect(ent.Owner, GrabbedStatusEffect);
-        DeleteHeldHandBlockers(ent.Owner);
+        _statusEffects.TryRemoveStatusEffect(ent, GrabbedStatusEffect);
+        DeleteHeldHandBlockers(ent);
 
         if (!_timing.ApplyingState)
             CancelBreakoutDoAfter(ent);
@@ -69,15 +72,13 @@ public sealed partial class SharedScpHoldingSystem
         {
             foreach (var holderUid in ent.Comp.Holders)
             {
-                if (!TerminatingOrDeleted(holderUid) && _holderQuery.HasComp(holderUid))
+                if (_holderQuery.HasComp(holderUid))
                     RemComp<ScpHolderComponent>(holderUid);
             }
         }
 
         _actionBlocker.UpdateCanMove(ent.Owner);
-
-        if (_net.IsClient)
-            _physics.UpdateIsPredicted(ent.Owner);
+        _physics.UpdateIsPredicted(ent.Owner);
     }
 
     private void OnBreakoutAlert(Entity<ScpHeldComponent> ent, ref ScpHoldBreakoutAlertEvent args)
@@ -96,16 +97,14 @@ public sealed partial class SharedScpHoldingSystem
         if (args.Handled)
             return;
 
-        args.Handled = true;
-
         if (args.Cancelled)
         {
             PopupTarget(ent.Owner, "scp-hold-breakout-interrupted");
             return;
         }
 
-        RaiseBreakoutEvent(ent, args.ViaMovement, applyImmunity: true);
-        ClearHoldState(ent, applyImmunity: true);
+        BreakOut(ent, args.ViaMovement, applyImmunity: true);
+        args.Handled = true;
     }
 
     private void OnHeldMoveInput(Entity<ScpHeldComponent> ent, ref MoveInputEvent args)
@@ -178,12 +177,14 @@ public sealed partial class SharedScpHoldingSystem
 
     private void OnHolderBeforeThrow(Entity<ScpHolderComponent> ent, ref BeforeThrowEvent args)
     {
-        if (ent.Comp.Target == null ||
-            !TryComp<ScpHoldHandBlockerComponent>(args.ItemUid, out var blocker) ||
-            blocker.Target != ent.Comp.Target.Value)
-        {
+        if (ent.Comp.Target == null)
             return;
-        }
+
+        if (!TryComp<ScpHoldHandBlockerComponent>(args.ItemUid, out var blocker))
+            return;
+
+        if (blocker.Target != ent.Comp.Target.Value)
+            return;
 
         ReleaseHolderContribution(ent.Owner, ent.Comp.Target.Value, clearIfEmpty: true);
         args.Cancelled = true;
@@ -191,37 +192,42 @@ public sealed partial class SharedScpHoldingSystem
 
     private void OnHolderHandsModified(Entity<ScpHolderComponent> ent, ref DidEquipHandEvent args)
     {
-        if (ent.Comp.LifeStage > ComponentLifeStage.Running ||
-            TerminatingOrDeleted(ent.Owner) ||
-            ent.Comp.Target == null ||
-            TerminatingOrDeleted(ent.Comp.Target.Value))
-        {
+        if (ent.Comp.LifeStage > ComponentLifeStage.Running)
             return;
-        }
+
+        if (ent.Comp.Target == null)
+            return;
+
+        if (!_heldQuery.HasComp(ent.Comp.Target.Value))
+            return;
 
         RefreshHolderState(ent);
     }
 
     private void OnHolderPreventCollide(Entity<ScpHolderComponent> ent, ref PreventCollideEvent args)
     {
-        if (args.Cancelled ||
-            ent.Comp.Target == null ||
-            ent.Comp.Target != args.OtherEntity)
-        {
+        if (args.Cancelled)
             return;
-        }
+
+        if (ent.Comp.Target == null)
+            return;
+
+        if (ent.Comp.Target != args.OtherEntity)
+            return;
 
         args.Cancelled = true;
     }
 
     private void OnHolderBlockerDropped(Entity<ScpHoldHandBlockerComponent> ent, ref GettingDroppedAttemptEvent args)
     {
-        if (!_holderQuery.TryComp(args.User, out var holder) ||
-            holder.Target == null ||
-            holder.Target != ent.Comp.Target)
-        {
+        if (!_holderQuery.TryComp(args.User, out var holder))
             return;
-        }
+
+        if (holder.Target == null)
+            return;
+
+        if (holder.Target != ent.Comp.Target)
+            return;
 
         ReleaseHolderContribution(args.User, ent.Comp.Target, clearIfEmpty: true);
     }

@@ -94,14 +94,12 @@ public sealed class ScpHoldingPredictionSystem : EntitySystem
     private void OnBlockerUnequipped(Entity<ScpHoldHandBlockerComponent> ent, ref GotUnequippedHandEvent args)
     {
         if (_player.LocalEntity != args.User)
-        {
             return;
-        }
 
-        if (_holderQuery.TryComp(args.User, out var holder) &&
-            holder.Target == ent.Comp.Target)
+        if (_holderQuery.TryComp(args.User, out var holder))
         {
-            return;
+            if (holder.Target == ent.Comp.Target)
+                return;
         }
 
         SuppressBlockerRespawn(args.User, ent.Comp.Target);
@@ -118,10 +116,13 @@ public sealed class ScpHoldingPredictionSystem : EntitySystem
             return;
         }
 
-        if (_holderQuery.TryComp(local, out var localHolder) && localHolder.Target == ent.Owner)
+        if (_holderQuery.TryComp(local, out var localHolder))
         {
-            args.IsPredicted = true;
-            return;
+            if (localHolder.Target == ent.Owner)
+            {
+                args.IsPredicted = true;
+                return;
+            }
         }
 
         for (var i = 0; i < ent.Comp.Holders.Count; i++)
@@ -166,13 +167,17 @@ public sealed class ScpHoldingPredictionSystem : EntitySystem
 
         foreach (var heldItem in _hands.EnumerateHeld((holder, hands)))
         {
-            if (!TryComp<VirtualItemComponent>(heldItem, out var virtualItem) ||
-                !TryComp<ScpHoldHandBlockerComponent>(heldItem, out var blocker) ||
-                virtualItem.BlockingEntity != target ||
-                blocker.Target != target)
-            {
+            if (!TryComp<VirtualItemComponent>(heldItem, out var virtualItem))
                 continue;
-            }
+
+            if (!TryComp<ScpHoldHandBlockerComponent>(heldItem, out var blocker))
+                continue;
+
+            if (virtualItem.BlockingEntity != target)
+                continue;
+
+            if (blocker.Target != target)
+                continue;
 
             _virtualItem.DeleteVirtualItem((heldItem, virtualItem), holder);
         }

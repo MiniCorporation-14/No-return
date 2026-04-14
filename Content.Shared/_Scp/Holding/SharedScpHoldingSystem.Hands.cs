@@ -61,13 +61,8 @@ public sealed partial class SharedScpHoldingSystem
 
             EnsureComp<UnremoveableComponent>(virtualItem.Value);
             var blocker = EnsureComp<ScpHeldHandBlockerComponent>(virtualItem.Value);
-
-            if (blocker.Target != held.Owner || blocker.Holder != holderUid)
-            {
-                blocker.Target = held.Owner;
-                blocker.Holder = holderUid;
-                Dirty(virtualItem.Value, blocker);
-            }
+            blocker.Target = held.Owner;
+            blocker.Holder = holderUid;
 
             iconIndex++;
         }
@@ -108,13 +103,18 @@ public sealed partial class SharedScpHoldingSystem
                 {
                     validBlocker = heldItem;
                     RemComp<UnremoveableComponent>(heldItem);
-                    var blocker = EnsureComp<ScpHoldHandBlockerComponent>(heldItem);
+                    var existingBlockerCreated = !TryComp<ScpHoldHandBlockerComponent>(heldItem, out var blocker);
+                    blocker ??= EnsureComp<ScpHoldHandBlockerComponent>(heldItem);
                     var currentTarget = target!.Value;
                     if (blocker.Target != currentTarget)
                     {
                         blocker.Target = currentTarget;
-                        Dirty(heldItem, blocker);
+                        DirtyHandBlockerField((heldItem, blocker), nameof(ScpHoldHandBlockerComponent.Target));
                     }
+
+                    if (existingBlockerCreated)
+                        Dirty(heldItem, blocker);
+
                     continue;
                 }
             }
@@ -144,9 +144,13 @@ public sealed partial class SharedScpHoldingSystem
         if (!_virtualItem.TrySpawnVirtualItemInHand(holder.Comp.Target.Value, holder.Owner, out var spawnedVirtualItem, silent: true))
             return;
 
-        var blockerComp = EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
+        var blockerCreated = !TryComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value, out var blockerComp);
+        blockerComp ??= EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
         blockerComp.Target = holder.Comp.Target.Value;
-        Dirty(spawnedVirtualItem.Value, blockerComp);
+        DirtyHandBlockerField((spawnedVirtualItem.Value, blockerComp), nameof(ScpHoldHandBlockerComponent.Target));
+
+        if (blockerCreated)
+            Dirty(spawnedVirtualItem.Value, blockerComp);
     }
 
     private bool HasAvailableHolderHand(EntityUid holderUid)

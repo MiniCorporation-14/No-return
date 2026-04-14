@@ -28,14 +28,20 @@ public sealed partial class SharedScpHoldingSystem
             return;
 
         var primaryHolder = held.Comp.PrimaryHolder.Value;
-        if (!_holderQuery.TryComp(primaryHolder, out var holder) ||
-            holder.Target != held.Owner ||
-            !_container.IsInSameOrNoContainer(primaryHolder, held.Owner) ||
-            !_interaction.InRangeUnobstructed(primaryHolder, held.Owner, maintenanceRange) ||
-            !_physicsQuery.TryComp(held.Owner, out var heldPhysics))
-        {
+        if (!_holderQuery.TryComp(primaryHolder, out var holder))
             return;
-        }
+
+        if (holder.Target != held.Owner)
+            return;
+
+        if (!_container.IsInSameOrNoContainer(primaryHolder, held.Owner))
+            return;
+
+        if (!_interaction.InRangeUnobstructed(primaryHolder, held.Owner, maintenanceRange))
+            return;
+
+        if (!_physicsQuery.TryComp(held.Owner, out var heldPhysics))
+            return;
 
         var holderCoords = _transform.GetMapCoordinates(primaryHolder);
         var heldCoords = _transform.GetMapCoordinates(held.Owner);

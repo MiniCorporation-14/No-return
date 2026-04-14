@@ -33,7 +33,7 @@ public sealed partial class SharedScpHoldingSystem
             return;
 
         held.Comp.BreakoutDoAfterId = breakoutDoAfterId;
-        Dirty(held);
+        DirtyHeldField(held, nameof(ScpHeldComponent.BreakoutDoAfterId));
     }
 
     private void ShowBreakoutAttemptFeedback(Entity<ScpHeldComponent> held)
@@ -43,19 +43,16 @@ public sealed partial class SharedScpHoldingSystem
 
         foreach (var holderUid in held.Comp.Holders)
         {
-            if (TerminatingOrDeleted(holderUid) || !_holderQuery.TryComp(holderUid, out var holder) || holder.Target != held.Owner)
+            if (!_holderQuery.TryComp(holderUid, out var holder))
                 continue;
 
-            if (_net.IsClient)
-                PredictedSpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
-            else
-                SpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
+            if (holder.Target != held.Owner)
+                continue;
+
+            SpawnBreakoutAttemptEffect(holderUid);
         }
 
-        if (_net.IsClient)
-            _audio.PlayPredicted(BreakoutAttemptSound, held.Owner, held.Owner);
-        else
-            _audio.PlayPvs(BreakoutAttemptSound, held.Owner);
+        PlayBreakoutAttemptSound(held.Owner);
     }
 
     private void PopupHolder(EntityUid holder, string key, params (string, object)[] args)
@@ -72,5 +69,27 @@ public sealed partial class SharedScpHoldingSystem
             return;
 
         _popup.PopupEntity(Loc.GetString(key, args), target, target);
+    }
+
+    private void SpawnBreakoutAttemptEffect(EntityUid holderUid)
+    {
+        if (_net.IsClient)
+        {
+            PredictedSpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
+            return;
+        }
+
+        SpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
+    }
+
+    private void PlayBreakoutAttemptSound(EntityUid targetUid)
+    {
+        if (_net.IsClient)
+        {
+            _audio.PlayPredicted(BreakoutAttemptSound, targetUid, targetUid);
+            return;
+        }
+
+        _audio.PlayPvs(BreakoutAttemptSound, targetUid);
     }
 }

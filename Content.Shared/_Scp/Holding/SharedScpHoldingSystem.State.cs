@@ -41,15 +41,8 @@ public sealed partial class SharedScpHoldingSystem
 
         foreach (var holderUid in held.Comp.Holders)
         {
-            if (!Exists(holderUid) ||
-                !_holdQuery.HasComp(holderUid) ||
-                !_holderQuery.TryComp(holderUid, out var holder) ||
-                holder.Target != held.Owner ||
-                !_container.IsInSameOrNoContainer(holderUid, held.Owner) ||
-                !_interaction.InRangeUnobstructed(holderUid, held.Owner, maintenanceRange))
-            {
+            if (ShouldReleaseHolder(holderUid, held.Owner, maintenanceRange))
                 _holdersToRemove.Add(holderUid);
-            }
         }
 
         foreach (var holderUid in _holdersToRemove)
@@ -64,9 +57,9 @@ public sealed partial class SharedScpHoldingSystem
             SyncHeldState((held.Owner, refreshed));
     }
 
-    private Entity<ScpHeldComponent> EnsureHeldState(EntityUid target, ScpHoldableComponent config)
+    private Entity<ScpHeldComponent> EnsureHeldState(EntityUid target, ScpHoldableComponent config, out bool created)
     {
-        var created = !_heldQuery.TryComp(target, out var held);
+        created = !_heldQuery.TryComp(target, out var held);
         held ??= EnsureComp<ScpHeldComponent>(target);
 
         if (created)
@@ -79,15 +72,19 @@ public sealed partial class SharedScpHoldingSystem
     private void AddHolderContribution(EntityUid holderUid, Entity<ScpHeldComponent> held)
     {
         if (!held.Comp.Holders.Contains(holderUid))
+        {
             held.Comp.Holders.Add(holderUid);
+            DirtyHeldField(held, nameof(ScpHeldComponent.Holders));
+        }
 
-        var holder = EnsureComp<ScpHolderComponent>(holderUid);
-        holder.Target = held.Owner;
-        holder.SlowdownEnabled = false;
-        holder.WalkModifier = held.Comp.WalkModifier;
-        holder.SprintModifier = held.Comp.SprintModifier;
-        Dirty(holderUid, holder);
+        var holderCreated = !_holderQuery.TryComp(holderUid, out var holder);
+        holder ??= EnsureComp<ScpHolderComponent>(holderUid);
+        SetHolderTarget((holderUid, holder), held.Owner);
+        SetHolderSlowdown((holderUid, holder), false, held.Comp.WalkModifier, held.Comp.SprintModifier);
         RefreshHolderState((holderUid, holder));
+
+        if (holderCreated)
+            Dirty(holderUid, holder);
     }
 
     private void ReleaseHolderContribution(EntityUid holderUid, EntityUid targetUid, bool clearIfEmpty)
@@ -95,17 +92,24 @@ public sealed partial class SharedScpHoldingSystem
         if (!_heldQuery.TryComp(targetUid, out var held))
             return;
 
+        var removed = false;
         for (var i = held.Holders.Count - 1; i >= 0; i--)
         {
             if (held.Holders[i] == holderUid)
+            {
                 held.Holders.RemoveAt(i);
+                removed = true;
+            }
         }
+
+        if (removed)
+            DirtyHeldField(targetUid, held, nameof(ScpHeldComponent.Holders));
 
         if (_holderQuery.HasComp(holderUid))
             RemComp<ScpHolderComponent>(holderUid);
 
         if (held.PrimaryHolder == holderUid)
-            held.PrimaryHolder = null;
+            SetHeldPrimaryHolder((targetUid, held), null);
 
         if (held.Holders.Count == 0)
         {
@@ -149,7 +153,6 @@ public sealed partial class SharedScpHoldingSystem
         UpdateSoftDrag(held, maintenanceRange, desiredSoftDragDistance);
         UpdateHolderSlowdowns(held);
         SyncPlaceholderHands(held);
-        Dirty(held);
     }
 
     private void EnterFullHold(Entity<ScpHeldComponent> held)
@@ -158,13 +161,16 @@ public sealed partial class SharedScpHoldingSystem
         {
             held.Comp.FullHold = true;
             held.Comp.FullHoldStartedAt = _timing.CurTime;
+            DirtyHeldFields(
+                held,
+                nameof(ScpHeldComponent.FullHold),
+                nameof(ScpHeldComponent.FullHoldStartedAt));
         }
 
         UpdateHolderSlowdowns(held);
         SyncPlaceholderHands(held);
         ZeroHeldVelocity(held.Owner);
         _actionBlocker.UpdateCanMove(held.Owner);
-        Dirty(held);
     }
 
     private void ExitFullHold(Entity<ScpHeldComponent> held)
@@ -176,32 +182,30 @@ public sealed partial class SharedScpHoldingSystem
 
         held.Comp.FullHold = false;
         held.Comp.FullHoldStartedAt = null;
+        DirtyHeldFields(
+            held,
+            nameof(ScpHeldComponent.FullHold),
+            nameof(ScpHeldComponent.FullHoldStartedAt));
         SyncPlaceholderHands(held);
         _actionBlocker.UpdateCanMove(held.Owner);
-        Dirty(held);
     }
 
     private bool EnsurePrimaryHolder(Entity<ScpHeldComponent> held)
     {
-        if (held.Comp.PrimaryHolder != null &&
-            _holderQuery.TryComp(held.Comp.PrimaryHolder.Value, out var activeHolder) &&
-            activeHolder.Target == held.Owner &&
-            held.Comp.Holders.Contains(held.Comp.PrimaryHolder.Value))
-        {
+        if (held.Comp.PrimaryHolder != null && IsValidPrimaryHolder(held, held.Comp.PrimaryHolder.Value))
             return true;
-        }
 
-        held.Comp.PrimaryHolder = null;
+        SetHeldPrimaryHolder(held, null);
 
         foreach (var holderUid in held.Comp.Holders)
         {
-            if (!_holderQuery.TryComp(holderUid, out var holder) ||
-                holder.Target != held.Owner)
-            {
+            if (!_holderQuery.TryComp(holderUid, out var holder))
                 continue;
-            }
 
-            held.Comp.PrimaryHolder = holderUid;
+            if (holder.Target != held.Owner)
+                continue;
+
+            SetHeldPrimaryHolder(held, holderUid);
             return true;
         }
 
@@ -232,9 +236,13 @@ public sealed partial class SharedScpHoldingSystem
 
         if (applyImmunity)
         {
-            var immune = EnsureComp<ScpHoldImmuneComponent>(held.Owner);
+            var immuneCreated = !TryComp<ScpHoldImmuneComponent>(held.Owner, out var immune);
+            immune ??= EnsureComp<ScpHoldImmuneComponent>(held.Owner);
             immune.ExpiresAt = _timing.CurTime + held.Comp.PostBreakoutImmunity;
-            Dirty(held.Owner, immune);
+            DirtyImmuneField((held.Owner, immune), nameof(ScpHoldImmuneComponent.ExpiresAt));
+
+            if (immuneCreated)
+                Dirty(held.Owner, immune);
         }
 
         foreach (var holderUid in _holderCooldownsToApply)
@@ -265,10 +273,24 @@ public sealed partial class SharedScpHoldingSystem
             return;
         }
 
-        holder.Comp.SlowdownEnabled = enabled;
-        holder.Comp.WalkModifier = walkModifier;
-        holder.Comp.SprintModifier = sprintModifier;
-        Dirty(holder);
+        if (holder.Comp.SlowdownEnabled != enabled)
+        {
+            holder.Comp.SlowdownEnabled = enabled;
+            DirtyHolderField(holder, nameof(ScpHolderComponent.SlowdownEnabled));
+        }
+
+        if (!MathHelper.CloseTo(holder.Comp.WalkModifier, walkModifier))
+        {
+            holder.Comp.WalkModifier = walkModifier;
+            DirtyHolderField(holder, nameof(ScpHolderComponent.WalkModifier));
+        }
+
+        if (!MathHelper.CloseTo(holder.Comp.SprintModifier, sprintModifier))
+        {
+            holder.Comp.SprintModifier = sprintModifier;
+            DirtyHolderField(holder, nameof(ScpHolderComponent.SprintModifier));
+        }
+
         _movement.RefreshMovementSpeedModifiers(holder.Owner);
     }
 
@@ -300,5 +322,51 @@ public sealed partial class SharedScpHoldingSystem
         target.SprintModifier = source.HolderSprintModifier;
         target.SoftEscapeAvailableAt = _timing.CurTime;
         target.FullHoldStartedAt = null;
+    }
+
+    private bool ShouldReleaseHolder(EntityUid holderUid, EntityUid heldUid, float maintenanceRange)
+    {
+        if (!_holdQuery.HasComp(holderUid))
+            return true;
+
+        if (!_holderQuery.TryComp(holderUid, out var holder))
+            return true;
+
+        if (holder.Target != heldUid)
+            return true;
+
+        if (!_container.IsInSameOrNoContainer(holderUid, heldUid))
+            return true;
+
+        return !_interaction.InRangeUnobstructed(holderUid, heldUid, maintenanceRange);
+    }
+
+    private bool IsValidPrimaryHolder(Entity<ScpHeldComponent> held, EntityUid primaryHolderUid)
+    {
+        if (!_holderQuery.TryComp(primaryHolderUid, out var holder))
+            return false;
+
+        if (holder.Target != held.Owner)
+            return false;
+
+        return held.Comp.Holders.Contains(primaryHolderUid);
+    }
+
+    private void SetHolderTarget(Entity<ScpHolderComponent> holder, EntityUid? target)
+    {
+        if (holder.Comp.Target == target)
+            return;
+
+        holder.Comp.Target = target;
+        DirtyHolderField(holder, nameof(ScpHolderComponent.Target));
+    }
+
+    private void SetHeldPrimaryHolder(Entity<ScpHeldComponent> held, EntityUid? primaryHolder)
+    {
+        if (held.Comp.PrimaryHolder == primaryHolder)
+            return;
+
+        held.Comp.PrimaryHolder = primaryHolder;
+        DirtyHeldField(held, nameof(ScpHeldComponent.PrimaryHolder));
     }
 }

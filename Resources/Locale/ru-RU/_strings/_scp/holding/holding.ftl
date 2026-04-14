@@ -9,5 +9,6 @@ scp-hold-holder-action-on-cooldown = Схватить снова можно че
 scp-hold-breakout-too-early = Попытаться вырваться можно через {$seconds} с.
 scp-hold-breakout-start = Вы начинаете вырываться.
 scp-hold-breakout-interrupted = Попытка вырваться была прервана.
+scp-hold-action-restricted = Вы не можете сделать это, пока вас удерживают.
 alerts-scp-held-name = Вас удерживают силой
 alerts-scp-held-desc = Кто-то физически держит вас. Двигайтесь или нажмите на этот статус-эффект, чтобы попытаться вырваться. В полном удержании сначала нужно выдержать захват.

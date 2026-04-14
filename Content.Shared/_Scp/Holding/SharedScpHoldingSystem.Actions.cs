@@ -40,9 +40,13 @@ public sealed partial class SharedScpHoldingSystem
             return false;
 
         var holdable = _holdableQuery.Comp(target);
-        var held = EnsureHeldState(target, holdable);
+        var held = EnsureHeldState(target, holdable, out var heldCreated);
         AddHolderContribution(holder.Owner, held);
         SyncHeldState(held);
+
+        if (heldCreated)
+            Dirty(held);
+
         StartHoldCooldown(holder);
         return true;
     }
@@ -54,7 +58,7 @@ public sealed partial class SharedScpHoldingSystem
         bool ignoreHandAvailability = false,
         bool checkAttempt = false)
     {
-        if (!Exists(target) || holder.Owner == target)
+        if (holder.Owner == target)
             return false;
 
         if (!CanStartHold(holder, quiet))
@@ -67,18 +71,42 @@ public sealed partial class SharedScpHoldingSystem
             return false;
         }
 
-        if (!_whitelist.CheckBoth(target, holder.Comp.HoldableBlacklist, holder.Comp.HoldableWhitelist) ||
-            !_whitelist.CheckBoth(holder.Owner, holdable.HolderBlacklist, holdable.HolderWhitelist))
+        if (!_whitelist.CheckBoth(target, holder.Comp.HoldableBlacklist, holder.Comp.HoldableWhitelist))
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
             return false;
         }
 
-        if (!_moverQuery.HasComp(holder.Owner) ||
-            !_moverQuery.HasComp(target) ||
-            !_physicsQuery.TryComp(target, out var targetPhysics) ||
-            targetPhysics.BodyType == BodyType.Static)
+        if (!_whitelist.CheckBoth(holder.Owner, holdable.HolderBlacklist, holdable.HolderWhitelist))
+        {
+            if (!quiet)
+                PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+            return false;
+        }
+
+        if (!_moverQuery.HasComp(holder.Owner))
+        {
+            if (!quiet)
+                PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+            return false;
+        }
+
+        if (!_moverQuery.HasComp(target))
+        {
+            if (!quiet)
+                PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+            return false;
+        }
+
+        if (!_physicsQuery.TryComp(target, out var targetPhysics))
+        {
+            if (!quiet)
+                PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+            return false;
+        }
+
+        if (targetPhysics.BodyType == BodyType.Static)
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
@@ -111,7 +139,7 @@ public sealed partial class SharedScpHoldingSystem
         {
             range = held.HoldRange;
 
-            if (held.FullHold && held.Holders.Count >= held.RequiredHolderCount)
+            if (held.FullHold)
             {
                 if (!quiet)
                     PopupHolder(holder.Owner, "scp-hold-target-fully-held", ("target", target));
@@ -139,15 +167,23 @@ public sealed partial class SharedScpHoldingSystem
             : TrySoftBreakOut(held, viaMovement);
     }
 
+    public bool TryForceBreakOut(Entity<ScpHeldComponent?> held, bool viaMovement = false, bool applyImmunity = false)
+    {
+        if (!Resolve(held, ref held.Comp, false))
+            return false;
+
+        BreakOut((held.Owner, held.Comp), viaMovement, applyImmunity);
+        return true;
+    }
+
     public void RefreshHeldState(Entity<ScpHeldComponent> held)
     {
         _alerts.ShowAlert(held.Owner, "ScpHoldGrabbed");
         SyncHeldStatusEffect(held.Owner);
         SyncPlaceholderHands(held);
         _actionBlocker.UpdateCanMove(held.Owner);
-
-        if (_net.IsClient)
-            _physics.UpdateIsPredicted(held.Owner);
+        EnsureCombatModeDisabled(held.Owner);
+        _physics.UpdateIsPredicted(held.Owner);
     }
 
     public void RefreshHolderState(Entity<ScpHolderComponent> holder)
@@ -164,8 +200,7 @@ public sealed partial class SharedScpHoldingSystem
         if (!viaMovement)
             PopupTarget(held.Owner, "scp-hold-breakout-start");
 
-        RaiseBreakoutEvent(held, viaMovement, applyImmunity: false);
-        ClearHoldState(held, applyImmunity: false);
+        BreakOut(held, viaMovement, applyImmunity: false);
         return true;
     }
 
@@ -240,8 +275,7 @@ public sealed partial class SharedScpHoldingSystem
 
     private void StartHoldCooldown(Entity<ScpHoldComponent> holder)
     {
-        holder.Comp.HoldAvailableAt = _timing.CurTime + holder.Comp.HoldActionCooldown;
-        Dirty(holder);
+        SetHoldAvailableAt(holder, _timing.CurTime + holder.Comp.HoldActionCooldown);
     }
 
     private void ApplyFullBreakoutHolderCooldown(EntityUid holderUid)
@@ -253,8 +287,24 @@ public sealed partial class SharedScpHoldingSystem
         if (hold.HoldAvailableAt != null && hold.HoldAvailableAt.Value >= cooldownEnd)
             return;
 
-        hold.HoldAvailableAt = cooldownEnd;
-        Dirty(holderUid, hold);
+        SetHoldAvailableAt((holderUid, hold), cooldownEnd);
+    }
+
+    private void SetHoldAvailableAt(Entity<ScpHoldComponent> holder, TimeSpan? holdAvailableAt)
+    {
+        if (holder.Comp.HoldAvailableAt == holdAvailableAt)
+            return;
+
+        var previousHoldAvailableAt = holder.Comp.HoldAvailableAt;
+        holder.Comp.HoldAvailableAt = holdAvailableAt;
+
+        if (previousHoldAvailableAt == null || holdAvailableAt == null)
+        {
+            Dirty(holder);
+            return;
+        }
+
+        DirtyHoldField(holder, nameof(ScpHoldComponent.HoldAvailableAt));
     }
 
     private bool CanPassHoldAttempt(EntityUid holderUid, EntityUid targetUid)
@@ -269,5 +319,11 @@ public sealed partial class SharedScpHoldingSystem
     {
         var ev = new ScpHoldBreakoutEvent(viaMovement, held.Comp.FullHold, applyImmunity);
         RaiseLocalEvent(held.Owner, ev);
+    }
+
+    private void BreakOut(Entity<ScpHeldComponent> held, bool viaMovement, bool applyImmunity)
+    {
+        RaiseBreakoutEvent(held, viaMovement, applyImmunity);
+        ClearHoldState(held, applyImmunity);
     }
 }
