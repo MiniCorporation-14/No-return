@@ -29,12 +29,12 @@ public abstract partial class SharedScpHoldingSystem
         return _heldQuery.TryComp(uid, out var held) && IsHeldAtStage((uid, held), stage);
     }
 
-    private static bool IsHeldAtStage(Entity<ScpHeldComponent> held, ScpHoldStage stage)
+    private bool IsHeldAtStage(Entity<ScpHeldComponent> held, ScpHoldStage stage)
     {
         return stage switch
         {
             ScpHoldStage.Soft => true,
-            ScpHoldStage.Full => held.Comp.FullHold,
+            ScpHoldStage.Full => _fullHeldQuery.HasComp(held.Owner),
             _ => false,
         };
     }

@@ -27,34 +27,110 @@ public abstract partial class SharedScpHoldingSystem
 
     private void SyncPlaceholderHands(Entity<ScpHeldComponent> held)
     {
-        DeleteHeldHandBlockers(held.Owner);
-
-        if (!held.Comp.FullHold || !_handsQuery.TryComp(held.Owner, out var hands))
+        if (!_handsQuery.TryComp(held.Owner, out var hands))
             return;
 
-        foreach (var hand in _hands.EnumerateHands((held.Owner, hands)))
+        if (!_fullHeldQuery.HasComp(held.Owner))
         {
-            if (!_hands.TryGetHeldItem((held.Owner, hands), hand, out var heldItem))
+            DeleteHeldHandBlockers(held.Owner);
+            return;
+        }
+
+        CollectPlaceholderIconHolders(held);
+
+        if (_placeholderIcons.Count == 0)
+        {
+            DeleteHeldHandBlockers(held.Owner);
+            return;
+        }
+
+        var heldHands = new Entity<HandsComponent>(held.Owner, hands).AsNullable();
+        DropHeldItemsForPlaceholders(heldHands);
+        DeleteInvalidHeldHandBlockers(heldHands);
+        EnsureHeldHandBlockers(heldHands);
+    }
+
+    private void CollectPlaceholderIconHolders(Entity<ScpHeldComponent> held)
+    {
+        _placeholderIcons.Clear();
+
+        foreach (var holderUid in held.Comp.Holders)
+        {
+            if (_holderQuery.TryComp(holderUid, out var holder) &&
+                holder.Target == held.Owner)
+            {
+                _placeholderIcons.Add(holderUid);
+            }
+        }
+    }
+
+    private void DropHeldItemsForPlaceholders(Entity<HandsComponent?> held)
+    {
+        foreach (var hand in _hands.EnumerateHands(held))
+        {
+            if (!_hands.TryGetHeldItem(held, hand, out var heldItem))
                 continue;
 
             if (HasComp<UnremoveableComponent>(heldItem.Value))
                 continue;
 
-            _hands.DoDrop((held.Owner, hands), hand, doDropInteraction: true);
+            _hands.DoDrop(held, hand, doDropInteraction: true);
         }
+    }
 
-        _placeholderIcons.Clear();
-        foreach (var holderUid in held.Comp.Holders)
+    private void DeleteInvalidHeldHandBlockers(Entity<HandsComponent?> held)
+    {
+        _virtualBlockersToDelete.Clear();
+
+        foreach (var heldItem in _hands.EnumerateHeld(held))
         {
-            if (_holderQuery.TryComp(holderUid, out var holder) && holder.Target == held.Owner)
-                _placeholderIcons.Add(holderUid);
+            if (!TryComp<VirtualItemComponent>(heldItem, out var virtualItem))
+                continue;
+
+            if (!TryComp<ScpHeldHandBlockerComponent>(heldItem, out var blocker))
+                continue;
+
+            if (!TrySyncHeldHandBlocker((heldItem, blocker), virtualItem, held.Owner))
+            {
+                _virtualBlockersToDelete.Add((heldItem, virtualItem));
+            }
         }
 
-        if (_placeholderIcons.Count == 0)
-            return;
+        foreach (var virtualItem in _virtualBlockersToDelete)
+        {
+            _virtualItem.DeleteVirtualItem(virtualItem, held.Owner);
+        }
+    }
 
+    private bool TrySyncHeldHandBlocker(
+        Entity<ScpHeldHandBlockerComponent> blocker,
+        VirtualItemComponent virtualItem,
+        EntityUid heldUid)
+    {
+        if (!_placeholderIcons.Contains(virtualItem.BlockingEntity))
+            return false;
+
+        var dirtyTarget = blocker.Comp.Target != heldUid;
+        if (dirtyTarget)
+        {
+            blocker.Comp.Target = heldUid;
+            DirtyField(blocker.Owner, blocker.Comp, nameof(ScpHeldHandBlockerComponent.Target));
+        }
+
+        var dirtyHolder = blocker.Comp.Holder != virtualItem.BlockingEntity;
+        if (dirtyHolder)
+        {
+            blocker.Comp.Holder = virtualItem.BlockingEntity;
+            DirtyField(blocker.Owner, blocker.Comp, nameof(ScpHeldHandBlockerComponent.Holder));
+        }
+
+        return true;
+    }
+
+    private void EnsureHeldHandBlockers(Entity<HandsComponent?> held)
+    {
         var iconIndex = 0;
-        while (_hands.TryGetEmptyHand((held.Owner, hands), out var emptyHand))
+        while (_hands.TryGetEmptyHand(held, out var emptyHand))
         {
             var holderUid = _placeholderIcons[iconIndex % _placeholderIcons.Count];
             if (!_virtualItem.TrySpawnVirtualItemInHand(holderUid, held.Owner, out var virtualItem, empty: emptyHand, silent: true))
@@ -64,6 +140,7 @@ public abstract partial class SharedScpHoldingSystem
             var blocker = EnsureComp<ScpHeldHandBlockerComponent>(virtualItem.Value);
             blocker.Target = held.Owner;
             blocker.Holder = holderUid;
+            Dirty(virtualItem.Value, blocker);
 
             iconIndex++;
         }
@@ -110,7 +187,7 @@ public abstract partial class SharedScpHoldingSystem
                     if (blocker.Target != currentTarget)
                     {
                         blocker.Target = currentTarget;
-                        DirtyHandBlockerField((heldItem, blocker), nameof(ScpHoldHandBlockerComponent.Target));
+                        DirtyField(heldItem, blocker, nameof(ScpHoldHandBlockerComponent.Target));
                     }
 
                     if (existingBlockerCreated)
@@ -145,13 +222,10 @@ public abstract partial class SharedScpHoldingSystem
         if (!_virtualItem.TrySpawnVirtualItemInHand(holder.Comp.Target.Value, holder.Owner, out var spawnedVirtualItem, silent: true))
             return;
 
-        var blockerCreated = !TryComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value, out var blockerComp);
+        TryComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value, out var blockerComp);
         blockerComp ??= EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
         blockerComp.Target = holder.Comp.Target.Value;
-        DirtyHandBlockerField((spawnedVirtualItem.Value, blockerComp), nameof(ScpHoldHandBlockerComponent.Target));
-
-        if (blockerCreated)
-            Dirty(spawnedVirtualItem.Value, blockerComp);
+        Dirty(spawnedVirtualItem.Value, blockerComp);
     }
 
     private bool HasAvailableHolderHand(EntityUid holderUid)

@@ -5,6 +5,7 @@ using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Systems;
 using Content.Shared.Throwing;
+using Robust.Shared.Maths;
 using Robust.Shared.Physics.Events;
 
 namespace Content.Shared._Scp.Holding;
@@ -17,69 +18,46 @@ public abstract partial class SharedScpHoldingSystem
 
     private void SubscribeHoldingEvents()
     {
-        SubscribeLocalEvent<ScpHoldComponent, ComponentShutdown>(OnHoldShutdown);
-
         SubscribeLocalEvent<ScpHeldComponent, ComponentStartup>(OnHeldStartup);
         SubscribeLocalEvent<ScpHeldComponent, ComponentShutdown>(OnHeldShutdown);
         SubscribeLocalEvent<ScpHeldComponent, ScpHoldBreakoutAlertEvent>(OnBreakoutAlert);
         SubscribeLocalEvent<ScpHeldComponent, ScpHoldBreakoutDoAfterEvent>(OnBreakoutDoAfter);
         SubscribeLocalEvent<ScpHeldComponent, MoveInputEvent>(OnHeldMoveInput);
-        SubscribeLocalEvent<ScpHeldComponent, HandCountChangedEvent>(OnHandCountChanged);
-        SubscribeLocalEvent<ScpHeldComponent, UpdateCanMoveEvent>(OnHeldUpdateCanMove);
         SubscribeLocalEvent<ScpHeldComponent, AttemptMobCollideEvent>(OnHeldAttemptMobCollide);
         SubscribeLocalEvent<ScpHeldComponent, AttemptMobTargetCollideEvent>(OnHeldAttemptMobTargetCollide);
         SubscribeLocalEvent<ScpHeldComponent, CombatModeChangedEvent>(OnHeldCombatModeChanged);
         SubscribeLocalEvent<ScpHeldComponent, PreventCollideEvent>(OnHeldPreventCollide);
         SubscribeLocalEvent<ScpHoldRestrictedComponent, ActionAttemptEvent>(OnHoldRestrictedActionAttempt);
+        SubscribeLocalEvent<ScpBreakoutAttemptComponent, ComponentStartup>(OnBreakoutAttemptStartup);
+        SubscribeLocalEvent<ScpBreakoutAttemptComponent, ComponentShutdown>(OnBreakoutAttemptShutdown);
+        SubscribeLocalEvent<ScpFullHeldComponent, ComponentStartup>(OnFullHeldStartup);
+        SubscribeLocalEvent<ScpFullHeldComponent, ComponentRemove>(OnFullHeldRemove);
+        SubscribeLocalEvent<ScpFullHeldComponent, UpdateCanMoveEvent>(OnFullHeldUpdateCanMove);
 
         SubscribeLocalEvent<ScpHolderComponent, ComponentStartup>(OnHolderStartup);
         SubscribeLocalEvent<ScpHolderComponent, ComponentShutdown>(OnHolderShutdown);
-        SubscribeLocalEvent<ScpHolderComponent, RefreshMovementSpeedModifiersEvent>(OnHolderRefreshMoveSpeed);
         SubscribeLocalEvent<ScpHolderComponent, BeforeThrowEvent>(OnHolderBeforeThrow);
         SubscribeLocalEvent<ScpHolderComponent, DidEquipHandEvent>(OnHolderHandsModified);
         SubscribeLocalEvent<ScpHolderComponent, PreventCollideEvent>(OnHolderPreventCollide);
+        SubscribeLocalEvent<ScpHolderSlowdownComponent, ComponentRemove>(OnHolderSlowdownRemove);
+        SubscribeLocalEvent<ScpHolderSlowdownComponent, AfterAutoHandleStateEvent>(OnHolderSlowdownAfterState);
+        SubscribeLocalEvent<ScpHolderSlowdownComponent, RefreshMovementSpeedModifiersEvent>(OnHolderSlowdownRefreshMoveSpeed);
         SubscribeLocalEvent<ScpHoldHandBlockerComponent, GettingDroppedAttemptEvent>(OnHolderBlockerDropped);
-    }
-
-    private void OnHoldShutdown(Entity<ScpHoldComponent> ent, ref ComponentShutdown args)
-    {
-        if (_net.IsClient)
-            return;
-
-        if (!_holderQuery.TryComp(ent.Owner, out var holder))
-            return;
-
-        if (holder.Target == null)
-            return;
-
-        ReleaseHolderContribution(ent.Owner, holder.Target.Value, clearIfEmpty: true);
     }
 
     private void OnHeldStartup(Entity<ScpHeldComponent> ent, ref ComponentStartup args)
     {
-        RefreshHeldState(ent);
+        _alerts.ShowAlert(ent.Owner, "ScpHoldGrabbed");
+        SyncHeldStatusEffect(ent.Owner);
+        EnsureCombatModeDisabled(ent.Owner);
+        OnHeldStateRefreshed(ent);
     }
 
     private void OnHeldShutdown(Entity<ScpHeldComponent> ent, ref ComponentShutdown args)
     {
         _alerts.ClearAlert(ent.Owner, "ScpHoldGrabbed");
         _statusEffects.TryRemoveStatusEffect(ent, GrabbedStatusEffect);
-        DeleteHeldHandBlockers(ent);
-
-        if (!_timing.ApplyingState)
-            CancelBreakoutDoAfter(ent);
-
-        if (!_net.IsClient)
-        {
-            foreach (var holderUid in ent.Comp.Holders)
-            {
-                if (_holderQuery.HasComp(holderUid))
-                    RemComp<ScpHolderComponent>(holderUid);
-            }
-        }
-
-        _actionBlocker.UpdateCanMove(ent.Owner);
-        _physics.UpdateIsPredicted(ent.Owner);
+        OnHeldStateShutdown(ent);
     }
 
     private void OnBreakoutAlert(Entity<ScpHeldComponent> ent, ref ScpHoldBreakoutAlertEvent args)
@@ -93,7 +71,7 @@ public abstract partial class SharedScpHoldingSystem
 
     private void OnBreakoutDoAfter(Entity<ScpHeldComponent> ent, ref ScpHoldBreakoutDoAfterEvent args)
     {
-        SetBreakoutDoAfterId(ent, null);
+        EndBreakoutAttempt(ent.Owner, cancelDoAfter: false);
 
         if (args.Handled)
             return;
@@ -108,29 +86,33 @@ public abstract partial class SharedScpHoldingSystem
         args.Handled = true;
     }
 
+    private void OnBreakoutAttemptStartup(Entity<ScpBreakoutAttemptComponent> ent, ref ComponentStartup args)
+    {
+        if (!_heldQuery.TryComp(ent.Owner, out var held))
+            return;
+
+        ShowBreakoutAttemptFeedback((ent.Owner, held));
+    }
+
+    private void OnBreakoutAttemptShutdown(Entity<ScpBreakoutAttemptComponent> ent, ref ComponentShutdown args)
+    {
+        if (!_breakoutDoAfterIds.Remove(ent.Owner, out var doAfterId))
+            return;
+
+        CancelBreakoutAttemptDoAfter(doAfterId);
+    }
+
     private void OnHeldMoveInput(Entity<ScpHeldComponent> ent, ref MoveInputEvent args)
     {
-        if (!args.State)
+        if (!IsBreakoutMovementPress(args))
             return;
 
         TryBreakOut(ent, viaMovement: true);
     }
 
-    private void OnHandCountChanged(Entity<ScpHeldComponent> ent, ref HandCountChangedEvent args)
+    private static void OnFullHeldUpdateCanMove(Entity<ScpFullHeldComponent> ent, ref UpdateCanMoveEvent args)
     {
-        if (_net.IsClient)
-            return;
-
-        SyncHeldState(ent);
-    }
-
-    private void OnHeldUpdateCanMove(Entity<ScpHeldComponent> ent, ref UpdateCanMoveEvent args)
-    {
-        if (ent.Comp.LifeStage > ComponentLifeStage.Running)
-            return;
-
-        if (ent.Comp.FullHold)
-            args.Cancel();
+        args.Cancel();
     }
 
     private static void OnHeldAttemptMobCollide(Entity<ScpHeldComponent> ent, ref AttemptMobCollideEvent args)
@@ -155,24 +137,50 @@ public abstract partial class SharedScpHoldingSystem
         }
     }
 
+    private void OnFullHeldStartup(Entity<ScpFullHeldComponent> ent, ref ComponentStartup args)
+    {
+        if (_heldQuery.TryComp(ent.Owner, out var held))
+            SyncPlaceholderHands((ent.Owner, held));
+
+        ZeroHeldVelocity(ent.Owner);
+        _actionBlocker.UpdateCanMove(ent.Owner);
+    }
+
+    private void OnFullHeldRemove(Entity<ScpFullHeldComponent> ent, ref ComponentRemove args)
+    {
+        DeleteHeldHandBlockers(ent.Owner);
+        _actionBlocker.UpdateCanMove(ent.Owner);
+    }
+
     private void OnHolderStartup(Entity<ScpHolderComponent> ent, ref ComponentStartup args)
     {
-        RefreshHolderState(ent);
+        SyncHolderState(ent);
     }
 
     private void OnHolderShutdown(Entity<ScpHolderComponent> ent, ref ComponentShutdown args)
     {
+        var target = ent.Comp.Target;
         ent.Comp.Target = null;
-        ent.Comp.SlowdownEnabled = false;
         DeleteHolderHandBlockers(ent.Owner);
+
+        if (!_timing.ApplyingState)
+            RemComp<ScpHolderSlowdownComponent>(ent.Owner);
+
+        OnHolderStateShutdown(ent.Owner, target);
+    }
+
+    private void OnHolderSlowdownRemove(Entity<ScpHolderSlowdownComponent> ent, ref ComponentRemove args)
+    {
         _movement.RefreshMovementSpeedModifiers(ent.Owner);
     }
 
-    private void OnHolderRefreshMoveSpeed(Entity<ScpHolderComponent> ent, ref RefreshMovementSpeedModifiersEvent args)
+    private void OnHolderSlowdownAfterState(Entity<ScpHolderSlowdownComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        if (!ent.Comp.SlowdownEnabled)
-            return;
+        _movement.RefreshMovementSpeedModifiers(ent.Owner);
+    }
 
+    private void OnHolderSlowdownRefreshMoveSpeed(Entity<ScpHolderSlowdownComponent> ent, ref RefreshMovementSpeedModifiersEvent args)
+    {
         args.ModifySpeed(ent.Comp.WalkModifier, ent.Comp.SprintModifier);
     }
 
@@ -202,7 +210,7 @@ public abstract partial class SharedScpHoldingSystem
         if (!_heldQuery.HasComp(ent.Comp.Target.Value))
             return;
 
-        RefreshHolderState(ent);
+        SyncHolderState(ent);
     }
 
     private void OnHolderPreventCollide(Entity<ScpHolderComponent> ent, ref PreventCollideEvent args)
@@ -231,5 +239,25 @@ public abstract partial class SharedScpHoldingSystem
             return;
 
         ReleaseHolderContribution(args.User, ent.Comp.Target, clearIfEmpty: true);
+    }
+
+    private static bool IsBreakoutMovementPress(MoveInputEvent args)
+    {
+        if (!args.State)
+            return false;
+
+        var pressedButton = args.Dir switch
+        {
+            Direction.East => MoveButtons.Right,
+            Direction.North => MoveButtons.Up,
+            Direction.West => MoveButtons.Left,
+            Direction.South => MoveButtons.Down,
+            _ => MoveButtons.None,
+        };
+
+        if (pressedButton == MoveButtons.None)
+            return false;
+
+        return (args.OldMovement & pressedButton) == MoveButtons.None;
     }
 }

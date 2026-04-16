@@ -1,12 +1,14 @@
-using System;
 using Content.Shared.Whitelist;
+using Robust.Shared.Audio;
+using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Scp.Holding;
 
 /// <summary>
 /// Marks an entity as a valid target for the SCP holding mechanic and stores per-target hold tuning.
 /// </summary>
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent]
 public sealed partial class ScpHoldableComponent : Component
 {
     /// <summary>
@@ -44,6 +46,19 @@ public sealed partial class ScpHoldableComponent : Component
     /// </summary>
     [DataField]
     public TimeSpan PostBreakoutImmunity = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Optional effect prototype spawned on each holder when a full-hold breakout attempt starts.
+    /// </summary>
+    [DataField]
+    public EntProtoId? BreakoutAttemptEffect = "WhistleExclamation";
+
+    /// <summary>
+    /// Optional sound played from the held target when a full-hold breakout attempt starts.
+    /// </summary>
+    [DataField]
+    public SoundSpecifier? BreakoutAttemptSound = new SoundCollectionSpecifier("storageRustle",
+        AudioParams.Default.WithVolume(-2f).WithMaxDistance(4f).WithVariation(0.15f));
 
     /// <summary>
     /// Maximum unobstructed range allowed between holder and target.

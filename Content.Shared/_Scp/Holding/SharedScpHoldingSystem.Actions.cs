@@ -139,7 +139,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             range = held.HoldRange;
 
-            if (held.FullHold)
+            if (_fullHeldQuery.HasComp(target))
             {
                 if (!quiet)
                     PopupHolder(holder.Owner, "scp-hold-target-fully-held", ("target", target));
@@ -162,7 +162,7 @@ public abstract partial class SharedScpHoldingSystem
 
     public bool TryBreakOut(Entity<ScpHeldComponent> held, bool viaMovement)
     {
-        return held.Comp.FullHold
+        return _fullHeldQuery.HasComp(held.Owner)
             ? TryStartFullBreakout(held, viaMovement)
             : TrySoftBreakOut(held, viaMovement);
     }
@@ -176,20 +176,23 @@ public abstract partial class SharedScpHoldingSystem
         return true;
     }
 
-    public void RefreshHeldState(Entity<ScpHeldComponent> held)
+    protected bool IsFullHold(EntityUid uid)
     {
-        _alerts.ShowAlert(held.Owner, "ScpHoldGrabbed");
-        SyncHeldStatusEffect(held.Owner);
-        SyncPlaceholderHands(held);
-        _actionBlocker.UpdateCanMove(held.Owner);
-        EnsureCombatModeDisabled(held.Owner);
-        _physics.UpdateIsPredicted(held.Owner);
+        return _fullHeldQuery.HasComp(uid);
     }
 
-    public void RefreshHolderState(Entity<ScpHolderComponent> holder)
+    protected void ReconcileHeldAfterState(Entity<ScpHeldComponent> held)
+    {
+        OnHeldStateRefreshed(held);
+
+        if (_fullHeldQuery.HasComp(held.Owner))
+            SyncPlaceholderHands(held);
+    }
+
+    public void SyncHolderState(Entity<ScpHolderComponent> holder)
     {
         SyncHolderHandBlocker(holder);
-        _movement.RefreshMovementSpeedModifiers(holder.Owner);
+        OnHolderStateRefreshed(holder);
     }
 
     private bool TrySoftBreakOut(Entity<ScpHeldComponent> held, bool viaMovement)
@@ -206,13 +209,16 @@ public abstract partial class SharedScpHoldingSystem
 
     private bool TryStartFullBreakout(Entity<ScpHeldComponent> held, bool viaMovement)
     {
-        if (held.Comp.FullHoldStartedAt == null)
+        if (!_fullHeldQuery.TryComp(held.Owner, out var fullHeld))
+            return false;
+
+        if (fullHeld.StartedAt == TimeSpan.Zero)
         {
             PopupTarget(held.Owner, "scp-hold-breakout-too-early", ("seconds", 1));
             return false;
         }
 
-        var breakoutAvailableAt = held.Comp.FullHoldStartedAt.Value + held.Comp.FullHoldDelay;
+        var breakoutAvailableAt = fullHeld.StartedAt + held.Comp.FullHoldDelay;
         if (_timing.CurTime < breakoutAvailableAt)
         {
             var remaining = breakoutAvailableAt - _timing.CurTime;
@@ -221,7 +227,7 @@ public abstract partial class SharedScpHoldingSystem
             return false;
         }
 
-        if (held.Comp.BreakoutDoAfterId != null)
+        if (_breakoutAttemptQuery.HasComp(held.Owner))
             return true;
 
         var doAfter = new DoAfterArgs(
@@ -241,8 +247,7 @@ public abstract partial class SharedScpHoldingSystem
         if (!_doAfter.TryStartDoAfter(doAfter, out var id))
             return false;
 
-        SetBreakoutDoAfterId(held, id.Value.Index);
-        ShowBreakoutAttemptFeedback(held);
+        StartBreakoutAttempt(held.Owner, id.Value);
 
         PopupTarget(held.Owner, "scp-hold-breakout-start");
         return true;
@@ -304,7 +309,7 @@ public abstract partial class SharedScpHoldingSystem
             return;
         }
 
-        DirtyHoldField(holder, nameof(ScpHoldComponent.HoldAvailableAt));
+        DirtyField(holder.Owner, holder.Comp, nameof(ScpHoldComponent.HoldAvailableAt));
     }
 
     private bool CanPassHoldAttempt(EntityUid holderUid, EntityUid targetUid)
@@ -317,7 +322,7 @@ public abstract partial class SharedScpHoldingSystem
 
     private void RaiseBreakoutEvent(Entity<ScpHeldComponent> held, bool viaMovement, bool applyImmunity)
     {
-        var ev = new ScpHoldBreakoutEvent(viaMovement, held.Comp.FullHold, applyImmunity);
+        var ev = new ScpHoldBreakoutEvent(viaMovement, _fullHeldQuery.HasComp(held.Owner), applyImmunity);
         RaiseLocalEvent(held.Owner, ev);
     }
 

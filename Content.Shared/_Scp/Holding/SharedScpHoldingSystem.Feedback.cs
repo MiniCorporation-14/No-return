@@ -1,45 +1,26 @@
 using Content.Shared.Coordinates;
 using Content.Shared.Popups;
-using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
+using Robust.Shared.Audio;
+using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Scp.Holding;
 
 public abstract partial class SharedScpHoldingSystem
 {
     /*
-     * Feedback-local dependencies, breakout do-after tracking, and popup/audio helpers.
+     * Feedback-local dependencies plus popup/audio helpers.
      */
 
     [Dependency] private readonly SharedAudioSystem _audio = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
 
-    private const string BreakoutAttemptEffect = "WhistleExclamation";
-    private static readonly SoundSpecifier BreakoutAttemptSound =
-        new SoundCollectionSpecifier("storageRustle",
-            AudioParams.Default.WithVolume(-8f).WithMaxDistance(4f).WithVariation(0.15f));
-
-    private void CancelBreakoutDoAfter(Entity<ScpHeldComponent> held)
-    {
-        if (held.Comp.BreakoutDoAfterId == null)
-            return;
-
-        _doAfter.Cancel(held.Owner, held.Comp.BreakoutDoAfterId.Value);
-        SetBreakoutDoAfterId(held, null);
-    }
-
-    private void SetBreakoutDoAfterId(Entity<ScpHeldComponent> held, ushort? breakoutDoAfterId)
-    {
-        if (held.Comp.BreakoutDoAfterId == breakoutDoAfterId)
-            return;
-
-        held.Comp.BreakoutDoAfterId = breakoutDoAfterId;
-        DirtyHeldField(held, nameof(ScpHeldComponent.BreakoutDoAfterId));
-    }
-
     private void ShowBreakoutAttemptFeedback(Entity<ScpHeldComponent> held)
     {
-        if (_net.IsClient && !_timing.IsFirstTimePredicted)
+        if (!CanShowBreakoutAttemptFeedback())
+            return;
+
+        if (!TryComp<ScpHoldableComponent>(held.Owner, out var holdable))
             return;
 
         foreach (var holderUid in held.Comp.Holders)
@@ -50,15 +31,15 @@ public abstract partial class SharedScpHoldingSystem
             if (holder.Target != held.Owner)
                 continue;
 
-            SpawnBreakoutAttemptEffect(holderUid);
+            SpawnBreakoutAttemptEffect(holderUid, holdable.BreakoutAttemptEffect);
         }
 
-        PlayBreakoutAttemptSound(held.Owner);
+        PlayBreakoutAttemptSound(held.Owner, holdable.BreakoutAttemptSound);
     }
 
     private void PopupHolder(EntityUid holder, string key, params (string, object)[] args)
     {
-        if (_net.IsClient)
+        if (!ShouldShowHoldPopups)
             return;
 
         _popup.PopupEntity(Loc.GetString(key, args), holder, holder);
@@ -66,31 +47,43 @@ public abstract partial class SharedScpHoldingSystem
 
     private void PopupTarget(EntityUid target, string key, params (string, object)[] args)
     {
-        if (_net.IsClient)
+        if (!ShouldShowHoldPopups)
             return;
 
         _popup.PopupEntity(Loc.GetString(key, args), target, target);
     }
 
-    private void SpawnBreakoutAttemptEffect(EntityUid holderUid)
+    private void SpawnBreakoutAttemptEffect(EntityUid holderUid, EntProtoId? effect)
     {
-        if (_net.IsClient)
+        if (effect == null)
+            return;
+
+        if (ShouldUsePredictedBreakoutFeedback)
         {
-            PredictedSpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
+            PredictedSpawnAttachedTo(effect.Value, holderUid.ToCoordinates());
             return;
         }
 
-        SpawnAttachedTo(BreakoutAttemptEffect, holderUid.ToCoordinates());
+        SpawnAttachedTo(effect.Value, holderUid.ToCoordinates());
     }
 
-    private void PlayBreakoutAttemptSound(EntityUid targetUid)
+    private void PlayBreakoutAttemptSound(EntityUid targetUid, SoundSpecifier? sound)
     {
-        if (_net.IsClient)
+        if (sound == null)
+            return;
+
+        if (ShouldUsePredictedBreakoutFeedback)
         {
-            _audio.PlayPredicted(BreakoutAttemptSound, targetUid, targetUid);
+            _audio.PlayPredicted(sound, targetUid, targetUid);
             return;
         }
 
-        _audio.PlayPvs(BreakoutAttemptSound, targetUid);
+        _audio.PlayPvs(sound, targetUid);
     }
+
+    protected virtual bool ShouldShowHoldPopups => false;
+
+    protected virtual bool ShouldUsePredictedBreakoutFeedback => false;
+
+    protected virtual bool CanShowBreakoutAttemptFeedback() => true;
 }

@@ -6,7 +6,6 @@ using Content.Shared.Movement.Systems;
 using Content.Shared.StatusEffectNew;
 using Content.Shared.Whitelist;
 using Robust.Shared.Containers;
-using Robust.Shared.Network;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
@@ -30,27 +29,40 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
     [Dependency] private readonly StatusEffectsSystem _statusEffects = default!;
     [Dependency] private readonly EntityWhitelistSystem _whitelist = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly INetManager _net = default!;
 
     private static readonly EntProtoId GrabbedStatusEffect = "StatusEffectScpHeld";
+    private readonly Dictionary<EntityUid, DoAfterId> _breakoutDoAfterIds = [];
+
+    private EntityQuery<ScpBreakoutAttemptComponent> _breakoutAttemptQuery;
+    private EntityQuery<ScpFullHeldComponent> _fullHeldQuery;
     private EntityQuery<PhysicsComponent> _physicsQuery;
     private EntityQuery<ScpHeldComponent> _heldQuery;
     private EntityQuery<ScpHoldComponent> _holdQuery;
     private EntityQuery<ScpHolderComponent> _holderQuery;
+    private EntityQuery<ScpHolderSlowdownComponent> _holderSlowdownQuery;
 
     public override void Initialize()
     {
         base.Initialize();
 
+        _breakoutAttemptQuery = GetEntityQuery<ScpBreakoutAttemptComponent>();
+        _fullHeldQuery = GetEntityQuery<ScpFullHeldComponent>();
         _physicsQuery = GetEntityQuery<PhysicsComponent>();
         _heldQuery = GetEntityQuery<ScpHeldComponent>();
         _holdQuery = GetEntityQuery<ScpHoldComponent>();
         _holderQuery = GetEntityQuery<ScpHolderComponent>();
+        _holderSlowdownQuery = GetEntityQuery<ScpHolderSlowdownComponent>();
 
         InitializeHoldQueries();
         InitializeHandQueries();
         InitializeStateQueries();
         SubscribeHoldingEvents();
+    }
+
+    public override void Shutdown()
+    {
+        base.Shutdown();
+        _breakoutDoAfterIds.Clear();
     }
 
     public override void Update(float frameTime)
@@ -67,56 +79,31 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
         var heldQuery = EntityQueryEnumerator<ScpHeldComponent>();
         while (heldQuery.MoveNext(out var uid, out var held))
         {
-            if (ShouldSkipHeldUpdate(uid))
+            if (!ShouldUpdateHeld(uid, held))
                 continue;
 
             UpdateHeld((uid, held));
         }
     }
 
-    private bool ShouldSkipHeldUpdate(EntityUid uid)
+    protected virtual bool ShouldUpdateHeld(EntityUid uid, ScpHeldComponent held)
     {
-        if (!_net.IsClient)
-            return false;
-
-        if (!_physicsQuery.TryComp(uid, out var physics))
-            return true;
-
-        return !physics.Predict;
+        return true;
     }
 
-    private void DirtyHoldField(Entity<ScpHoldComponent> holder, string fieldName)
+    protected virtual void OnHeldStateRefreshed(Entity<ScpHeldComponent> held)
     {
-        DirtyField(holder.AsNullable(), fieldName);
     }
 
-    private void DirtyHeldField(Entity<ScpHeldComponent> held, string fieldName)
+    protected virtual void OnHeldStateShutdown(Entity<ScpHeldComponent> held)
     {
-        Dirty(held);
     }
 
-    private void DirtyHeldField(EntityUid uid, ScpHeldComponent held, string fieldName)
+    protected virtual void OnHolderStateRefreshed(Entity<ScpHolderComponent> holder)
     {
-        Dirty(uid, held);
     }
 
-    private void DirtyHeldFields(Entity<ScpHeldComponent> held, params string[] fieldNames)
+    protected virtual void OnHolderStateShutdown(EntityUid holderUid, EntityUid? target)
     {
-        Dirty(held);
-    }
-
-    private void DirtyHolderField(Entity<ScpHolderComponent> holder, string fieldName)
-    {
-        Dirty(holder);
-    }
-
-    private void DirtyImmuneField(Entity<ScpHoldImmuneComponent> immune, string fieldName)
-    {
-        Dirty(immune);
-    }
-
-    private void DirtyHandBlockerField(Entity<ScpHoldHandBlockerComponent> blocker, string fieldName)
-    {
-        Dirty(blocker);
     }
 }
