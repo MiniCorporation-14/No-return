@@ -9,11 +9,12 @@ using Robust.Shared.Physics.Events;
 
 namespace Content.Shared._Scp.Holding;
 
-public sealed partial class SharedScpHoldingSystem
+public abstract partial class SharedScpHoldingSystem
 {
     /*
      * Event subscription wiring plus routing/lifecycle reactions for held and holder entities.
      */
+
     private void SubscribeHoldingEvents()
     {
         SubscribeLocalEvent<ScpHoldComponent, ComponentShutdown>(OnHoldShutdown);

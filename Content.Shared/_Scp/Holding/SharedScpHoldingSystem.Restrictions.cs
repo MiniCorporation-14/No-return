@@ -3,7 +3,7 @@ using Content.Shared.CombatMode;
 
 namespace Content.Shared._Scp.Holding;
 
-public sealed partial class SharedScpHoldingSystem
+public abstract partial class SharedScpHoldingSystem
 {
     [Dependency] private readonly SharedCombatModeSystem _combatMode = default!;
 

@@ -1,15 +1,15 @@
-using System;
 using Content.Shared.DoAfter;
 using Content.Shared.Movement.Components;
 using Robust.Shared.Physics;
 
 namespace Content.Shared._Scp.Holding;
 
-public sealed partial class SharedScpHoldingSystem
+public abstract partial class SharedScpHoldingSystem
 {
     /*
      * Hold-local query caches, hold toggling API, breakout flow, and cooldown helpers.
      */
+
     private EntityQuery<InputMoverComponent> _moverQuery;
     private EntityQuery<ScpHoldableComponent> _holdableQuery;
 

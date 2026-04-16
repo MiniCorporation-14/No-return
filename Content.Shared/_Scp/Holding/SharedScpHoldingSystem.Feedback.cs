@@ -5,11 +5,12 @@ using Robust.Shared.Audio.Systems;
 
 namespace Content.Shared._Scp.Holding;
 
-public sealed partial class SharedScpHoldingSystem
+public abstract partial class SharedScpHoldingSystem
 {
     /*
      * Feedback-local dependencies, breakout do-after tracking, and popup/audio helpers.
      */
+
     [Dependency] private readonly SharedAudioSystem _audio = default!;
     [Dependency] private readonly SharedPopupSystem _popup = default!;
 

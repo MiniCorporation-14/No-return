@@ -4,11 +4,12 @@ using Content.Shared.Body.Systems;
 
 namespace Content.Shared._Scp.Holding;
 
-public sealed partial class SharedScpHoldingSystem
+public abstract partial class SharedScpHoldingSystem
 {
     /*
      * State-local dependencies, caches, held lifecycle, holder membership, and full-hold transitions.
      */
+
     [Dependency] private readonly SharedBodySystem _body = default!;
 
     private readonly List<EntityUid> _holdersToRemove = [];

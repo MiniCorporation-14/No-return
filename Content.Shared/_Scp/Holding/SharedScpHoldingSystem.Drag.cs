@@ -4,11 +4,12 @@ using Robust.Shared.Physics.Components;
 
 namespace Content.Shared._Scp.Holding;
 
-public sealed partial class SharedScpHoldingSystem
+public abstract partial class SharedScpHoldingSystem
 {
     /*
      * Drag-local dependencies, soft-drag movement, and helper calculations.
      */
+
     [Dependency] private readonly SharedTransformSystem _transform = default!;
 
     private const float SoftDragDistanceFactor = 0.3f;

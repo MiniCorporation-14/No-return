@@ -1,8 +1,8 @@
-using System;
+using Content.Client.Hands.Systems;
+using Content.Client.Inventory;
 using Content.Shared._Scp.Holding;
 using Content.Shared.Hands;
 using Content.Shared.Hands.Components;
-using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Inventory.VirtualItem;
 using Robust.Client.Physics;
 using Robust.Client.Player;
@@ -10,16 +10,15 @@ using Robust.Shared.Timing;
 
 namespace Content.Client._Scp.Holding;
 
-public sealed class ScpHoldingPredictionSystem : EntitySystem
+public sealed class ScpHoldingSystem : SharedScpHoldingSystem
 {
-    [Dependency] private readonly SharedScpHoldingSystem _holding = default!;
-    [Dependency] private readonly SharedHandsSystem _hands = default!;
+    [Dependency] private readonly HandsSystem _hands = default!;
     [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
+    [Dependency] private readonly VirtualItemSystem _virtualItem = default!;
     [Dependency] private readonly IPlayerManager _player = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly SharedVirtualItemSystem _virtualItem = default!;
 
-    private static readonly TimeSpan BlockerRespawnSuppressionDuration = TimeSpan.FromSeconds(0.5);
+    private static readonly TimeSpan BlockerRespawnSuppressionDuration = TimeSpan.FromSeconds(0.5f);
 
     private EntityUid? _suppressedHolder;
     private EntityUid? _suppressedTarget;
@@ -72,12 +71,12 @@ public sealed class ScpHoldingPredictionSystem : EntitySystem
             return;
         }
 
-        _holding.RefreshHolderState((local, localHolder));
+        RefreshHolderState((local, localHolder));
     }
 
     private void OnHeldAfterState(Entity<ScpHeldComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        _holding.RefreshHeldState(ent);
+        RefreshHeldState(ent);
     }
 
     private void OnHolderAfterState(Entity<ScpHolderComponent> ent, ref AfterAutoHandleStateEvent args)
@@ -88,7 +87,7 @@ public sealed class ScpHoldingPredictionSystem : EntitySystem
             return;
         }
 
-        _holding.RefreshHolderState(ent);
+        RefreshHolderState(ent);
     }
 
     private void OnBlockerUnequipped(Entity<ScpHoldHandBlockerComponent> ent, ref GotUnequippedHandEvent args)
@@ -125,9 +124,9 @@ public sealed class ScpHoldingPredictionSystem : EntitySystem
             }
         }
 
-        for (var i = 0; i < ent.Comp.Holders.Count; i++)
+        foreach (var holder in ent.Comp.Holders)
         {
-            if (ent.Comp.Holders[i] != local)
+            if (holder != local)
                 continue;
 
             args.IsPredicted = true;

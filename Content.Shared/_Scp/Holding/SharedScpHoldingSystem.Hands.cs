@@ -6,11 +6,12 @@ using Content.Shared.StatusEffectNew.Components;
 
 namespace Content.Shared._Scp.Holding;
 
-public sealed partial class SharedScpHoldingSystem
+public abstract partial class SharedScpHoldingSystem
 {
     /*
      * Hand-local dependencies, caches, placeholders, virtual blockers, and held-status visuals.
      */
+
     [Dependency] private readonly SharedHandsSystem _hands = default!;
     [Dependency] private readonly SharedVirtualItemSystem _virtualItem = default!;
 
