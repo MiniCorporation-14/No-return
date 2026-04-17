@@ -1,5 +1,7 @@
 using System.Numerics;
 using Content.Shared._Scp.Holding;
+using Content.Shared._Scp.Holding.Components;
+using Content.Shared._Scp.Holding.Systems;
 using Content.Shared._Scp.Scp096.Main.Components;
 using Robust.Shared.Physics.Systems;
 
@@ -20,7 +22,7 @@ public abstract partial class SharedScp096System
     private void OnHoldAttempt(Entity<Scp096Component> ent, ref ScpHoldAttemptEvent args)
     {
         if (IsInHoldRestrictedState(ent.Owner))
-            args.Cancel();
+            args.Cancelled = true;
     }
 
     private void OnHoldBreakout(Entity<Scp096Component> ent, ref ScpHoldBreakoutEvent args)
@@ -31,7 +33,7 @@ public abstract partial class SharedScp096System
         if (!args.WasFullHold && !IsInHoldRestrictedState(ent.Owner))
             return;
 
-        if (!TryComp<ScpHeldComponent>(ent.Owner, out var held))
+        if (!TryComp<ActiveScpHoldableComponent>(ent.Owner, out var held))
             return;
 
         var scpPosition = _transform.GetWorldPosition(ent.Owner);
@@ -50,7 +52,7 @@ public abstract partial class SharedScp096System
 
     protected void TryBreakOutOfHold(EntityUid uid)
     {
-        _holding.TryForceBreakOut((uid, (ScpHeldComponent?) null));
+        _holding.TryForceBreakOut((uid, (ActiveScpHoldableComponent?) null));
     }
 
     private void ApplyHoldBreakoutEffects(Entity<Scp096Component> ent, EntityUid holderUid, Vector2 scpPosition)

@@ -20,9 +20,9 @@ public abstract partial class SharedScpHoldingSystem
         _holdableQuery = GetEntityQuery<ScpHoldableComponent>();
     }
 
-    public bool TryToggleHold(Entity<ScpHoldComponent> holder, EntityUid target, bool attemptChecked = false)
+    public bool TryToggleHold(Entity<ScpHolderComponent> holder, EntityUid target, bool attemptChecked = false)
     {
-        if (_holderQuery.TryComp(holder.Owner, out var activeHolder) && activeHolder.Target != null)
+        if (_activeHolderQuery.TryComp(holder.Owner, out var activeHolder) && activeHolder.Target != null)
         {
             if (activeHolder.Target.Value == target)
             {
@@ -49,7 +49,7 @@ public abstract partial class SharedScpHoldingSystem
     }
 
     public bool CanToggleHold(
-        Entity<ScpHoldComponent> holder,
+        Entity<ScpHolderComponent> holder,
         EntityUid target,
         bool quiet = false,
         bool ignoreHandAvailability = false,
@@ -142,9 +142,9 @@ public abstract partial class SharedScpHoldingSystem
         }
 
         var range = holdable.HoldRange;
-        if (_heldQuery.HasComp(target))
+        if (_activeHoldableQuery.HasComp(target))
         {
-            if (_fullHeldQuery.HasComp(target))
+            if (_activeHoldableFullHoldStateQuery.HasComp(target))
             {
                 if (!quiet)
                     PopupHolder(holder.Owner, "scp-hold-target-fully-held", ("target", target));
@@ -167,14 +167,14 @@ public abstract partial class SharedScpHoldingSystem
         return true;
     }
 
-    public bool TryBreakOut(Entity<ScpHeldComponent> held, bool viaMovement)
+    public bool TryBreakOut(Entity<ActiveScpHoldableComponent> held, bool viaMovement)
     {
-        return _fullHeldQuery.HasComp(held.Owner)
+        return _activeHoldableFullHoldStateQuery.HasComp(held.Owner)
             ? TryStartFullBreakout(held, viaMovement)
             : TrySoftBreakOut(held, viaMovement);
     }
 
-    public bool TryForceBreakOut(Entity<ScpHeldComponent?> held, bool viaMovement = false, bool applyImmunity = false)
+    public bool TryForceBreakOut(Entity<ActiveScpHoldableComponent?> held, bool viaMovement = false, bool applyImmunity = false)
     {
         if (!Resolve(held, ref held.Comp, false))
             return false;
@@ -185,24 +185,24 @@ public abstract partial class SharedScpHoldingSystem
 
     protected bool IsFullHold(EntityUid uid)
     {
-        return _fullHeldQuery.HasComp(uid);
+        return _activeHoldableFullHoldStateQuery.HasComp(uid);
     }
 
-    protected void ReconcileHeldAfterState(Entity<ScpHeldComponent> held)
+    protected void ReconcileHeldAfterState(Entity<ActiveScpHoldableComponent> held)
     {
         OnHeldStateRefreshed(held);
 
-        if (_fullHeldQuery.HasComp(held.Owner))
+        if (_activeHoldableFullHoldStateQuery.HasComp(held.Owner))
             SyncPlaceholderHands(held);
     }
 
-    public void SyncHolderState(Entity<ScpHolderComponent> holder)
+    public void SyncHolderState(Entity<ActiveScpHolderComponent> holder)
     {
         SyncHolderHandBlocker(holder);
         OnHolderStateRefreshed(holder);
     }
 
-    private bool TrySoftBreakOut(Entity<ScpHeldComponent> held, bool viaMovement)
+    private bool TrySoftBreakOut(Entity<ActiveScpHoldableComponent> held, bool viaMovement)
     {
         if (_timing.CurTime < held.Comp.SoftEscapeAvailableAt)
             return false;
@@ -214,9 +214,9 @@ public abstract partial class SharedScpHoldingSystem
         return true;
     }
 
-    private bool TryStartFullBreakout(Entity<ScpHeldComponent> held, bool viaMovement)
+    private bool TryStartFullBreakout(Entity<ActiveScpHoldableComponent> held, bool viaMovement)
     {
-        if (!_fullHeldQuery.TryComp(held.Owner, out var fullHeld))
+        if (!_activeHoldableFullHoldStateQuery.TryComp(held.Owner, out var fullHeld))
             return false;
 
         if (!TryGetHeldHoldable(held, out var holdable))
@@ -263,7 +263,7 @@ public abstract partial class SharedScpHoldingSystem
         return true;
     }
 
-    private bool CanStartHold(Entity<ScpHoldComponent> holder, bool quiet = false)
+    private bool CanStartHold(Entity<ScpHolderComponent> holder, bool quiet = false)
     {
         if (!IsHoldCoolingDown(holder, out var remaining))
             return true;
@@ -277,7 +277,7 @@ public abstract partial class SharedScpHoldingSystem
         return false;
     }
 
-    private bool IsHoldCoolingDown(Entity<ScpHoldComponent> holder, out TimeSpan remaining)
+    private bool IsHoldCoolingDown(Entity<ScpHolderComponent> holder, out TimeSpan remaining)
     {
         remaining = TimeSpan.Zero;
 
@@ -288,14 +288,14 @@ public abstract partial class SharedScpHoldingSystem
         return true;
     }
 
-    private void StartHoldCooldown(Entity<ScpHoldComponent> holder)
+    private void StartHoldCooldown(Entity<ScpHolderComponent> holder)
     {
         SetHoldAvailableAt(holder, _timing.CurTime + holder.Comp.HoldActionCooldown);
     }
 
     private void ApplyFullBreakoutHolderCooldown(EntityUid holderUid)
     {
-        if (!_holdQuery.TryComp(holderUid, out var hold))
+        if (!_holderConfigQuery.TryComp(holderUid, out var hold))
             return;
 
         var cooldownEnd = _timing.CurTime + TimeSpan.FromTicks(hold.HoldActionCooldown.Ticks * 2);
@@ -305,7 +305,7 @@ public abstract partial class SharedScpHoldingSystem
         SetHoldAvailableAt((holderUid, hold), cooldownEnd);
     }
 
-    private void SetHoldAvailableAt(Entity<ScpHoldComponent> holder, TimeSpan? holdAvailableAt)
+    private void SetHoldAvailableAt(Entity<ScpHolderComponent> holder, TimeSpan? holdAvailableAt)
     {
         if (holder.Comp.HoldAvailableAt == holdAvailableAt)
             return;
@@ -319,7 +319,7 @@ public abstract partial class SharedScpHoldingSystem
             return;
         }
 
-        DirtyField(holder.Owner, holder.Comp, nameof(ScpHoldComponent.HoldAvailableAt));
+        DirtyField(holder.Owner, holder.Comp, nameof(ScpHolderComponent.HoldAvailableAt));
     }
 
     private bool CanPassHoldAttempt(EntityUid holderUid, EntityUid targetUid)
@@ -330,13 +330,13 @@ public abstract partial class SharedScpHoldingSystem
         return !attempt.Cancelled;
     }
 
-    private void RaiseBreakoutEvent(Entity<ScpHeldComponent> held, bool viaMovement, bool applyImmunity)
+    private void RaiseBreakoutEvent(Entity<ActiveScpHoldableComponent> held, bool viaMovement, bool applyImmunity)
     {
-        var ev = new ScpHoldBreakoutEvent(viaMovement, _fullHeldQuery.HasComp(held.Owner), applyImmunity);
+        var ev = new ScpHoldBreakoutEvent(viaMovement, _activeHoldableFullHoldStateQuery.HasComp(held.Owner), applyImmunity);
         RaiseLocalEvent(held.Owner, ref ev);
     }
 
-    private void BreakOut(Entity<ScpHeldComponent> held, bool viaMovement, bool applyImmunity)
+    private void BreakOut(Entity<ActiveScpHoldableComponent> held, bool viaMovement, bool applyImmunity)
     {
         RaiseBreakoutEvent(held, viaMovement, applyImmunity);
         ClearHoldState(held, applyImmunity);

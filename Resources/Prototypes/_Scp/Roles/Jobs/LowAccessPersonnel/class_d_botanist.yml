@@ -23,7 +23,7 @@
       - ExternalAdministrativeZoneSecurityService
       includeJobName: true
       requiredGameRunLevel: InRound
-    - type: ScpHold
+    - type: ScpHolder
       holdableWhitelist:
         components:
         - Scp096

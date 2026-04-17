@@ -9,7 +9,7 @@ namespace Content.Shared._Scp.Holding.Components;
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState, AutoGenerateComponentPause]
 [Access(typeof(SharedScpHoldingSystem))]
-public sealed partial class ScpFullHeldComponent : Component
+public sealed partial class ActiveStateScpHoldableFullHoldComponent : Component
 {
     /// <summary>
     /// Timestamp when the current uninterrupted full hold started.

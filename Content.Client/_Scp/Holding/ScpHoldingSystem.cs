@@ -30,7 +30,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
     private EntityQuery<HandsComponent> _handsQuery;
     private EntityQuery<PhysicsComponent> _physicsQuery;
     private EntityQuery<ScpHoldHandBlockerComponent> _blockerQuery;
-    private EntityQuery<ScpHolderComponent> _holderQuery;
+    private EntityQuery<ActiveScpHolderComponent> _activeHolderQuery;
     private EntityQuery<VirtualItemComponent> _virtualItemQuery;
 
     public override void Initialize()
@@ -40,12 +40,12 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         _handsQuery = GetEntityQuery<HandsComponent>();
         _physicsQuery = GetEntityQuery<PhysicsComponent>();
         _blockerQuery = GetEntityQuery<ScpHoldHandBlockerComponent>();
-        _holderQuery = GetEntityQuery<ScpHolderComponent>();
+        _activeHolderQuery = GetEntityQuery<ActiveScpHolderComponent>();
         _virtualItemQuery = GetEntityQuery<VirtualItemComponent>();
 
-        SubscribeLocalEvent<ScpHeldComponent, AfterAutoHandleStateEvent>(OnHeldAfterState);
+        SubscribeLocalEvent<ActiveScpHoldableComponent, AfterAutoHandleStateEvent>(OnHeldAfterState);
         SubscribeLocalEvent<ScpHoldHandBlockerComponent, GotUnequippedHandEvent>(OnBlockerUnequipped);
-        SubscribeLocalEvent<ScpHeldComponent, UpdateIsPredictedEvent>(OnUpdateHeldPredicted);
+        SubscribeLocalEvent<ActiveScpHoldableComponent, UpdateIsPredictedEvent>(OnUpdateHeldPredicted);
     }
 
     public override void Update(float frameTime)
@@ -65,7 +65,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         if (ShouldSuppressBlockerRespawn(local, _suppressedTarget))
             DeleteSuppressedBlockers(local, _suppressedTarget!.Value);
 
-        if (!_holderQuery.TryComp(local, out var localHolder))
+        if (!_activeHolderQuery.TryComp(local, out var localHolder))
         {
             UpdateTrackedLocalHeldTarget(null);
             return;
@@ -81,7 +81,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         SyncHolderState((local, localHolder));
     }
 
-    private void OnHeldAfterState(Entity<ScpHeldComponent> ent, ref AfterAutoHandleStateEvent args)
+    private void OnHeldAfterState(Entity<ActiveScpHoldableComponent> ent, ref AfterAutoHandleStateEvent args)
     {
         ReconcileHeldAfterState(ent);
     }
@@ -91,7 +91,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         if (_player.LocalEntity != args.User)
             return;
 
-        if (_holderQuery.TryComp(args.User, out var holder))
+        if (_activeHolderQuery.TryComp(args.User, out var holder))
         {
             if (holder.Target == ent.Comp.Target)
                 return;
@@ -100,7 +100,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         SuppressBlockerRespawn(args.User, ent.Comp.Target);
     }
 
-    private void OnUpdateHeldPredicted(Entity<ScpHeldComponent> ent, ref UpdateIsPredictedEvent args)
+    private void OnUpdateHeldPredicted(Entity<ActiveScpHoldableComponent> ent, ref UpdateIsPredictedEvent args)
     {
         if (_player.LocalEntity is not { Valid: true } local)
             return;
@@ -111,7 +111,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
             return;
         }
 
-        if (_holderQuery.TryComp(local, out var localHolder))
+        if (_activeHolderQuery.TryComp(local, out var localHolder))
         {
             if (localHolder.Target == ent.Owner)
             {
@@ -135,7 +135,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
 
     protected override bool ShouldUsePredictedBreakoutFeedback => true;
 
-    protected override bool ShouldUpdateHeld(EntityUid uid, ScpHeldComponent held)
+    protected override bool ShouldUpdateHeld(EntityUid uid, ActiveScpHoldableComponent held)
     {
         return _physicsQuery.TryComp(uid, out var physics) && physics.Predict;
     }
@@ -145,19 +145,19 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         return _timing.IsFirstTimePredicted;
     }
 
-    protected override void OnHeldStateRefreshed(Entity<ScpHeldComponent> held)
+    protected override void OnHeldStateRefreshed(Entity<ActiveScpHoldableComponent> held)
     {
-        _physics.UpdateIsPredicted(held.Owner);
+        _physics.UpdateIsPredicted(held);
     }
 
-    protected override void OnHeldStateShutdown(Entity<ScpHeldComponent> held)
+    protected override void OnHeldStateShutdown(Entity<ActiveScpHoldableComponent> held)
     {
-        _physics.UpdateIsPredicted(held.Owner);
+        _physics.UpdateIsPredicted(held);
     }
 
-    protected override void OnHolderStateRefreshed(Entity<ScpHolderComponent> holder)
+    protected override void OnHolderStateRefreshed(Entity<ActiveScpHolderComponent> holder)
     {
-        UpdateTrackedLocalHeldTarget(holder.Owner, holder.Comp.Target);
+        UpdateTrackedLocalHeldTarget(holder, holder.Comp.Target);
     }
 
     protected override void OnHolderStateShutdown(EntityUid holderUid, EntityUid? target)

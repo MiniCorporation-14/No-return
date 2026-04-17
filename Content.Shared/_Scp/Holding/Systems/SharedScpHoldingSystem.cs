@@ -35,29 +35,30 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
     private readonly Dictionary<EntityUid, DoAfterId> _breakoutDoAfterIds = [];
 
     private EntityQuery<ScpBreakoutAttemptComponent> _breakoutAttemptQuery;
-    private EntityQuery<ScpFullHeldComponent> _fullHeldQuery;
+    private EntityQuery<ActiveStateScpHoldableFullHoldComponent> _activeHoldableFullHoldStateQuery;
     private EntityQuery<PhysicsComponent> _physicsQuery;
-    private EntityQuery<ScpHeldComponent> _heldQuery;
-    private EntityQuery<ScpHoldComponent> _holdQuery;
-    private EntityQuery<ScpHolderComponent> _holderQuery;
-    private EntityQuery<ScpHolderSlowdownComponent> _holderSlowdownQuery;
+    private EntityQuery<ActiveScpHoldableComponent> _activeHoldableQuery;
+    private EntityQuery<ScpHolderComponent> _holderConfigQuery;
+    private EntityQuery<ActiveScpHolderComponent> _activeHolderQuery;
+    private EntityQuery<ActiveStateScpHolderSlowdownComponent> _activeHolderSlowdownStateQuery;
 
     public override void Initialize()
     {
         base.Initialize();
 
         _breakoutAttemptQuery = GetEntityQuery<ScpBreakoutAttemptComponent>();
-        _fullHeldQuery = GetEntityQuery<ScpFullHeldComponent>();
+        _activeHoldableFullHoldStateQuery = GetEntityQuery<ActiveStateScpHoldableFullHoldComponent>();
         _physicsQuery = GetEntityQuery<PhysicsComponent>();
-        _heldQuery = GetEntityQuery<ScpHeldComponent>();
-        _holdQuery = GetEntityQuery<ScpHoldComponent>();
-        _holderQuery = GetEntityQuery<ScpHolderComponent>();
-        _holderSlowdownQuery = GetEntityQuery<ScpHolderSlowdownComponent>();
+        _activeHoldableQuery = GetEntityQuery<ActiveScpHoldableComponent>();
+        _holderConfigQuery = GetEntityQuery<ScpHolderComponent>();
+        _activeHolderQuery = GetEntityQuery<ActiveScpHolderComponent>();
+        _activeHolderSlowdownStateQuery = GetEntityQuery<ActiveStateScpHolderSlowdownComponent>();
 
         InitializeHoldQueries();
         InitializeHandQueries();
         InitializeStateQueries();
         SubscribeHoldingEvents();
+        InitializeRestrictions();
     }
 
     public override void Shutdown()
@@ -77,7 +78,7 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
                 RemCompDeferred<ScpHoldImmuneComponent>(uid);
         }
 
-        var heldQuery = EntityQueryEnumerator<ScpHeldComponent>();
+        var heldQuery = EntityQueryEnumerator<ActiveScpHoldableComponent>();
         while (heldQuery.MoveNext(out var uid, out var held))
         {
             if (!ShouldUpdateHeld(uid, held))
@@ -87,20 +88,20 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
         }
     }
 
-    protected virtual bool ShouldUpdateHeld(EntityUid uid, ScpHeldComponent held)
+    protected virtual bool ShouldUpdateHeld(EntityUid uid, ActiveScpHoldableComponent held)
     {
         return true;
     }
 
-    protected virtual void OnHeldStateRefreshed(Entity<ScpHeldComponent> held)
+    protected virtual void OnHeldStateRefreshed(Entity<ActiveScpHoldableComponent> held)
     {
     }
 
-    protected virtual void OnHeldStateShutdown(Entity<ScpHeldComponent> held)
+    protected virtual void OnHeldStateShutdown(Entity<ActiveScpHoldableComponent> held)
     {
     }
 
-    protected virtual void OnHolderStateRefreshed(Entity<ScpHolderComponent> holder)
+    protected virtual void OnHolderStateRefreshed(Entity<ActiveScpHolderComponent> holder)
     {
     }
 

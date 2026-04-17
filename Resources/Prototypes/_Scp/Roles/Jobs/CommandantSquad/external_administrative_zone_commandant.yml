@@ -28,7 +28,7 @@
       class: C
     - type: AccessLevel
       level: Three
-    - type: ScpHold
+    - type: ScpHolder
       holdableWhitelist:
         components:
         - HumanoidAppearance

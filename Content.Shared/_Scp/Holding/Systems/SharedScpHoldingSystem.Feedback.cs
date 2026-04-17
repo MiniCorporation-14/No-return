@@ -1,6 +1,5 @@
 using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Coordinates;
-using Content.Shared.Popups;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Audio;
 using Robust.Shared.Prototypes;
@@ -14,19 +13,18 @@ public abstract partial class SharedScpHoldingSystem
      */
 
     [Dependency] private readonly SharedAudioSystem _audio = default!;
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
 
-    private void ShowBreakoutAttemptFeedback(Entity<ScpHeldComponent> held)
+    private void ShowBreakoutAttemptFeedback(Entity<ActiveScpHoldableComponent> held)
     {
         if (!CanShowBreakoutAttemptFeedback())
             return;
 
-        if (!TryComp<ScpHoldableComponent>(held.Owner, out var holdable))
+        if (!TryComp<ScpHoldableComponent>(held, out var holdable))
             return;
 
         foreach (var holderUid in held.Comp.Holders)
         {
-            if (!_holderQuery.TryComp(holderUid, out var holder))
+            if (!_activeHolderQuery.TryComp(holderUid, out var holder))
                 continue;
 
             if (holder.Target != held.Owner)
@@ -36,22 +34,6 @@ public abstract partial class SharedScpHoldingSystem
         }
 
         PlayBreakoutAttemptSound(held.Owner, holdable.BreakoutAttemptSound);
-    }
-
-    private void PopupHolder(EntityUid holder, string key, params (string, object)[] args)
-    {
-        if (!ShouldShowHoldPopups)
-            return;
-
-        _popup.PopupEntity(Loc.GetString(key, args), holder, holder);
-    }
-
-    private void PopupTarget(EntityUid target, string key, params (string, object)[] args)
-    {
-        if (!ShouldShowHoldPopups)
-            return;
-
-        _popup.PopupEntity(Loc.GetString(key, args), target, target);
     }
 
     private void SpawnBreakoutAttemptEffect(EntityUid holderUid, EntProtoId? effect)
@@ -82,7 +64,9 @@ public abstract partial class SharedScpHoldingSystem
         _audio.PlayPvs(sound, targetUid);
     }
 
-    protected virtual bool ShouldShowHoldPopups => false;
+    protected virtual void PopupHolder(EntityUid holder, string key, params (string, object)[] args) { }
+
+    protected virtual void PopupTarget(EntityUid target, string key, params (string, object)[] args) { }
 
     protected virtual bool ShouldUsePredictedBreakoutFeedback => false;
 

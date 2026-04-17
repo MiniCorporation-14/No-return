@@ -1,18 +1,37 @@
 using Content.Shared._Scp.Holding.Systems;
+using Content.Shared.Whitelist;
 using Robust.Shared.GameStates;
 
 namespace Content.Shared._Scp.Holding.Components;
 
 /// <summary>
-/// Runtime contribution state stored on each active holder.
+/// Grants the owner the ability to contribute to SCP holding.
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(fieldDeltas: true), AutoGenerateComponentPause]
 [Access(typeof(SharedScpHoldingSystem))]
 public sealed partial class ScpHolderComponent : Component
 {
     /// <summary>
-    /// Target currently being contributed to.
+    /// Next timestamp when this entity may start a new hold contribution.
     /// </summary>
-    [AutoNetworkedField, ViewVariables]
-    public EntityUid? Target;
+    [AutoNetworkedField, AutoPausedField]
+    public TimeSpan? HoldAvailableAt;
+
+    /// <summary>
+    /// Optional whitelist of entities this holder may grab.
+    /// </summary>
+    [DataField]
+    public EntityWhitelist? HoldableWhitelist;
+
+    /// <summary>
+    /// Optional blacklist of entities this holder may not grab.
+    /// </summary>
+    [DataField]
+    public EntityWhitelist? HoldableBlacklist;
+
+    /// <summary>
+    /// Cooldown applied after each successful hold contribution start.
+    /// </summary>
+    [DataField]
+    public TimeSpan HoldActionCooldown = TimeSpan.FromSeconds(1);
 }

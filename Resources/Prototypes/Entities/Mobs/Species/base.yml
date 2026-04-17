@@ -278,7 +278,7 @@
   - type: CritHeartbeat
   # Sunrise-End
   # Fire start
-  - type: ScpHold # TODO: Убрать перед мержем
+  - type: ScpHolder # TODO: Убрать перед мержем
   - type: ScpHoldable
   - type: FieldOfView
   - type: Blinkable

@@ -8,7 +8,7 @@ namespace Content.Shared._Scp.Holding.Components;
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true)]
 [Access(typeof(SharedScpHoldingSystem))]
-public sealed partial class ScpHolderSlowdownComponent : Component
+public sealed partial class ActiveStateScpHolderSlowdownComponent : Component
 {
     /// <summary>
     /// Walk speed modifier applied while the holder contributes to an active hold.

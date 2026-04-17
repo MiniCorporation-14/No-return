@@ -16,7 +16,12 @@ public record struct ScpHoldAttemptEvent(EntityUid Holder, EntityUid Target)
 public readonly record struct ScpHoldBreakoutEvent(bool ViaMovement, bool WasFullHold, bool AppliedImmunity);
 
 [Serializable, NetSerializable]
-public sealed partial class ScpHoldBreakoutDoAfterEvent(bool viaMovement = false) : SimpleDoAfterEvent
+public sealed partial class ScpHoldBreakoutDoAfterEvent : SimpleDoAfterEvent
 {
-    public bool ViaMovement = viaMovement;
+    public bool ViaMovement;
+
+    public ScpHoldBreakoutDoAfterEvent(bool viaMovement = false)
+    {
+        ViaMovement = viaMovement;
+    }
 }

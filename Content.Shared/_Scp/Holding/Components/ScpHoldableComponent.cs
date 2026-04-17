@@ -60,6 +60,66 @@ public sealed partial class ScpHoldableComponent : Component
     public float HoldRange = 1f;
 
     /// <summary>
+    /// Scales the preferred soft-drag distance from the configured hold range.
+    /// </summary>
+    [DataField]
+    public float SoftDragDistanceFactor = 0.3f;
+
+    /// <summary>
+    /// Lower clamp for the preferred soft-drag distance.
+    /// </summary>
+    [DataField]
+    public float SoftDragMinimumDistance = 0.4f;
+
+    /// <summary>
+    /// Upper clamp for the preferred soft-drag distance.
+    /// </summary>
+    [DataField]
+    public float SoftDragMaximumDistance = 0.6f;
+
+    /// <summary>
+    /// Distance where the system snaps to the holder-facing direction instead of offset.
+    /// </summary>
+    [DataField]
+    public float SoftDragSnapTolerance = 0.03f;
+
+    /// <summary>
+    /// Distance where the held target is considered settled and only matches holder velocity.
+    /// </summary>
+    [DataField]
+    public float SoftDragSettleTolerance = 0.08f;
+
+    /// <summary>
+    /// Minimum velocity used to derive drag direction from holder movement.
+    /// </summary>
+    [DataField]
+    public float SoftDragVelocityDirectionThreshold = 0.05f;
+
+    /// <summary>
+    /// Minimum time window used to catch the held target back up to its desired position.
+    /// </summary>
+    [DataField]
+    public float SoftDragCatchUpTime = 0.05f;
+
+    /// <summary>
+    /// Maximum correction speed applied while soft-dragging the held target.
+    /// </summary>
+    [DataField]
+    public float SoftDragMaximumCorrectionSpeed = 6f;
+
+    /// <summary>
+    /// Extra correction strength applied when the held target moves away from its desired position.
+    /// </summary>
+    [DataField]
+    public float SoftDragAwayVelocityStrength = 0.6f;
+
+    /// <summary>
+    /// Velocity difference threshold before the held body's velocity is updated.
+    /// </summary>
+    [DataField]
+    public float SoftDragVelocityTolerance = 0.05f;
+
+    /// <summary>
     /// Walk speed modifier applied to holders while they move this target.
     /// Lower values make the target heavier to move.
     /// </summary>

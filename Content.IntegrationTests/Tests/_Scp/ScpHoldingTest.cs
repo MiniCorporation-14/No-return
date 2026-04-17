@@ -7,6 +7,8 @@ using Content.IntegrationTests.Tests.Helpers;
 using Content.Shared.Alert;
 using Content.Server.Body.Systems;
 using Content.Shared._Scp.Holding;
+using Content.Shared._Scp.Holding.Components;
+using Content.Shared._Scp.Holding.Systems;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Part;
 using Content.Shared.Hands.Components;
@@ -46,7 +48,7 @@ public sealed class ScpHoldingTest
     private const string TestListenerComponentName = "TestListener";
     private static readonly ProtoId<AlertPrototype> GrabbedAlertId = "ScpHoldGrabbed";
     private static readonly FieldInfo SoftEscapeAvailableAtField =
-        typeof(ScpHeldComponent).GetField(nameof(ScpHeldComponent.SoftEscapeAvailableAt))!;
+        typeof(ActiveScpHoldableComponent).GetField(nameof(ActiveScpHoldableComponent.SoftEscapeAvailableAt))!;
 
     private static EntityWhitelist CreateComponentWhitelist(params string[] components)
     {
@@ -62,12 +64,12 @@ public sealed class ScpHoldingTest
   id: ScpHoldingTestHolder
   parent: MobHuman
   components:
-  - type: ScpHold
+  - type: ScpHolder
 - type: entity
   id: ScpHoldingTestHolderHoldableWhitelisted
   parent: ScpHoldingTestHolder
   components:
-  - type: ScpHold
+  - type: ScpHolder
     holdableWhitelist:
       components:
       - TestListener
@@ -75,7 +77,7 @@ public sealed class ScpHoldingTest
   id: ScpHoldingTestHolderHoldableBlacklisted
   parent: ScpHoldingTestHolder
   components:
-  - type: ScpHold
+  - type: ScpHolder
     holdableBlacklist:
       components:
       - TestListener
@@ -106,7 +108,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(entMan, target), Is.False);
@@ -121,13 +123,13 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
         });
 
         await server.WaitPost(() =>
         {
             StartHold(entMan, holding, holder, target);
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             SetSoftEscapeAvailableAt(held, timing.CurTime + TimeSpan.FromSeconds(1));
         });
 
@@ -136,7 +138,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.True);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.True);
         });
 
         await server.WaitPost(() =>
@@ -148,12 +150,12 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.True);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.True);
         });
 
         await server.WaitPost(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             SetSoftEscapeAvailableAt(held, timing.CurTime);
             var alert = proto.Index(GrabbedAlertId);
             Assert.That(alerts.ActivateAlert(target, alert), Is.True);
@@ -162,7 +164,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
         });
 
         await pair.CleanReturnAsync();
@@ -210,8 +212,8 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(target);
-            var holderState = sEntMan.GetComponent<ScpHolderComponent>(holder);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(target);
+            var holderState = sEntMan.GetComponent<ActiveScpHolderComponent>(holder);
             var holderSpeed = sEntMan.GetComponent<MovementSpeedModifierComponent>(holder);
             var holderHands = sEntMan.GetComponent<HandsComponent>(holder);
             var puller = sEntMan.GetComponent<PullerComponent>(holder);
@@ -256,8 +258,8 @@ public sealed class ScpHoldingTest
             clientHolder = ToClientEntity(sEntMan, cEntMan, holder);
             clientTarget = ToClientEntity(sEntMan, cEntMan, target);
 
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
-            var holderState = cEntMan.GetComponent<ScpHolderComponent>(clientHolder);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
+            var holderState = cEntMan.GetComponent<ActiveScpHolderComponent>(clientHolder);
             var holderSpeed = cEntMan.GetComponent<MovementSpeedModifierComponent>(clientHolder);
             var holderHands = cEntMan.GetComponent<HandsComponent>(clientHolder);
             var puller = cEntMan.GetComponent<PullerComponent>(clientHolder);
@@ -340,12 +342,12 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(sEntMan.HasComponent<ScpHeldComponent>(target), Is.True);
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(target), Is.True);
         });
 
         await client.WaitAssertion(() =>
         {
-            Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientTarget), Is.True);
+            Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.True);
         });
 
         await server.WaitPost(() =>
@@ -414,7 +416,7 @@ public sealed class ScpHoldingTest
         await server.WaitPost(() =>
         {
             sTransform.SetCoordinates(serverPlayer, map.GridCoords);
-            sEntMan.EnsureComponent<ScpHoldComponent>(serverPlayer);
+            sEntMan.EnsureComponent<ScpHolderComponent>(serverPlayer);
             target = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
         });
 
@@ -466,7 +468,7 @@ public sealed class ScpHoldingTest
             var speed = sEntMan.GetComponent<MovementSpeedModifierComponent>(serverPlayer);
             Assert.Multiple(() =>
             {
-                Assert.That(sEntMan.HasComponent<ScpHolderComponent>(serverPlayer), Is.True);
+                Assert.That(sEntMan.HasComponent<ActiveScpHolderComponent>(serverPlayer), Is.True);
                 Assert.That(HasHolderSlowdown(sEntMan, serverPlayer), Is.True);
                 Assert.That(speed.WalkSpeedModifier, Is.LessThan(serverBaseWalk * 0.75f));
                 Assert.That(speed.SprintSpeedModifier, Is.LessThan(serverBaseSprint * 0.75f));
@@ -478,7 +480,7 @@ public sealed class ScpHoldingTest
             var speed = cEntMan.GetComponent<MovementSpeedModifierComponent>(clientPlayer);
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.True);
+                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.True);
                 Assert.That(HasHolderSlowdown(cEntMan, clientPlayer), Is.True);
                 Assert.That(speed.WalkSpeedModifier, Is.LessThan(clientBaseWalk * 0.75f));
                 Assert.That(speed.SprintSpeedModifier, Is.LessThan(clientBaseSprint * 0.75f));
@@ -487,7 +489,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitPost(() =>
         {
-            var holdComp = sEntMan.GetComponent<ScpHoldComponent>(serverPlayer);
+            var holdComp = sEntMan.GetComponent<ScpHolderComponent>(serverPlayer);
             Assert.That(holding.TryToggleHold((serverPlayer, holdComp), target), Is.True);
         });
 
@@ -499,7 +501,7 @@ public sealed class ScpHoldingTest
             var speed = sEntMan.GetComponent<MovementSpeedModifierComponent>(serverPlayer);
             Assert.Multiple(() =>
             {
-                Assert.That(sEntMan.HasComponent<ScpHolderComponent>(serverPlayer), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveScpHolderComponent>(serverPlayer), Is.False);
                 Assert.That(HasHolderSlowdown(sEntMan, serverPlayer), Is.False);
                 Assert.That(speed.WalkSpeedModifier, Is.EqualTo(serverBaseWalk).Within(0.001f));
                 Assert.That(speed.SprintSpeedModifier, Is.EqualTo(serverBaseSprint).Within(0.001f));
@@ -511,7 +513,7 @@ public sealed class ScpHoldingTest
             var speed = cEntMan.GetComponent<MovementSpeedModifierComponent>(clientPlayer);
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.False);
                 Assert.That(HasHolderSlowdown(cEntMan, clientPlayer), Is.False);
                 Assert.That(speed.WalkSpeedModifier, Is.EqualTo(clientBaseWalk).Within(0.001f));
                 Assert.That(speed.SprintSpeedModifier, Is.EqualTo(clientBaseSprint).Within(0.001f));
@@ -555,7 +557,7 @@ public sealed class ScpHoldingTest
             {
                 Assert.That(holderPuller.Pulling, Is.EqualTo(plainTarget));
                 Assert.That(plainPullable.Puller, Is.EqualTo(holder));
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(holdTarget), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(holdTarget), Is.False);
             });
         });
 
@@ -568,7 +570,7 @@ public sealed class ScpHoldingTest
         await server.WaitAssertion(() =>
         {
             var holderPuller = entMan.GetComponent<PullerComponent>(holder);
-            var holderState = entMan.GetComponent<ScpHolderComponent>(holder);
+            var holderState = entMan.GetComponent<ActiveScpHolderComponent>(holder);
             var plainPullable = entMan.GetComponent<PullableComponent>(plainTarget);
             var holdPullable = entMan.GetComponent<PullableComponent>(holdTarget);
 
@@ -578,7 +580,7 @@ public sealed class ScpHoldingTest
                 Assert.That(holderState.Target, Is.EqualTo(holdTarget));
                 Assert.That(plainPullable.Puller, Is.Null);
                 Assert.That(holdPullable.Puller, Is.Null);
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(holdTarget), Is.True);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(holdTarget), Is.True);
             });
         });
 
@@ -611,7 +613,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             var hands = entMan.GetComponent<HandsComponent>(target);
             var holderOnePuller = entMan.GetComponent<PullerComponent>(holderOne);
             var holderTwoPuller = entMan.GetComponent<PullerComponent>(holderTwo);
@@ -753,13 +755,13 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var holdComp = entMan.GetComponent<ScpHoldComponent>(holder);
+            var holdComp = entMan.GetComponent<ScpHolderComponent>(holder);
 
             Assert.Multiple(() =>
             {
                 Assert.That(holding.CanToggleHold((holder, holdComp), target, quiet: true), Is.False);
                 Assert.That(holding.TryToggleHold((holder, holdComp), target), Is.False);
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
             });
         });
 
@@ -808,9 +810,9 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var successHold = entMan.GetComponent<ScpHoldComponent>(successHolder);
-            var blockedHold = entMan.GetComponent<ScpHoldComponent>(blockedHolder);
-            var blacklistHold = entMan.GetComponent<ScpHoldComponent>(blacklistHolder);
+            var successHold = entMan.GetComponent<ScpHolderComponent>(successHolder);
+            var blockedHold = entMan.GetComponent<ScpHolderComponent>(blockedHolder);
+            var blacklistHold = entMan.GetComponent<ScpHolderComponent>(blacklistHolder);
 
             Assert.Multiple(() =>
             {
@@ -829,8 +831,8 @@ public sealed class ScpHoldingTest
                 Assert.That(holding.CanToggleHold((successHolder, successHold), successTarget, quiet: true), Is.True);
                 Assert.That(holding.TryToggleHold((successHolder, successHold), successTarget), Is.True);
 
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(blockedTarget), Is.False);
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(successTarget), Is.True);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(blockedTarget), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(successTarget), Is.True);
             });
         });
 
@@ -862,12 +864,12 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var holdComp = entMan.GetComponent<ScpHoldComponent>(holder);
+            var holdComp = entMan.GetComponent<ScpHolderComponent>(holder);
 
             Assert.Multiple(() =>
             {
                 Assert.That(holding.TryToggleHold((holder, holdComp), target), Is.False);
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
                 Assert.That(attempts.Count(target), Is.EqualTo(1));
                 Assert.That(attempts.Count(holder), Is.EqualTo(1));
             });
@@ -906,7 +908,7 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
                 Assert.That(breakouts.Count(target), Is.EqualTo(1));
                 Assert.That(breakout.ViaMovement, Is.True);
                 Assert.That(breakout.WasFullHold, Is.False);
@@ -954,7 +956,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             Assert.Multiple(() =>
             {
                 Assert.That(held.RequiredHolderCount, Is.EqualTo(3));
@@ -970,7 +972,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             var hands = entMan.GetComponent<HandsComponent>(target);
 
             Assert.Multiple(() =>
@@ -993,7 +995,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             var hands = entMan.GetComponent<HandsComponent>(target);
 
             Assert.Multiple(() =>
@@ -1038,7 +1040,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(entMan, target), Is.True);
@@ -1053,7 +1055,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             Assert.Multiple(() =>
             {
                 Assert.That(HasBreakoutAttempt(entMan, target), Is.True);
@@ -1068,33 +1070,33 @@ public sealed class ScpHoldingTest
         {
             Assert.Multiple(() =>
             {
-                Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
                 Assert.That(entMan.HasComponent<ScpHoldImmuneComponent>(target), Is.True);
             });
         });
 
         await server.WaitPost(() =>
         {
-            var holdComp = entMan.GetComponent<ScpHoldComponent>(holderOne);
+            var holdComp = entMan.GetComponent<ScpHolderComponent>(holderOne);
             Assert.That(holding.TryToggleHold((holderOne, holdComp), target), Is.False);
         });
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
         });
 
         await server.WaitRunTicks(GetTickCount(timing, TimeSpan.FromSeconds(5)));
 
         await server.WaitPost(() =>
         {
-            var holdComp = entMan.GetComponent<ScpHoldComponent>(holderOne);
+            var holdComp = entMan.GetComponent<ScpHolderComponent>(holderOne);
             Assert.That(holding.TryToggleHold((holderOne, holdComp), target), Is.True);
         });
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.True);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.True);
         });
 
         await pair.CleanReturnAsync();
@@ -1172,8 +1174,8 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(sEntMan.HasComponent<ScpHeldComponent>(serverPlayer), Is.False);
-                Assert.That(sEntMan.HasComponent<ScpFullHeldComponent>(serverPlayer), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(serverPlayer), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveStateScpHoldableFullHoldComponent>(serverPlayer), Is.False);
                 Assert.That(mover.CanMove, Is.True);
             });
         });
@@ -1184,8 +1186,8 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientPlayer), Is.False);
-                Assert.That(cEntMan.HasComponent<ScpFullHeldComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveStateScpHoldableFullHoldComponent>(clientPlayer), Is.False);
                 Assert.That(mover.CanMove, Is.True);
             });
         });
@@ -1230,7 +1232,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             Assert.Multiple(() =>
             {
                 Assert.That(HasBreakoutAttempt(entMan, target), Is.True);
@@ -1243,7 +1245,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
         });
 
         await pair.CleanReturnAsync();
@@ -1282,8 +1284,8 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
-            Assert.That(entMan.HasComponent<ScpHolderComponent>(holder), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHolderComponent>(holder), Is.False);
         });
 
         await server.WaitPost(() => StartHold(entMan, holding, holder, target));
@@ -1303,8 +1305,8 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
-            Assert.That(entMan.HasComponent<ScpHolderComponent>(holder), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHolderComponent>(holder), Is.False);
         });
 
         await pair.CleanReturnAsync();
@@ -1336,7 +1338,7 @@ public sealed class ScpHoldingTest
         await server.WaitPost(() =>
         {
             sTransform.SetCoordinates(serverPlayer, map.GridCoords);
-            sEntMan.EnsureComponent<ScpHoldComponent>(serverPlayer);
+            sEntMan.EnsureComponent<ScpHolderComponent>(serverPlayer);
             target = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
             StartHold(sEntMan, holding, serverPlayer, target);
         });
@@ -1354,8 +1356,8 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.True);
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientTarget), Is.True);
+                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.True);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.True);
                 Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands), Is.EqualTo(1));
                 Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
             });
@@ -1371,8 +1373,8 @@ public sealed class ScpHoldingTest
             Assert.That(cHandsSystem.TryDrop((clientPlayer, hands), blocker, dropLocation), Is.True);
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientTarget), Is.False);
-                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.False);
                 Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands), Is.EqualTo(0));
                 Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
             });
@@ -1435,7 +1437,7 @@ public sealed class ScpHoldingTest
         await server.WaitPost(() =>
         {
             sTransform.SetCoordinates(serverPlayer, map.GridCoords);
-            sEntMan.EnsureComponent<ScpHoldComponent>(serverPlayer);
+            sEntMan.EnsureComponent<ScpHolderComponent>(serverPlayer);
             target = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
         });
 
@@ -1451,7 +1453,7 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHoldComponent>(clientPlayer), Is.True);
+                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.True);
                 Assert.That(cEntMan.EntityExists(clientTarget), Is.True);
             });
         });
@@ -1460,13 +1462,13 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
             var holderHands = cEntMan.GetComponent<HandsComponent>(clientPlayer);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.False);
                 Assert.That(held.Holders, Has.Count.EqualTo(1));
-                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.True);
+                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.True);
                 Assert.That(CountHolderHandBlockers(cEntMan, cHandsSystem, clientPlayer, clientTarget, holderHands), Is.EqualTo(1));
                 Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, holderHands), Is.EqualTo(1));
                 Assert.That(cStatusEffects.HasStatusEffect(clientTarget, "StatusEffectScpHeld"), Is.True);
@@ -1475,7 +1477,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(sEntMan.HasComponent<ScpHeldComponent>(target), Is.False);
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
         });
 
         var maxPredictedClientBlockers = 1;
@@ -1500,7 +1502,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(target);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(target);
             var holderHands = sEntMan.GetComponent<HandsComponent>(serverPlayer);
             var puller = sEntMan.GetComponent<PullerComponent>(serverPlayer);
             var pullable = sEntMan.GetComponent<PullableComponent>(target);
@@ -1523,7 +1525,7 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
             var holderHands = cEntMan.GetComponent<HandsComponent>(clientPlayer);
             var puller = cEntMan.GetComponent<PullerComponent>(clientPlayer);
             var pullable = cEntMan.GetComponent<PullableComponent>(clientTarget);
@@ -1545,6 +1547,112 @@ public sealed class ScpHoldingTest
 
         await pair.CleanReturnAsync();
     }
+
+    // Fire added start - compare real client pull path against direct server hold helper
+    [Test]
+    public async Task ClientPullHeldTargetWithCombatModeEnabled_DisablesCombatModeInPredictionAndAfterAck()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings
+        {
+            Fresh = true,
+            Connected = true,
+            DummyTicker = false,
+        });
+
+        var server = pair.Server;
+        var client = pair.Client;
+        var sEntMan = server.EntMan;
+        var cEntMan = client.EntMan;
+        var cTiming = client.ResolveDependency<IGameTiming>();
+        var sTransform = server.System<SharedTransformSystem>();
+        var sCombatMode = server.System<Content.Shared.CombatMode.SharedCombatModeSystem>();
+        var map = await pair.CreateTestMap();
+
+        var serverPlayer = pair.Player!.AttachedEntity!.Value;
+        EntityUid target = default;
+        EntityUid serverCombatAction = default;
+
+        await server.WaitPost(() =>
+        {
+            sTransform.SetCoordinates(serverPlayer, map.GridCoords);
+            sEntMan.EnsureComponent<ScpHolderComponent>(serverPlayer);
+            target = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
+
+            var combat = sEntMan.GetComponent<Content.Shared.CombatMode.CombatModeComponent>(target);
+            sCombatMode.SetInCombatMode(target, true, combat);
+            serverCombatAction = GetCombatToggleAction(sEntMan, target);
+        });
+
+        await pair.RunTicksSync(10);
+        await pair.SyncTicks(targetDelta: 1);
+
+        EntityUid clientPlayer = default;
+        EntityUid clientTarget = default;
+        EntityUid clientCombatAction = default;
+        await client.WaitAssertion(() =>
+        {
+            clientPlayer = client.AttachedEntity!.Value;
+            clientTarget = ToClientEntity(sEntMan, cEntMan, target);
+            clientCombatAction = ToClientEntity(sEntMan, cEntMan, serverCombatAction);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(IsInCombatMode(sEntMan, target), Is.True);
+                Assert.That(IsActionToggled(sEntMan, serverCombatAction), Is.True);
+                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientPlayer), Is.True);
+                Assert.That(IsInCombatMode(cEntMan, clientTarget), Is.True);
+                Assert.That(IsActionToggled(cEntMan, clientCombatAction), Is.True);
+            });
+        });
+
+        await PressClientPullKey(client, cEntMan, cTiming, clientTarget);
+
+        await client.WaitAssertion(() =>
+        {
+            clientCombatAction = ToClientEntity(sEntMan, cEntMan, serverCombatAction);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.True);
+                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.True);
+                Assert.That(IsInCombatMode(cEntMan, clientTarget), Is.False);
+                Assert.That(IsActionToggled(cEntMan, clientCombatAction), Is.False);
+            });
+        });
+
+        await server.WaitAssertion(() =>
+        {
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
+        });
+
+        await pair.RunTicksSync(10);
+        await pair.SyncTicks(targetDelta: 1);
+
+        await server.WaitAssertion(() =>
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(target), Is.True);
+                Assert.That(IsInCombatMode(sEntMan, target), Is.False);
+                Assert.That(IsActionToggled(sEntMan, serverCombatAction), Is.False);
+            });
+        });
+
+        await client.WaitAssertion(() =>
+        {
+            clientCombatAction = ToClientEntity(sEntMan, cEntMan, serverCombatAction);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.True);
+                Assert.That(IsInCombatMode(cEntMan, clientTarget), Is.False);
+                Assert.That(IsActionToggled(cEntMan, clientCombatAction), Is.False);
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+    // Fire added end
 
     [Test]
     public async Task ClientPullCooldownAndFullBreakoutPenaltyReplicate()
@@ -1574,7 +1682,7 @@ public sealed class ScpHoldingTest
         await server.WaitPost(() =>
         {
             sTransform.SetCoordinates(serverPlayer, map.GridCoords);
-            sEntMan.EnsureComponent<ScpHoldComponent>(serverPlayer);
+            sEntMan.EnsureComponent<ScpHolderComponent>(serverPlayer);
             firstTarget = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.4f, 0f)));
             breakoutTarget = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.4f, 0.6f)));
             holderTwo = sEntMan.SpawnEntity(HolderPrototype, map.GridCoords.Offset(new Vector2(-0.4f, 0.6f)));
@@ -1601,8 +1709,8 @@ public sealed class ScpHoldingTest
         {
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientFirstTarget), Is.True);
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientBreakoutTarget), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientFirstTarget), Is.True);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientBreakoutTarget), Is.False);
                 Assert.That(GetHoldCooldownRemaining(cEntMan, clientPlayer, cTiming), Is.GreaterThan(TimeSpan.Zero));
             });
         });
@@ -1614,8 +1722,8 @@ public sealed class ScpHoldingTest
         {
             Assert.Multiple(() =>
             {
-                Assert.That(sEntMan.HasComponent<ScpHeldComponent>(firstTarget), Is.True);
-                Assert.That(sEntMan.HasComponent<ScpHeldComponent>(breakoutTarget), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(firstTarget), Is.True);
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(breakoutTarget), Is.False);
                 Assert.That(GetHoldCooldownRemaining(sEntMan, serverPlayer, sTiming), Is.GreaterThan(TimeSpan.Zero));
             });
         });
@@ -1632,7 +1740,7 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientFirstTarget), Is.False);
+            Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientFirstTarget), Is.False);
         });
 
         await pair.RunTicksSync(10);
@@ -1640,7 +1748,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(sEntMan.HasComponent<ScpHeldComponent>(firstTarget), Is.False);
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(firstTarget), Is.False);
         });
 
         await pair.RunTicksSync(GetTickCount(sTiming, TimeSpan.FromSeconds(1)) + 1);
@@ -1650,7 +1758,7 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientBreakoutTarget), Is.True);
+            Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientBreakoutTarget), Is.True);
         });
 
         await pair.RunTicksSync(10);
@@ -1658,7 +1766,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(sEntMan.HasComponent<ScpHeldComponent>(breakoutTarget), Is.True);
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(breakoutTarget), Is.True);
         });
 
         await server.WaitPost(() =>
@@ -1681,7 +1789,7 @@ public sealed class ScpHoldingTest
         {
             Assert.Multiple(() =>
             {
-                Assert.That(sEntMan.HasComponent<ScpHeldComponent>(breakoutTarget), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(breakoutTarget), Is.False);
                 Assert.That(GetHoldCooldownRemaining(sEntMan, serverPlayer, sTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
                 Assert.That(GetHoldCooldownRemaining(sEntMan, holderTwo, sTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
             });
@@ -1691,7 +1799,7 @@ public sealed class ScpHoldingTest
         {
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientBreakoutTarget), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientBreakoutTarget), Is.False);
                 Assert.That(GetHoldCooldownRemaining(cEntMan, clientPlayer, cTiming), Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(1.5)));
             });
         });
@@ -1700,7 +1808,7 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientFirstTarget), Is.False);
+            Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientFirstTarget), Is.False);
         });
 
         await pair.RunTicksSync(5);
@@ -1708,7 +1816,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(sEntMan.HasComponent<ScpHeldComponent>(firstTarget), Is.False);
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(firstTarget), Is.False);
         });
 
         await pair.CleanReturnAsync();
@@ -1742,7 +1850,7 @@ public sealed class ScpHoldingTest
         await server.WaitPost(() =>
         {
             sTransform.SetCoordinates(serverPlayer, map.GridCoords);
-            sEntMan.EnsureComponent<ScpHoldComponent>(serverPlayer);
+            sEntMan.EnsureComponent<ScpHolderComponent>(serverPlayer);
 
             holderOne = sEntMan.SpawnEntity(HolderPrototype, map.GridCoords);
             target = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.5f, 0f)));
@@ -1761,7 +1869,7 @@ public sealed class ScpHoldingTest
             clientTarget = ToClientEntity(sEntMan, cEntMan, target);
             clientHolderOne = ToClientEntity(sEntMan, cEntMan, holderOne);
 
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.False);
@@ -1773,7 +1881,7 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
             var hands = cEntMan.GetComponent<HandsComponent>(clientTarget);
 
             Assert.Multiple(() =>
@@ -1787,7 +1895,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(target);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(target);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, target), Is.False);
@@ -1800,7 +1908,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(target);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(target);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, target), Is.True);
@@ -1810,7 +1918,7 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.True);
@@ -1850,7 +1958,7 @@ public sealed class ScpHoldingTest
         await server.WaitPost(() =>
         {
             sTransform.SetCoordinates(serverPlayer, map.GridCoords);
-            sEntMan.EnsureComponent<ScpHoldComponent>(serverPlayer);
+            sEntMan.EnsureComponent<ScpHolderComponent>(serverPlayer);
 
             target = sEntMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.95f, 0f)));
             host.ExecuteCommand(null, $"addhand {sEntMan.GetNetEntity(target)}");
@@ -1866,7 +1974,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(target);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(target);
             var serverPlayerPuller = sEntMan.GetComponent<PullerComponent>(serverPlayer);
             var holderTwoPuller = sEntMan.GetComponent<PullerComponent>(holderTwo);
             var pullable = sEntMan.GetComponent<PullableComponent>(target);
@@ -1896,7 +2004,7 @@ public sealed class ScpHoldingTest
             clientTarget = ToClientEntity(sEntMan, cEntMan, target);
             clientHolderTwo = ToClientEntity(sEntMan, cEntMan, holderTwo);
 
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
             var playerPuller = cEntMan.GetComponent<PullerComponent>(clientPlayer);
             var holderTwoPuller = cEntMan.GetComponent<PullerComponent>(clientHolderTwo);
             var pullable = cEntMan.GetComponent<PullableComponent>(clientTarget);
@@ -1919,7 +2027,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitPost(() =>
         {
-            var holdComp = sEntMan.GetComponent<ScpHoldComponent>(serverPlayer);
+            var holdComp = sEntMan.GetComponent<ScpHolderComponent>(serverPlayer);
             Assert.That(holding.TryToggleHold((serverPlayer, holdComp), target), Is.True);
         });
 
@@ -1928,7 +2036,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(target);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(target);
             var pullable = sEntMan.GetComponent<PullableComponent>(target);
             var holderTwoPuller = sEntMan.GetComponent<PullerComponent>(holderTwo);
             var distance = GetDistance(sTransform, holderTwo, target);
@@ -1948,7 +2056,7 @@ public sealed class ScpHoldingTest
 
         await client.WaitAssertion(() =>
         {
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientTarget);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientTarget);
             var pullable = cEntMan.GetComponent<PullableComponent>(clientTarget);
             var holderTwoPuller = cEntMan.GetComponent<PullerComponent>(clientHolderTwo);
             var distance = GetDistance(cTransform, clientHolderTwo, clientTarget);
@@ -2008,7 +2116,7 @@ public sealed class ScpHoldingTest
         await pair.SyncTicks(targetDelta: 1);
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(serverPlayer);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(serverPlayer);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, serverPlayer), Is.True);
@@ -2030,7 +2138,7 @@ public sealed class ScpHoldingTest
         {
             cEntMan.RaisePredictiveEvent(new ClickAlertEvent("ScpHoldGrabbed"));
 
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientPlayer);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientPlayer);
             Assert.Multiple(() =>
             {
                 Assert.That(HasBreakoutAttempt(cEntMan, clientPlayer), Is.True);
@@ -2042,7 +2150,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(serverPlayer);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(serverPlayer);
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, serverPlayer), Is.True);
@@ -2057,7 +2165,7 @@ public sealed class ScpHoldingTest
         {
             Assert.Multiple(() =>
             {
-                Assert.That(sEntMan.HasComponent<ScpHeldComponent>(serverPlayer), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(serverPlayer), Is.False);
                 Assert.That(sEntMan.HasComponent<ScpHoldImmuneComponent>(serverPlayer), Is.True);
             });
         });
@@ -2066,7 +2174,7 @@ public sealed class ScpHoldingTest
         {
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientPlayer), Is.False);
                 Assert.That(cEntMan.HasComponent<ScpHoldImmuneComponent>(clientPlayer), Is.True);
             });
         });
@@ -2114,7 +2222,7 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientPlayer), Is.True);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientPlayer), Is.True);
                 Assert.That(cAlerts.IsShowingAlert(clientPlayer, "ScpHoldGrabbed"), Is.True);
             });
         });
@@ -2125,14 +2233,14 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientPlayer), Is.False);
                 Assert.That(cAlerts.IsShowingAlert(clientPlayer, "ScpHoldGrabbed"), Is.False);
             });
         });
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(sEntMan.HasComponent<ScpHeldComponent>(serverPlayer), Is.True);
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(serverPlayer), Is.True);
             Assert.That(sAlerts.IsShowingAlert(serverPlayer, "ScpHoldGrabbed"), Is.True);
         });
 
@@ -2141,13 +2249,13 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(sEntMan.HasComponent<ScpHeldComponent>(serverPlayer), Is.False);
+            Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(serverPlayer), Is.False);
             Assert.That(sAlerts.IsShowingAlert(serverPlayer, "ScpHoldGrabbed"), Is.False);
         });
 
         await client.WaitAssertion(() =>
         {
-            Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientPlayer), Is.False);
+            Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientPlayer), Is.False);
             Assert.That(cAlerts.IsShowingAlert(clientPlayer, "ScpHoldGrabbed"), Is.False);
         });
 
@@ -2187,7 +2295,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             var holderOnePuller = entMan.GetComponent<PullerComponent>(holderOne);
             var holderTwoPuller = entMan.GetComponent<PullerComponent>(holderTwo);
             var pullable = entMan.GetComponent<PullableComponent>(target);
@@ -2204,14 +2312,14 @@ public sealed class ScpHoldingTest
 
         await server.WaitPost(() =>
         {
-            var holderComp = entMan.GetComponent<ScpHoldComponent>(holderOne);
+            var holderComp = entMan.GetComponent<ScpHolderComponent>(holderOne);
             Assert.That(holding.TryToggleHold((holderOne, holderComp), target), Is.True);
         });
         await server.WaitRunTicks(4);
 
         await server.WaitAssertion(() =>
         {
-            var held = entMan.GetComponent<ScpHeldComponent>(target);
+            var held = entMan.GetComponent<ActiveScpHoldableComponent>(target);
             var holderOnePuller = entMan.GetComponent<PullerComponent>(holderOne);
             var holderTwoPuller = entMan.GetComponent<PullerComponent>(holderTwo);
             var pullable = entMan.GetComponent<PullableComponent>(target);
@@ -2235,7 +2343,7 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            Assert.That(entMan.HasComponent<ScpHeldComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
         });
 
         await pair.CleanReturnAsync();
@@ -2280,8 +2388,8 @@ public sealed class ScpHoldingTest
 
         await server.WaitAssertion(() =>
         {
-            var held = sEntMan.GetComponent<ScpHeldComponent>(serverPlayer);
-            var holderState = sEntMan.GetComponent<ScpHolderComponent>(holder);
+            var held = sEntMan.GetComponent<ActiveScpHoldableComponent>(serverPlayer);
+            var holderState = sEntMan.GetComponent<ActiveScpHolderComponent>(holder);
             var holderHands = sEntMan.GetComponent<HandsComponent>(holder);
 
             Assert.Multiple(() =>
@@ -2303,8 +2411,8 @@ public sealed class ScpHoldingTest
             clientPlayer = client.AttachedEntity!.Value;
             clientHolder = ToClientEntity(sEntMan, cEntMan, holder);
 
-            var held = cEntMan.GetComponent<ScpHeldComponent>(clientPlayer);
-            var holderState = cEntMan.GetComponent<ScpHolderComponent>(clientHolder);
+            var held = cEntMan.GetComponent<ActiveScpHoldableComponent>(clientPlayer);
+            var holderState = cEntMan.GetComponent<ActiveScpHolderComponent>(clientHolder);
             var holderHands = cEntMan.GetComponent<HandsComponent>(clientHolder);
 
             Assert.Multiple(() =>
@@ -2333,9 +2441,9 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(sEntMan.HasComponent<ScpHeldComponent>(serverPlayer), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(serverPlayer), Is.False);
                 Assert.That(sEntMan.HasComponent<ScpHoldImmuneComponent>(serverPlayer), Is.False);
-                Assert.That(sEntMan.HasComponent<ScpHolderComponent>(holder), Is.False);
+                Assert.That(sEntMan.HasComponent<ActiveScpHolderComponent>(holder), Is.False);
                 Assert.That(CountHolderHandBlockers(sEntMan, sHandsSystem, holder, serverPlayer, holderHands), Is.EqualTo(0));
                 Assert.That(CountHolderTargetVirtualItems(sEntMan, sHandsSystem, holder, serverPlayer, holderHands), Is.EqualTo(0));
                 Assert.That(sStatusEffects.HasStatusEffect(serverPlayer, "StatusEffectScpHeld"), Is.False);
@@ -2349,9 +2457,9 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(cEntMan.HasComponent<ScpHeldComponent>(clientPlayer), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientPlayer), Is.False);
                 Assert.That(cEntMan.HasComponent<ScpHoldImmuneComponent>(clientPlayer), Is.False);
-                Assert.That(cEntMan.HasComponent<ScpHolderComponent>(clientHolder), Is.False);
+                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientHolder), Is.False);
                 Assert.That(CountHolderHandBlockers(cEntMan, cHandsSystem, clientHolder, clientPlayer, holderHands), Is.EqualTo(0));
                 Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientHolder, clientPlayer, holderHands), Is.EqualTo(0));
                 Assert.That(cStatusEffects.HasStatusEffect(clientPlayer, "StatusEffectScpHeld"), Is.False);
@@ -2361,6 +2469,96 @@ public sealed class ScpHoldingTest
 
         await pair.CleanReturnAsync();
     }
+
+    // Fire added start - verify hold disables combat mode consistently
+    [Test]
+    public async Task ConnectedTargetHeldWithCombatModeEnabled_DisablesCombatModeAndCombatAction()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings
+        {
+            Fresh = true,
+            Connected = true,
+            DummyTicker = false,
+        });
+
+        var server = pair.Server;
+        var client = pair.Client;
+        var sEntMan = server.EntMan;
+        var cEntMan = client.EntMan;
+        var sTransform = server.System<SharedTransformSystem>();
+        var sCombatMode = server.System<Content.Shared.CombatMode.SharedCombatModeSystem>();
+        var holding = server.System<SharedScpHoldingSystem>();
+        var map = await pair.CreateTestMap();
+
+        var serverPlayer = pair.Player!.AttachedEntity!.Value;
+        EntityUid clientPlayer = default;
+        EntityUid holder = default;
+        EntityUid serverCombatAction = default;
+        EntityUid clientCombatAction = default;
+
+        await server.WaitPost(() =>
+        {
+            sTransform.SetCoordinates(serverPlayer, map.GridCoords.Offset(new Vector2(0.1f, 0f)));
+            holder = sEntMan.SpawnEntity(HolderPrototype, map.GridCoords);
+
+            var combat = sEntMan.GetComponent<Content.Shared.CombatMode.CombatModeComponent>(serverPlayer);
+            sCombatMode.SetInCombatMode(serverPlayer, true, combat);
+            serverCombatAction = GetCombatToggleAction(sEntMan, serverPlayer);
+        });
+
+        await pair.RunTicksSync(5);
+        await pair.SyncTicks(targetDelta: 1);
+
+        await server.WaitAssertion(() =>
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(IsInCombatMode(sEntMan, serverPlayer), Is.True);
+                Assert.That(IsActionToggled(sEntMan, serverCombatAction), Is.True);
+            });
+        });
+
+        await client.WaitAssertion(() =>
+        {
+            clientPlayer = client.AttachedEntity!.Value;
+            clientCombatAction = ToClientEntity(sEntMan, cEntMan, serverCombatAction);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(IsInCombatMode(cEntMan, clientPlayer), Is.True);
+                Assert.That(IsActionToggled(cEntMan, clientCombatAction), Is.True);
+            });
+        });
+
+        await server.WaitPost(() => StartHold(sEntMan, holding, holder, serverPlayer));
+        await pair.RunTicksSync(5);
+        await pair.SyncTicks(targetDelta: 1);
+
+        await server.WaitAssertion(() =>
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(sEntMan.HasComponent<ActiveScpHoldableComponent>(serverPlayer), Is.True);
+                Assert.That(IsInCombatMode(sEntMan, serverPlayer), Is.False);
+                Assert.That(IsActionToggled(sEntMan, serverCombatAction), Is.False);
+            });
+        });
+
+        await client.WaitAssertion(() =>
+        {
+            clientCombatAction = ToClientEntity(sEntMan, cEntMan, serverCombatAction);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientPlayer), Is.True);
+                Assert.That(IsInCombatMode(cEntMan, clientPlayer), Is.False);
+                Assert.That(IsActionToggled(cEntMan, clientCombatAction), Is.False);
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+    // Fire added end
 
     private static int CountBlockingVirtualHands(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid uid, HandsComponent hands)
     {
@@ -2387,7 +2585,7 @@ public sealed class ScpHoldingTest
 
     private static bool HasFullHold(IEntityManager entMan, EntityUid uid)
     {
-        return entMan.HasComponent<ScpFullHeldComponent>(uid);
+        return entMan.HasComponent<ActiveStateScpHoldableFullHoldComponent>(uid);
     }
 
     private static bool HasBreakoutAttempt(IEntityManager entMan, EntityUid uid)
@@ -2397,8 +2595,28 @@ public sealed class ScpHoldingTest
 
     private static bool HasHolderSlowdown(IEntityManager entMan, EntityUid uid)
     {
-        return entMan.HasComponent<ScpHolderSlowdownComponent>(uid);
+        return entMan.HasComponent<ActiveStateScpHolderSlowdownComponent>(uid);
     }
+
+    // Fire added start - verify hold disables combat mode consistently
+    private static EntityUid GetCombatToggleAction(IEntityManager entMan, EntityUid uid)
+    {
+        var combat = entMan.GetComponent<Content.Shared.CombatMode.CombatModeComponent>(uid);
+
+        Assert.That(combat.CombatToggleActionEntity, Is.Not.Null);
+        return combat.CombatToggleActionEntity!.Value;
+    }
+
+    private static bool IsInCombatMode(IEntityManager entMan, EntityUid uid)
+    {
+        return entMan.GetComponent<Content.Shared.CombatMode.CombatModeComponent>(uid).IsInCombatMode;
+    }
+
+    private static bool IsActionToggled(IEntityManager entMan, EntityUid uid)
+    {
+        return entMan.GetComponent<Content.Shared.Actions.Components.ActionComponent>(uid).Toggled;
+    }
+    // Fire added end
 
     private static bool VictimHandsUseHolderIcons(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid uid, HandsComponent hands, params EntityUid[] holders)
     {
@@ -2516,7 +2734,7 @@ public sealed class ScpHoldingTest
 
     private static TimeSpan GetHoldCooldownRemaining(IEntityManager entMan, EntityUid holder, IGameTiming timing)
     {
-        if (!entMan.TryGetComponent(holder, out ScpHoldComponent? holdComp) ||
+        if (!entMan.TryGetComponent(holder, out ScpHolderComponent? holdComp) ||
             holdComp.HoldAvailableAt is not { } cooldownEnd ||
             cooldownEnd <= timing.CurTime)
         {
@@ -2557,7 +2775,7 @@ public sealed class ScpHoldingTest
         await client.WaitPost(() => inputSystem.HandleInputCommand(client.Session!, ContentKeyFunctions.TryPullObject, message));
     }
 
-    private static void SetSoftEscapeAvailableAt(ScpHeldComponent held, TimeSpan value)
+    private static void SetSoftEscapeAvailableAt(ActiveScpHoldableComponent held, TimeSpan value)
     {
         SoftEscapeAvailableAtField.SetValue(held, value);
     }
@@ -2571,7 +2789,7 @@ public sealed class ScpHoldingTest
 
     private static void StartHold(IEntityManager entMan, SharedScpHoldingSystem holding, EntityUid holder, EntityUid target)
     {
-        var holdComp = entMan.GetComponent<ScpHoldComponent>(holder);
+        var holdComp = entMan.GetComponent<ScpHolderComponent>(holder);
         Assert.That(holding.TryToggleHold((holder, holdComp), target), Is.True);
     }
 
@@ -2597,6 +2815,6 @@ public sealed class ScpHoldAttemptCancelSystem : EntitySystem
 
     private static void OnAttempt(Entity<ScpHoldAttemptCancelTestComponent> ent, ref ScpHoldAttemptEvent args)
     {
-        args.Cancel();
+        args.Cancelled = true;
     }
 }

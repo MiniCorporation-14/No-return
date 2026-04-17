@@ -24,7 +24,7 @@ public abstract partial class SharedScpHoldingSystem
         _bodyQuery = GetEntityQuery<BodyComponent>();
     }
 
-    private void UpdateHeld(Entity<ScpHeldComponent> held)
+    private void UpdateHeld(Entity<ActiveScpHoldableComponent> held)
     {
         if (!TryGetHeldHoldable(held, out var holdable))
             return;
@@ -35,11 +35,11 @@ public abstract partial class SharedScpHoldingSystem
             return;
         }
 
-        var desiredSoftDragDistance = GetDesiredSoftDragDistance(holdable.HoldRange);
-        var maintenanceRange = GetHoldMaintenanceRange(holdable.HoldRange, desiredSoftDragDistance);
+        var desiredSoftDragDistance = GetDesiredSoftDragDistance(holdable);
+        var maintenanceRange = GetHoldMaintenanceRange(holdable, desiredSoftDragDistance);
 
-        if (!_fullHeldQuery.HasComp(held.Owner))
-            UpdateSoftDrag(held, maintenanceRange, desiredSoftDragDistance);
+        if (!_activeHoldableFullHoldStateQuery.HasComp(held.Owner))
+            UpdateSoftDrag(held, holdable, maintenanceRange, desiredSoftDragDistance);
         else
             ZeroHeldVelocity(held.Owner);
 
@@ -55,18 +55,18 @@ public abstract partial class SharedScpHoldingSystem
         {
             ReleaseHolderContribution(holderUid, held.Owner, clearIfEmpty: false);
 
-            if (!_heldQuery.TryComp(held.Owner, out _))
+            if (!_activeHoldableQuery.TryComp(held.Owner, out _))
                 return;
         }
 
-        if (_heldQuery.TryComp(held.Owner, out var refreshed))
+        if (_activeHoldableQuery.TryComp(held.Owner, out var refreshed))
             SyncHeldState((held.Owner, refreshed));
     }
 
-    private Entity<ScpHeldComponent> EnsureHeldState(EntityUid target)
+    private Entity<ActiveScpHoldableComponent> EnsureHeldState(EntityUid target)
     {
-        var created = !_heldQuery.TryComp(target, out var held);
-        held ??= EnsureComp<ScpHeldComponent>(target);
+        var created = !_activeHoldableQuery.TryComp(target, out var held);
+        held ??= EnsureComp<ActiveScpHoldableComponent>(target);
 
         if (created)
             held.SoftEscapeAvailableAt = _timing.CurTime;
@@ -75,7 +75,7 @@ public abstract partial class SharedScpHoldingSystem
         return (target, held);
     }
 
-    private void AddHolderContribution(EntityUid holderUid, Entity<ScpHeldComponent> held)
+    private void AddHolderContribution(EntityUid holderUid, Entity<ActiveScpHoldableComponent> held)
     {
         if (!held.Comp.Holders.Contains(holderUid))
         {
@@ -83,8 +83,8 @@ public abstract partial class SharedScpHoldingSystem
             Dirty(held);
         }
 
-        var holderCreated = !_holderQuery.TryComp(holderUid, out var holder);
-        holder ??= EnsureComp<ScpHolderComponent>(holderUid);
+        var holderCreated = !_activeHolderQuery.TryComp(holderUid, out var holder);
+        holder ??= EnsureComp<ActiveScpHolderComponent>(holderUid);
         SetHolderTarget((holderUid, holder), held.Owner);
         SyncHolderState((holderUid, holder));
 
@@ -94,7 +94,7 @@ public abstract partial class SharedScpHoldingSystem
 
     protected void ReleaseHolderContribution(EntityUid holderUid, EntityUid targetUid, bool clearIfEmpty)
     {
-        if (!_heldQuery.TryComp(targetUid, out var held))
+        if (!_activeHoldableQuery.TryComp(targetUid, out var held))
             return;
 
         var removed = false;
@@ -110,10 +110,10 @@ public abstract partial class SharedScpHoldingSystem
         if (removed)
             Dirty(targetUid, held);
 
-        if (_holderQuery.HasComp(holderUid))
-            RemComp<ScpHolderComponent>(holderUid);
-        else if (_holderSlowdownQuery.HasComp(holderUid))
-            RemComp<ScpHolderSlowdownComponent>(holderUid);
+        if (_activeHolderQuery.HasComp(holderUid))
+            RemComp<ActiveScpHolderComponent>(holderUid);
+        else if (_activeHolderSlowdownStateQuery.HasComp(holderUid))
+            RemComp<ActiveStateScpHolderSlowdownComponent>(holderUid);
 
         if (held.PrimaryHolder == holderUid)
             SetHeldPrimaryHolder((targetUid, held), null);
@@ -128,9 +128,9 @@ public abstract partial class SharedScpHoldingSystem
         SyncHeldState((targetUid, held));
     }
 
-    protected void SyncHeldState(Entity<ScpHeldComponent> held)
+    protected void SyncHeldState(Entity<ActiveScpHoldableComponent> held)
     {
-        if (!_heldQuery.TryComp(held.Owner, out var heldComp))
+        if (!_activeHoldableQuery.TryComp(held.Owner, out var heldComp))
             return;
 
         held.Comp = heldComp;
@@ -159,17 +159,17 @@ public abstract partial class SharedScpHoldingSystem
         }
 
         ExitFullHold(held);
-        var desiredSoftDragDistance = GetDesiredSoftDragDistance(holdable.HoldRange);
-        var maintenanceRange = GetHoldMaintenanceRange(holdable.HoldRange, desiredSoftDragDistance);
-        UpdateSoftDrag(held, maintenanceRange, desiredSoftDragDistance);
+        var desiredSoftDragDistance = GetDesiredSoftDragDistance(holdable);
+        var maintenanceRange = GetHoldMaintenanceRange(holdable, desiredSoftDragDistance);
+        UpdateSoftDrag(held, holdable, maintenanceRange, desiredSoftDragDistance);
         UpdateHolderSlowdowns(held, holdable);
         SyncPlaceholderHands(held);
     }
 
-    private void EnterFullHold(Entity<ScpHeldComponent> held, ScpHoldableComponent holdable)
+    private void EnterFullHold(Entity<ActiveScpHoldableComponent> held, ScpHoldableComponent holdable)
     {
-        var fullHeldCreated = !_fullHeldQuery.TryComp(held.Owner, out var fullHeld);
-        fullHeld ??= EnsureComp<ScpFullHeldComponent>(held.Owner);
+        var fullHeldCreated = !_activeHoldableFullHoldStateQuery.TryComp(held.Owner, out var fullHeld);
+        fullHeld ??= EnsureComp<ActiveStateScpHoldableFullHoldComponent>(held.Owner);
 
         if (fullHeldCreated)
         {
@@ -186,16 +186,16 @@ public abstract partial class SharedScpHoldingSystem
         ZeroHeldVelocity(held.Owner);
     }
 
-    private void ExitFullHold(Entity<ScpHeldComponent> held)
+    private void ExitFullHold(Entity<ActiveScpHoldableComponent> held)
     {
-        if (!_fullHeldQuery.HasComp(held.Owner))
+        if (!_activeHoldableFullHoldStateQuery.HasComp(held.Owner))
             return;
 
         EndBreakoutAttempt(held.Owner, cancelDoAfter: true);
-        RemComp<ScpFullHeldComponent>(held.Owner);
+        RemComp<ActiveStateScpHoldableFullHoldComponent>(held.Owner);
     }
 
-    private bool EnsurePrimaryHolder(Entity<ScpHeldComponent> held)
+    private bool EnsurePrimaryHolder(Entity<ActiveScpHoldableComponent> held)
     {
         if (held.Comp.PrimaryHolder != null && IsValidPrimaryHolder(held, held.Comp.PrimaryHolder.Value))
             return true;
@@ -204,7 +204,7 @@ public abstract partial class SharedScpHoldingSystem
 
         foreach (var holderUid in held.Comp.Holders)
         {
-            if (!_holderQuery.TryComp(holderUid, out var holder))
+            if (!_activeHolderQuery.TryComp(holderUid, out var holder))
                 continue;
 
             if (holder.Target != held.Owner)
@@ -217,15 +217,15 @@ public abstract partial class SharedScpHoldingSystem
         return false;
     }
 
-    private void ClearHoldState(Entity<ScpHeldComponent> held, bool applyImmunity)
+    private void ClearHoldState(Entity<ActiveScpHoldableComponent> held, bool applyImmunity)
     {
-        if (_heldQuery.TryComp(held.Owner, out var refreshed))
+        if (_activeHoldableQuery.TryComp(held.Owner, out var refreshed))
             held = (held.Owner, refreshed);
 
         EndBreakoutAttempt(held.Owner, cancelDoAfter: true);
 
-        if (_fullHeldQuery.HasComp(held.Owner))
-            RemComp<ScpFullHeldComponent>(held.Owner);
+        if (_activeHoldableFullHoldStateQuery.HasComp(held.Owner))
+            RemComp<ActiveStateScpHoldableFullHoldComponent>(held.Owner);
 
         _holderCooldownsToApply.Clear();
 
@@ -234,10 +234,10 @@ public abstract partial class SharedScpHoldingSystem
             if (applyImmunity)
                 _holderCooldownsToApply.Add(holderUid);
 
-            if (_holderQuery.HasComp(holderUid))
-                RemComp<ScpHolderComponent>(holderUid);
-            else if (_holderSlowdownQuery.HasComp(holderUid))
-                RemComp<ScpHolderSlowdownComponent>(holderUid);
+            if (_activeHolderQuery.HasComp(holderUid))
+                RemComp<ActiveScpHolderComponent>(holderUid);
+            else if (_activeHolderSlowdownStateQuery.HasComp(holderUid))
+                RemComp<ActiveStateScpHolderSlowdownComponent>(holderUid);
         }
 
         held.Comp.Holders.Clear();
@@ -260,10 +260,10 @@ public abstract partial class SharedScpHoldingSystem
             ApplyFullBreakoutHolderCooldown(holderUid);
         }
 
-        RemComp<ScpHeldComponent>(held.Owner);
+        RemComp<ActiveScpHoldableComponent>(held.Owner);
     }
 
-    private void UpdateHolderSlowdowns(Entity<ScpHeldComponent> held, ScpHoldableComponent holdable)
+    private void UpdateHolderSlowdowns(Entity<ActiveScpHoldableComponent> held, ScpHoldableComponent holdable)
     {
         foreach (var holderUid in held.Comp.Holders)
         {
@@ -273,8 +273,8 @@ public abstract partial class SharedScpHoldingSystem
 
     private void SetHolderSlowdown(EntityUid holderUid, float walkModifier, float sprintModifier)
     {
-        var slowdownCreated = !_holderSlowdownQuery.TryComp(holderUid, out var slowdown);
-        slowdown ??= EnsureComp<ScpHolderSlowdownComponent>(holderUid);
+        var slowdownCreated = !_activeHolderSlowdownStateQuery.TryComp(holderUid, out var slowdown);
+        slowdown ??= EnsureComp<ActiveStateScpHolderSlowdownComponent>(holderUid);
 
         if (!slowdownCreated &&
             MathHelper.CloseTo(slowdown.WalkModifier, walkModifier) &&
@@ -306,7 +306,7 @@ public abstract partial class SharedScpHoldingSystem
         return 2;
     }
 
-    private bool TryGetHeldHoldable(Entity<ScpHeldComponent> held, [NotNullWhen(true)] out ScpHoldableComponent? holdable)
+    private bool TryGetHeldHoldable(Entity<ActiveScpHoldableComponent> held, [NotNullWhen(true)] out ScpHoldableComponent? holdable)
     {
         if (_holdableQuery.TryComp(held.Owner, out holdable))
             return true;
@@ -318,10 +318,10 @@ public abstract partial class SharedScpHoldingSystem
 
     private bool ShouldReleaseHolder(EntityUid holderUid, EntityUid heldUid, float maintenanceRange)
     {
-        if (!_holdQuery.HasComp(holderUid))
+        if (!_holderConfigQuery.HasComp(holderUid))
             return true;
 
-        if (!_holderQuery.TryComp(holderUid, out var holder))
+        if (!_activeHolderQuery.TryComp(holderUid, out var holder))
             return true;
 
         if (holder.Target != heldUid)
@@ -333,9 +333,9 @@ public abstract partial class SharedScpHoldingSystem
         return !_interaction.InRangeUnobstructed(holderUid, heldUid, maintenanceRange);
     }
 
-    private bool IsValidPrimaryHolder(Entity<ScpHeldComponent> held, EntityUid primaryHolderUid)
+    private bool IsValidPrimaryHolder(Entity<ActiveScpHoldableComponent> held, EntityUid primaryHolderUid)
     {
-        if (!_holderQuery.TryComp(primaryHolderUid, out var holder))
+        if (!_activeHolderQuery.TryComp(primaryHolderUid, out var holder))
             return false;
 
         if (holder.Target != held.Owner)
@@ -344,7 +344,7 @@ public abstract partial class SharedScpHoldingSystem
         return held.Comp.Holders.Contains(primaryHolderUid);
     }
 
-    private void SetHolderTarget(Entity<ScpHolderComponent> holder, EntityUid? target)
+    private void SetHolderTarget(Entity<ActiveScpHolderComponent> holder, EntityUid? target)
     {
         if (holder.Comp.Target == target)
             return;
@@ -353,7 +353,7 @@ public abstract partial class SharedScpHoldingSystem
         Dirty(holder);
     }
 
-    private void SetHeldPrimaryHolder(Entity<ScpHeldComponent> held, EntityUid? primaryHolder)
+    private void SetHeldPrimaryHolder(Entity<ActiveScpHoldableComponent> held, EntityUid? primaryHolder)
     {
         if (held.Comp.PrimaryHolder == primaryHolder)
             return;

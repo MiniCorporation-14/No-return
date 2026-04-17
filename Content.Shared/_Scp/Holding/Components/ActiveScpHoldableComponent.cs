@@ -1,5 +1,7 @@
 using Content.Shared._Scp.Holding.Systems;
+using Content.Shared.Alert;
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom;
 
 namespace Content.Shared._Scp.Holding.Components;
@@ -9,7 +11,7 @@ namespace Content.Shared._Scp.Holding.Components;
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true), AutoGenerateComponentPause]
 [Access(typeof(SharedScpHoldingSystem))]
-public sealed partial class ScpHeldComponent : Component
+public sealed partial class ActiveScpHoldableComponent : Component
 {
     /// <summary>
     /// Next timestamp when a soft breakout attempt may succeed.
