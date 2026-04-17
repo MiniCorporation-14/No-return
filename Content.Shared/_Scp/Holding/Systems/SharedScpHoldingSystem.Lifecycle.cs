@@ -33,7 +33,6 @@ public abstract partial class SharedScpHoldingSystem
     {
         _alerts.ShowAlert(ent.Owner, HeldAlert);
         _statusEffects.TrySetStatusEffectDuration(ent, GrabbedStatusEffect);
-        OnHeldStateRefreshed(ent);
         ValidateAllActions(ent.Owner);
     }
 
@@ -72,24 +71,18 @@ public abstract partial class SharedScpHoldingSystem
     private void OnHolderStartup(Entity<ActiveScpHolderComponent> ent, ref ComponentStartup args)
     {
         if (_timing.ApplyingState)
-        {
-            OnHolderStateRefreshed(ent);
             return;
-        }
 
         SyncHolderState(ent);
     }
 
     private void OnHolderShutdown(Entity<ActiveScpHolderComponent> ent, ref ComponentShutdown args)
     {
-        var target = ent.Comp.Target;
         ent.Comp.Target = null;
         DeleteHolderHandBlockers(ent.Owner);
 
         if (!_timing.ApplyingState)
             RemComp<ActiveStateScpHolderSlowdownComponent>(ent.Owner);
-
-        OnHolderStateShutdown(ent.Owner, target);
     }
 
     private void OnHolderSlowdownRemove(Entity<ActiveStateScpHolderSlowdownComponent> ent, ref ComponentRemove args)

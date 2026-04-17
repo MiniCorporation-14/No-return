@@ -43,7 +43,7 @@ public abstract partial class SharedScpHoldingSystem
         SubscribeLocalEvent<ScpHoldHandBlockerComponent, GettingDroppedAttemptEvent>(OnHolderBlockerGettingDropped);
     }
 
-    private void SyncPlaceholderHands(Entity<ActiveScpHoldableComponent> held)
+    protected void SyncPlaceholderHands(Entity<ActiveScpHoldableComponent> held)
     {
         if (!_handsQuery.TryComp(held.Owner, out var hands))
             return;
@@ -102,10 +102,10 @@ public abstract partial class SharedScpHoldingSystem
 
         foreach (var heldItem in _hands.EnumerateHeld(held))
         {
-            if (!_virtualItemQuery.TryComp(heldItem, out var virtualItem))
+            if (!_heldHandBlockerQuery.HasComp(heldItem))
                 continue;
 
-            if (!_heldHandBlockerQuery.TryComp(heldItem, out var blocker))
+            if (!_virtualItemQuery.TryComp(heldItem, out var virtualItem))
                 continue;
 
             if (!IsValidHeldHandBlocker(virtualItem))

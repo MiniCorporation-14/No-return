@@ -20,18 +20,18 @@ public sealed partial class ScpHolderComponent : Component
     /// <summary>
     /// Optional whitelist of entities this holder may grab.
     /// </summary>
-    [DataField]
+    [DataField, AutoNetworkedField]
     public EntityWhitelist? HoldableWhitelist;
 
     /// <summary>
     /// Optional blacklist of entities this holder may not grab.
     /// </summary>
-    [DataField]
+    [DataField, AutoNetworkedField]
     public EntityWhitelist? HoldableBlacklist;
 
     /// <summary>
     /// Cooldown applied after each successful hold contribution start.
     /// </summary>
-    [DataField]
+    [DataField, AutoNetworkedField]
     public TimeSpan HoldActionCooldown = TimeSpan.FromSeconds(1);
 }

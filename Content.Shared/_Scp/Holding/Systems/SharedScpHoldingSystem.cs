@@ -57,6 +57,12 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
 
     public override void Update(float frameTime)
     {
+        UpdateSharedState(frameTime);
+        UpdateHeldStates();
+    }
+
+    protected void UpdateSharedState(float frameTime)
+    {
         base.Update(frameTime);
 
         var immuneQuery = EntityQueryEnumerator<ScpHoldImmuneComponent>();
@@ -65,35 +71,21 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
             if (_timing.CurTime >= immune.ExpiresAt)
                 RemCompDeferred<ScpHoldImmuneComponent>(uid);
         }
+    }
 
+    protected void UpdateAllHeldStates()
+    {
         var heldQuery = EntityQueryEnumerator<ActiveScpHoldableComponent>();
         while (heldQuery.MoveNext(out var uid, out var held))
         {
-            if (!ShouldUpdateHeld(uid, held))
-                continue;
-
             UpdateHeld((uid, held));
         }
     }
 
-    protected virtual bool ShouldUpdateHeld(EntityUid uid, ActiveScpHoldableComponent held)
+    protected virtual void UpdateHeldStates()
     {
-        return true;
+        UpdateAllHeldStates();
     }
 
-    protected virtual void OnHeldStateRefreshed(Entity<ActiveScpHoldableComponent> held)
-    {
-    }
-
-    protected virtual void OnHeldStateShutdown(Entity<ActiveScpHoldableComponent> held)
-    {
-    }
-
-    protected virtual void OnHolderStateRefreshed(Entity<ActiveScpHolderComponent> holder)
-    {
-    }
-
-    protected virtual void OnHolderStateShutdown(EntityUid holderUid, EntityUid? target)
-    {
-    }
+    protected abstract void OnHeldStateShutdown(Entity<ActiveScpHoldableComponent> held);
 }

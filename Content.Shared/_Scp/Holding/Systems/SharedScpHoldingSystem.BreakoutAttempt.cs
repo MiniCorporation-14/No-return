@@ -71,7 +71,7 @@ public abstract partial class SharedScpHoldingSystem
 
         if (args.Cancelled)
         {
-            PopupTarget(ent.Owner, "scp-hold-breakout-interrupted");
+            Popup(ent, "scp-hold-breakout-interrupted");
             return;
         }
 

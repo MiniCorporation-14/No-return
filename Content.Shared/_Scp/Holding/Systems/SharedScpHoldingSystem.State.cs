@@ -34,7 +34,7 @@ public abstract partial class SharedScpHoldingSystem
         _bodyQuery = GetEntityQuery<BodyComponent>();
     }
 
-    private void UpdateHeld(Entity<ActiveScpHoldableComponent> held)
+    protected void UpdateHeld(Entity<ActiveScpHoldableComponent> held)
     {
         if (!TryGetHeldHoldable(held, out var holdable))
             return;

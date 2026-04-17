@@ -1,24 +1,24 @@
-using Content.Server.Popups;
 using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Coordinates;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Prototypes;
 
-namespace Content.Server._Scp.Holding;
+namespace Content.Client._Scp.Holding;
 
 public sealed partial class ScpHoldingSystem
 {
     [Dependency] private readonly SharedAudioSystem _audio = default!;
-    [Dependency] private readonly PopupSystem _popup = default!;
 
     protected override void Popup(EntityUid target, string key, params (string, object)[] args)
     {
-        _popup.PopupEntity(Loc.GetString(key, args), target, target);
     }
 
     protected override void ShowBreakoutAttemptFeedback(Entity<ActiveScpHoldableComponent> held)
     {
+        if (!_timing.IsFirstTimePredicted)
+            return;
+
         if (!TryComp<ScpHoldableComponent>(held, out var holdable))
             return;
 
@@ -41,7 +41,7 @@ public sealed partial class ScpHoldingSystem
         if (effect == null)
             return;
 
-        SpawnAttachedTo(effect.Value, holderUid.ToCoordinates());
+        PredictedSpawnAttachedTo(effect.Value, holderUid.ToCoordinates());
     }
 
     private void PlayBreakoutAttemptSound(EntityUid targetUid, SoundSpecifier? sound)
@@ -49,6 +49,6 @@ public sealed partial class ScpHoldingSystem
         if (sound == null)
             return;
 
-        _audio.PlayPvs(sound, targetUid);
+        _audio.PlayPredicted(sound, targetUid, targetUid);
     }
 }
