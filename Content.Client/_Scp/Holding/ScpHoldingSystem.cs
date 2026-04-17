@@ -16,16 +16,11 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
 {
     [Dependency] private readonly HandsSystem _hands = default!;
     [Dependency] private readonly Robust.Client.Physics.PhysicsSystem _physics = default!;
-    [Dependency] private readonly VirtualItemSystem _virtualItem = default!;
     [Dependency] private readonly IPlayerManager _player = default!;
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly VirtualItemSystem _virtualItem = default!;
 
-    private static readonly TimeSpan BlockerRespawnSuppressionDuration = TimeSpan.FromSeconds(0.5f);
-
-    private EntityUid? _suppressedHolder;
-    private EntityUid? _suppressedTarget;
     private EntityUid? _trackedHolderTarget;
-    private TimeSpan _suppressedUntil;
 
     private EntityQuery<HandsComponent> _handsQuery;
     private EntityQuery<PhysicsComponent> _physicsQuery;
@@ -44,7 +39,9 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         _virtualItemQuery = GetEntityQuery<VirtualItemComponent>();
 
         SubscribeLocalEvent<ActiveScpHoldableComponent, AfterAutoHandleStateEvent>(OnHeldAfterState);
-        SubscribeLocalEvent<ScpHoldHandBlockerComponent, GotUnequippedHandEvent>(OnBlockerUnequipped);
+        SubscribeLocalEvent<ActiveScpHolderComponent, AfterAutoHandleStateEvent>(OnHolderAfterState);
+        SubscribeLocalEvent<ScpHoldHandBlockerComponent, ComponentStartup>(OnBlockerStartup);
+        SubscribeLocalEvent<ScpHoldHandBlockerComponent, GotEquippedHandEvent>(OnBlockerEquipped);
         SubscribeLocalEvent<ActiveScpHoldableComponent, UpdateIsPredictedEvent>(OnUpdateHeldPredicted);
     }
 
@@ -52,18 +49,11 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
     {
         base.Update(frameTime);
 
-        if (_timing.CurTime >= _suppressedUntil)
-            ClearBlockerRespawnSuppression();
-
         if (_player.LocalEntity is not { Valid: true } local)
         {
             UpdateTrackedLocalHeldTarget(null);
-            ClearBlockerRespawnSuppression();
             return;
         }
-
-        if (ShouldSuppressBlockerRespawn(local, _suppressedTarget))
-            DeleteSuppressedBlockers(local, _suppressedTarget!.Value);
 
         if (!_activeHolderQuery.TryComp(local, out var localHolder))
         {
@@ -71,14 +61,7 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
             return;
         }
 
-        if (ShouldSuppressBlockerRespawn(local, localHolder.Target))
-        {
-            DeleteSuppressedBlockers(local, localHolder.Target!.Value);
-            UpdateTrackedLocalHeldTarget(localHolder.Target);
-            return;
-        }
-
-        SyncHolderState((local, localHolder));
+        ReconcileLocalHolderState((local, localHolder));
     }
 
     private void OnHeldAfterState(Entity<ActiveScpHoldableComponent> ent, ref AfterAutoHandleStateEvent args)
@@ -86,18 +69,28 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         ReconcileHeldAfterState(ent);
     }
 
-    private void OnBlockerUnequipped(Entity<ScpHoldHandBlockerComponent> ent, ref GotUnequippedHandEvent args)
+    private void OnHolderAfterState(Entity<ActiveScpHolderComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        if (_player.LocalEntity != args.User)
+        if (_player.LocalEntity != ent.Owner)
             return;
 
-        if (_activeHolderQuery.TryComp(args.User, out var holder))
-        {
-            if (holder.Target == ent.Comp.Target)
-                return;
-        }
+        ReconcileLocalHolderState(ent);
+    }
 
-        SuppressBlockerRespawn(args.User, ent.Comp.Target);
+    private void OnBlockerStartup(Entity<ScpHoldHandBlockerComponent> ent, ref ComponentStartup args)
+    {
+        if (!_timing.ApplyingState)
+            return;
+
+        ReconcileLocalHolderBlocker(ent.Owner);
+    }
+
+    private void OnBlockerEquipped(Entity<ScpHoldHandBlockerComponent> ent, ref GotEquippedHandEvent args)
+    {
+        if (!_timing.ApplyingState)
+            return;
+
+        ReconcileLocalHolderBlocker(ent.Owner, args.User);
     }
 
     private void OnUpdateHeldPredicted(Entity<ActiveScpHoldableComponent> ent, ref UpdateIsPredictedEvent args)
@@ -165,26 +158,95 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
         UpdateTrackedLocalHeldTarget(holderUid, null, target);
     }
 
-    private void SuppressBlockerRespawn(EntityUid holder, EntityUid target)
+    private void ReconcileLocalHolderBlocker(EntityUid blocker, EntityUid? holderUid = null)
     {
-        _suppressedHolder = holder;
-        _suppressedTarget = target;
-        _suppressedUntil = _timing.CurTime + BlockerRespawnSuppressionDuration;
+        holderUid ??= _player.LocalEntity;
+
+        if (holderUid is not { Valid: true } holder)
+            return;
+
+        if (!_activeHolderQuery.TryComp(holder, out var activeHolder) ||
+            activeHolder.Target == null)
+        {
+            return;
+        }
+
+        if (!_virtualItemQuery.TryComp(blocker, out var virtualItem))
+            return;
+
+        if (virtualItem.BlockingEntity != activeHolder.Target.Value)
+            return;
+
+        if (!_handsQuery.TryComp(holder, out var hands) ||
+            !_hands.IsHolding((holder, hands), blocker))
+        {
+            return;
+        }
+
+        ReconcileLocalHolderState((holder, activeHolder));
     }
 
-    private void ClearBlockerRespawnSuppression()
+    private void ReconcileLocalHolderState(Entity<ActiveScpHolderComponent> holder)
     {
-        _suppressedHolder = null;
-        _suppressedTarget = null;
-        _suppressedUntil = TimeSpan.Zero;
+        UpdateTrackedLocalHeldTarget(holder, holder.Comp.Target);
+        ReconcileLocalHolderBlockerSteadyState(holder);
     }
 
-    private bool ShouldSuppressBlockerRespawn(EntityUid holder, EntityUid? target)
+    private void ReconcileLocalHolderBlockerSteadyState(Entity<ActiveScpHolderComponent> holder)
     {
-        return _suppressedHolder == holder &&
-               _suppressedTarget != null &&
-               target == _suppressedTarget &&
-               _timing.CurTime < _suppressedUntil;
+        if (holder.Comp.Target == null ||
+            !_handsQuery.TryComp(holder.Owner, out var hands))
+        {
+            return;
+        }
+
+        var target = holder.Comp.Target.Value;
+        EntityUid? authoritativeBlocker = null;
+        EntityUid? predictedBlocker = null;
+
+        foreach (var heldItem in _hands.EnumerateHeld((holder.Owner, hands)))
+        {
+            if (!_virtualItemQuery.TryComp(heldItem, out var virtualItem) ||
+                virtualItem.BlockingEntity != target)
+            {
+                continue;
+            }
+
+            if (!IsClientSide(heldItem))
+            {
+                authoritativeBlocker ??= heldItem;
+                continue;
+            }
+
+            if (!_blockerQuery.HasComp(heldItem))
+                continue;
+
+            if (predictedBlocker == null)
+            {
+                predictedBlocker = heldItem;
+                continue;
+            }
+
+            QueueDel(heldItem);
+        }
+
+        if (authoritativeBlocker != null)
+        {
+            if (predictedBlocker != null)
+                QueueDel(predictedBlocker.Value);
+            return;
+        }
+
+        if (_timing.ApplyingState ||
+            predictedBlocker != null ||
+            !_hands.TryGetEmptyHand((holder.Owner, hands), out var emptyHand) ||
+            !_virtualItem.TrySpawnVirtualItem(target, holder.Owner, out var spawnedVirtualItem))
+        {
+            return;
+        }
+
+        EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
+        _hands.DoPickup(holder.Owner, emptyHand, spawnedVirtualItem.Value, hands);
     }
 
     private void UpdateTrackedLocalHeldTarget(EntityUid? currentTarget, EntityUid? previousTarget = null)
@@ -209,28 +271,5 @@ public sealed class ScpHoldingSystem : SharedScpHoldingSystem
             return;
 
         UpdateTrackedLocalHeldTarget(currentTarget, previousTarget);
-    }
-
-    private void DeleteSuppressedBlockers(EntityUid holder, EntityUid target)
-    {
-        if (!_handsQuery.TryComp(holder, out var hands))
-            return;
-
-        foreach (var heldItem in _hands.EnumerateHeld((holder, hands)))
-        {
-            if (!_virtualItemQuery.TryComp(heldItem, out var virtualItem))
-                continue;
-
-            if (!_blockerQuery.TryComp(heldItem, out var blocker))
-                continue;
-
-            if (virtualItem.BlockingEntity != target)
-                continue;
-
-            if (blocker.Target != target)
-                continue;
-
-            _virtualItem.DeleteVirtualItem((heldItem, virtualItem), holder);
-        }
     }
 }

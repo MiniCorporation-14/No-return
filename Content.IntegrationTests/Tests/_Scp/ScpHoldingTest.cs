@@ -48,6 +48,8 @@ public sealed class ScpHoldingTest
     private const string HoldableBlacklistedHolderPrototype = "ScpHoldingTestHolderHoldableBlacklisted";
     private const string TestListenerComponentName = "TestListener";
     private static readonly ProtoId<AlertPrototype> GrabbedAlertId = "ScpHoldGrabbed";
+    private static readonly FieldInfo ActiveScpHolderTargetField =
+        typeof(ActiveScpHolderComponent).GetField(nameof(ActiveScpHolderComponent.Target))!;
     private static readonly FieldInfo SoftEscapeAvailableAtField =
         typeof(ActiveScpHoldableComponent).GetField(nameof(ActiveScpHoldableComponent.SoftEscapeAvailableAt))!;
 
@@ -103,6 +105,90 @@ public sealed class ScpHoldingTest
             Assert.That(statusEffects.TryGetStatusEffect(target, "StatusEffectScpHeld", out var effect), Is.True);
             Assert.That(effect, Is.Not.Null);
             Assert.That(entMan.GetComponent<StatusEffectComponent>(effect!.Value).Applied, Is.True);
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
+    public async Task SyncHolderState_DoesNotAdoptForeignVirtualItemWithSameBlockingEntity()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var handsSystem = server.System<SharedHandsSystem>();
+        var holding = server.System<SharedScpHoldingSystem>();
+        var virtualItem = server.System<SharedVirtualItemSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid holder = default;
+        EntityUid target = default;
+
+        await server.WaitPost(() =>
+        {
+            holder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            target = entMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
+
+            var holderState = entMan.EnsureComponent<ActiveScpHolderComponent>(holder);
+            SetHolderTarget(holderState, target);
+
+            Assert.That(virtualItem.TrySpawnVirtualItemInHand(target, holder, out _), Is.True);
+
+            holding.SyncHolderState((holder, holderState));
+
+            var hands = entMan.GetComponent<HandsComponent>(holder);
+            Assert.Multiple(() =>
+            {
+                Assert.That(CountHolderHandBlockers(entMan, handsSystem, holder, target, hands), Is.EqualTo(1));
+                Assert.That(CountHolderTargetVirtualItems(entMan, handsSystem, holder, target, hands), Is.EqualTo(2));
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
+    public async Task SyncHolderState_DeletesDuplicateTaggedHolderBlockers()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var handsSystem = server.System<SharedHandsSystem>();
+        var holding = server.System<SharedScpHoldingSystem>();
+        var virtualItem = server.System<SharedVirtualItemSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid holder = default;
+        EntityUid target = default;
+
+        await server.WaitPost(() =>
+        {
+            holder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            target = entMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
+
+            var holderState = entMan.EnsureComponent<ActiveScpHolderComponent>(holder);
+            SetHolderTarget(holderState, target);
+
+            Assert.That(virtualItem.TrySpawnVirtualItemInHand(target, holder, out var blocker1), Is.True);
+            Assert.That(virtualItem.TrySpawnVirtualItemInHand(target, holder, out var blocker2), Is.True);
+
+            entMan.EnsureComponent<ScpHoldHandBlockerComponent>(blocker1!.Value);
+            entMan.EnsureComponent<ScpHoldHandBlockerComponent>(blocker2!.Value);
+
+            holding.SyncHolderState((holder, holderState));
+        });
+
+        await server.WaitRunTicks(2);
+
+        await server.WaitAssertion(() =>
+        {
+            var hands = entMan.GetComponent<HandsComponent>(holder);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(CountHolderHandBlockers(entMan, handsSystem, holder, target, hands), Is.EqualTo(1));
+                Assert.That(CountHolderTargetVirtualItems(entMan, handsSystem, holder, target, hands), Is.EqualTo(1));
+            });
         });
 
         await pair.CleanReturnAsync();
@@ -652,7 +738,7 @@ public sealed class ScpHoldingTest
                 Assert.That(held.RequiredHolderCount, Is.EqualTo(2));
                 Assert.That(held.Holders, Has.Count.EqualTo(2));
                 Assert.That(move.Cancelled, Is.True);
-                Assert.That(CountBlockingVirtualHands(entMan, handsSystem, target, hands), Is.EqualTo(hands.SortedHands.Count));
+                Assert.That(CountBlockingVirtualHands(entMan, handsSystem, target, hands, holderOne, holderTwo), Is.EqualTo(hands.SortedHands.Count));
                 Assert.That(VictimHandsUseHolderIcons(entMan, handsSystem, target, hands, holderOne, holderTwo), Is.True);
                 Assert.That(holderOnePuller.Pulling, Is.Null);
                 Assert.That(holderTwoPuller.Pulling, Is.Null);
@@ -677,6 +763,7 @@ public sealed class ScpHoldingTest
         var client = pair.Client;
         var sEntMan = server.EntMan;
         var cEntMan = client.EntMan;
+        var cTiming = client.ResolveDependency<IGameTiming>();
         var sTransform = server.System<SharedTransformSystem>();
         var sHandsSystem = server.System<SharedHandsSystem>();
         var cHandsSystem = client.System<SharedHandsSystem>();
@@ -707,10 +794,10 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, serverPlayer), Is.True);
-                Assert.That(CountBlockingVirtualHands(sEntMan, sHandsSystem, serverPlayer, hands), Is.EqualTo(hands.SortedHands.Count));
+                Assert.That(CountBlockingVirtualHands(sEntMan, sHandsSystem, serverPlayer, hands, holderOne, holderTwo), Is.EqualTo(hands.SortedHands.Count));
             });
 
-            initialServerBlockers = GetHeldHandBlockers(sEntMan, sHandsSystem, serverPlayer, hands);
+            initialServerBlockers = GetHeldHandBlockers(sEntMan, sHandsSystem, serverPlayer, hands, holderOne, holderTwo);
             Assert.That(initialServerBlockers, Has.Length.EqualTo(hands.SortedHands.Count));
         });
 
@@ -724,10 +811,10 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientPlayer), Is.True);
-                Assert.That(CountBlockingVirtualHands(cEntMan, cHandsSystem, clientPlayer, hands), Is.EqualTo(hands.SortedHands.Count));
+                Assert.That(CountBlockingVirtualHands(cEntMan, cHandsSystem, clientPlayer, hands, holderOne, holderTwo), Is.EqualTo(hands.SortedHands.Count));
             });
 
-            initialClientBlockers = GetHeldHandBlockers(cEntMan, cHandsSystem, clientPlayer, hands);
+            initialClientBlockers = GetHeldHandBlockers(cEntMan, cHandsSystem, clientPlayer, hands, holderOne, holderTwo);
             Assert.That(initialClientBlockers, Has.Length.EqualTo(hands.SortedHands.Count));
         });
 
@@ -741,7 +828,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, serverPlayer), Is.True);
-                Assert.That(GetHeldHandBlockers(sEntMan, sHandsSystem, serverPlayer, hands), Is.EqualTo(initialServerBlockers));
+                Assert.That(GetHeldHandBlockers(sEntMan, sHandsSystem, serverPlayer, hands, holderOne, holderTwo), Is.EqualTo(initialServerBlockers));
             });
         });
 
@@ -752,7 +839,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientPlayer), Is.True);
-                Assert.That(GetHeldHandBlockers(cEntMan, cHandsSystem, clientPlayer, hands), Is.EqualTo(initialClientBlockers));
+                Assert.That(GetHeldHandBlockers(cEntMan, cHandsSystem, clientPlayer, hands, holderOne, holderTwo), Is.EqualTo(initialClientBlockers));
             });
         });
 
@@ -1005,7 +1092,7 @@ public sealed class ScpHoldingTest
                 Assert.That(HasFullHold(entMan, target), Is.True);
                 Assert.That(held.RequiredHolderCount, Is.EqualTo(3));
                 Assert.That(hands.SortedHands.Count, Is.EqualTo(3));
-                Assert.That(CountBlockingVirtualHands(entMan, handsSystem, target, hands), Is.EqualTo(3));
+                Assert.That(CountBlockingVirtualHands(entMan, handsSystem, target, hands, holderOne, holderTwo, holderThree), Is.EqualTo(3));
                 Assert.That(VictimHandsUseHolderIcons(entMan, handsSystem, target, hands, holderOne, holderTwo, holderThree), Is.True);
             });
         });
@@ -1028,7 +1115,7 @@ public sealed class ScpHoldingTest
                 Assert.That(held.RequiredHolderCount, Is.EqualTo(2));
                 Assert.That(HasFullHold(entMan, target), Is.True);
                 Assert.That(hands.SortedHands.Count, Is.EqualTo(2));
-                Assert.That(CountBlockingVirtualHands(entMan, handsSystem, target, hands), Is.EqualTo(2));
+                Assert.That(CountBlockingVirtualHands(entMan, handsSystem, target, hands, holderOne, holderTwo, holderThree), Is.EqualTo(2));
                 Assert.That(VictimHandsUseHolderIcons(entMan, handsSystem, target, hands, holderOne, holderTwo, holderThree), Is.True);
             });
         });
@@ -1277,7 +1364,7 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
-    public async Task DroppingOrThrowingHolderBlockerReleasesHold()
+    public async Task DroppingHolderBlockerReleasesHold()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
         var server = pair.Server;
@@ -1303,7 +1390,7 @@ public sealed class ScpHoldingTest
             var blocker = FindHolderHandBlocker(entMan, handsSystem, holder, target, hands);
 
             Assert.That(blocker, Is.Not.EqualTo(EntityUid.Invalid));
-            Assert.That(handsSystem.TryDrop((holder, hands), blocker), Is.True);
+            Assert.That(handsSystem.TryDrop((holder, hands), blocker), Is.False);
         });
         await server.WaitRunTicks(2);
 
@@ -1313,7 +1400,28 @@ public sealed class ScpHoldingTest
             Assert.That(entMan.HasComponent<ActiveScpHolderComponent>(holder), Is.False);
         });
 
-        await server.WaitPost(() => StartHold(entMan, holding, holder, target));
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
+    public async Task ThrowingHolderBlockerReleasesHold()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var handsSystem = server.System<SharedHandsSystem>();
+        var holding = server.System<SharedScpHoldingSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid holder = default;
+        EntityUid target = default;
+
+        await server.WaitPost(() =>
+        {
+            holder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            target = entMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
+            StartHold(entMan, holding, holder, target);
+        });
         await server.WaitRunTicks(2);
 
         await server.WaitPost(() =>
@@ -1325,6 +1433,48 @@ public sealed class ScpHoldingTest
             Assert.That(blocker, Is.Not.EqualTo(EntityUid.Invalid));
             entMan.EventBus.RaiseLocalEvent(holder, ref throwEvent);
             Assert.That(throwEvent.Cancelled, Is.True);
+        });
+        await server.WaitRunTicks(2);
+
+        await server.WaitAssertion(() =>
+        {
+            Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
+            Assert.That(entMan.HasComponent<ActiveScpHolderComponent>(holder), Is.False);
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
+    public async Task GettingDroppedAttemptOnHolderBlockerReleasesHold()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var handsSystem = server.System<SharedHandsSystem>();
+        var holding = server.System<SharedScpHoldingSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid holder = default;
+        EntityUid target = default;
+
+        await server.WaitPost(() =>
+        {
+            holder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            target = entMan.SpawnEntity("MobHuman", map.GridCoords.Offset(new Vector2(0.1f, 0f)));
+            StartHold(entMan, holding, holder, target);
+        });
+        await server.WaitRunTicks(2);
+
+        await server.WaitPost(() =>
+        {
+            var hands = entMan.GetComponent<HandsComponent>(holder);
+            var blocker = FindHolderHandBlocker(entMan, handsSystem, holder, target, hands);
+            var dropAttempt = new GettingDroppedAttemptEvent(holder);
+
+            Assert.That(blocker, Is.Not.EqualTo(EntityUid.Invalid));
+            entMan.EventBus.RaiseLocalEvent(blocker, ref dropAttempt);
+            Assert.That(dropAttempt.Cancelled, Is.True);
         });
         await server.WaitRunTicks(2);
 
@@ -1351,6 +1501,7 @@ public sealed class ScpHoldingTest
         var client = pair.Client;
         var sEntMan = server.EntMan;
         var cEntMan = client.EntMan;
+        var cTiming = client.ResolveDependency<IGameTiming>();
         var sTransform = server.System<SharedTransformSystem>();
         var sHandsSystem = server.System<SharedHandsSystem>();
         var cHandsSystem = client.System<SharedHandsSystem>();
@@ -1379,23 +1530,35 @@ public sealed class ScpHoldingTest
             clientTarget = ToClientEntity(sEntMan, cEntMan, target);
             var hands = cEntMan.GetComponent<HandsComponent>(clientPlayer);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.True);
-                Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.True);
-                Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands), Is.EqualTo(1));
-                Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
-            });
+                Assert.Multiple(() =>
+                {
+                    Assert.That(cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer), Is.True);
+                    Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.True);
+                    Assert.That(
+                        CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands),
+                        Is.EqualTo(1),
+                        DescribeHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands));
+                    Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
+                });
         });
 
         await client.WaitPost(() =>
         {
             var hands = cEntMan.GetComponent<HandsComponent>(clientPlayer);
             var blocker = FindHolderHandBlocker(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands);
-            var dropLocation = new EntityCoordinates(clientPlayer, new Vector2(0.5f, 0f));
 
             Assert.That(blocker, Is.Not.EqualTo(EntityUid.Invalid));
-            Assert.That(cHandsSystem.TryDrop((clientPlayer, hands), blocker, dropLocation), Is.True);
+            Assert.That(cHandsSystem.IsHolding((clientPlayer, hands), blocker, out var blockerHand), Is.True);
+
+            if (hands.ActiveHandId != blockerHand)
+                Assert.That(cHandsSystem.TrySetActiveHand((clientPlayer, hands), blockerHand), Is.True);
+        });
+
+        await PressClientDropKey(client, cEntMan, cTiming, clientTarget);
+
+        await client.WaitAssertion(() =>
+        {
+            var hands = cEntMan.GetComponent<HandsComponent>(clientPlayer);
             Assert.Multiple(() =>
             {
                 Assert.That(cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget), Is.False);
@@ -1406,6 +1569,9 @@ public sealed class ScpHoldingTest
         });
 
         var maxClientBlockers = 0;
+        var holderRespawned = false;
+        var heldRespawned = false;
+        string? blockerTimeline = null;
         for (var i = 0; i < 12; i++)
         {
             await pair.RunTicksSync(1);
@@ -1415,14 +1581,28 @@ public sealed class ScpHoldingTest
                 if (!cEntMan.TryGetComponent<HandsComponent>(clientPlayer, out var hands))
                     return;
 
-                maxClientBlockers = Math.Max(maxClientBlockers,
-                    CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands));
+                var blockerCount = CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands);
+                var hasHolder = cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer);
+                var hasHeld = cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget);
+
+                maxClientBlockers = Math.Max(maxClientBlockers, blockerCount);
+                holderRespawned |= hasHolder;
+                heldRespawned |= hasHeld;
+
+                if (blockerCount > 0 || hasHolder || hasHeld)
+                {
+                    blockerTimeline =
+                        $"tick={i}, holder={hasHolder}, held={hasHeld}, " +
+                        $"items=[{DescribeHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, hands)}]";
+                }
             });
         }
 
         Assert.Multiple(() =>
         {
-            Assert.That(maxClientBlockers, Is.EqualTo(0));
+            Assert.That(maxClientBlockers, Is.EqualTo(0), blockerTimeline);
+            Assert.That(holderRespawned, Is.False, blockerTimeline);
+            Assert.That(heldRespawned, Is.False, blockerTimeline);
             Assert.That(CountPrototypeEntities(cEntMan, "clientsideclone"), Is.EqualTo(0));
         });
 
@@ -1568,6 +1748,42 @@ public sealed class ScpHoldingTest
                 Assert.That(CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, holderHands), Is.EqualTo(1));
                 Assert.That(cStatusEffects.HasStatusEffect(clientTarget, "StatusEffectScpHeld"), Is.True);
             });
+        });
+
+        var minClientBlockersAfterAck = int.MaxValue;
+        var maxClientBlockersAfterAck = 0;
+        string? blockerTimelineAfterAck = null;
+        for (var i = 0; i < 12; i++)
+        {
+            await pair.RunTicksSync(1);
+            await pair.SyncTicks(targetDelta: 1);
+            await client.WaitPost(() =>
+            {
+                if (!cEntMan.TryGetComponent<HandsComponent>(clientPlayer, out var holderHands))
+                    return;
+
+                var blockerCount = CountHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, holderHands);
+                minClientBlockersAfterAck = Math.Min(minClientBlockersAfterAck, blockerCount);
+                maxClientBlockersAfterAck = Math.Max(maxClientBlockersAfterAck, blockerCount);
+
+                if (blockerCount != 1 ||
+                    !cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer) ||
+                    !cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget))
+                {
+                    var distance = GetDistance(cTransform, clientPlayer, clientTarget);
+                    blockerTimelineAfterAck =
+                        $"tick={i}, blockers={blockerCount}, distance={distance:0.000}, " +
+                        $"hasHolder={cEntMan.HasComponent<ActiveScpHolderComponent>(clientPlayer)}, " +
+                        $"hasHeld={cEntMan.HasComponent<ActiveScpHoldableComponent>(clientTarget)}, " +
+                        $"items=[{DescribeHolderTargetVirtualItems(cEntMan, cHandsSystem, clientPlayer, clientTarget, holderHands)}]";
+                }
+            });
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(minClientBlockersAfterAck, Is.EqualTo(1), blockerTimelineAfterAck);
+            Assert.That(maxClientBlockersAfterAck, Is.EqualTo(1), blockerTimelineAfterAck);
         });
 
         await pair.CleanReturnAsync();
@@ -1913,7 +2129,7 @@ public sealed class ScpHoldingTest
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.True);
                 Assert.That(held.Holders, Has.Count.EqualTo(2));
-                Assert.That(CountBlockingVirtualHands(cEntMan, cHandsSystem, clientTarget, hands), Is.EqualTo(hands.SortedHands.Count));
+                Assert.That(CountBlockingVirtualHands(cEntMan, cHandsSystem, clientTarget, hands, clientHolderOne, clientPlayer), Is.EqualTo(hands.SortedHands.Count));
                 Assert.That(VictimHandsUseHolderIcons(cEntMan, cHandsSystem, clientTarget, hands, clientHolderOne, clientPlayer), Is.True);
             });
         });
@@ -2585,24 +2801,26 @@ public sealed class ScpHoldingTest
     }
     // Fire added end
 
-    private static int CountBlockingVirtualHands(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid uid, HandsComponent hands)
+    private static int CountBlockingVirtualHands(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid uid, HandsComponent hands, params EntityUid[] holders)
     {
+        var expected = holders.ToHashSet();
+
         return handsSystem.EnumerateHeld((uid, hands)).Count(item =>
             entMan.TryGetComponent(item, out VirtualItemComponent? virtualItem) &&
-            entMan.TryGetComponent(item, out ScpHeldHandBlockerComponent? blocker) &&
-            blocker.Target == uid &&
-            blocker.Holder == virtualItem.BlockingEntity &&
+            entMan.HasComponent<ScpHeldHandBlockerComponent>(item) &&
+            expected.Contains(virtualItem.BlockingEntity) &&
             entMan.HasComponent<UnremoveableComponent>(item));
     }
 
-    private static EntityUid[] GetHeldHandBlockers(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid uid, HandsComponent hands)
+    private static EntityUid[] GetHeldHandBlockers(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid uid, HandsComponent hands, params EntityUid[] holders)
     {
+        var expected = holders.ToHashSet();
+
         return handsSystem.EnumerateHeld((uid, hands))
             .Where(item =>
                 entMan.TryGetComponent(item, out VirtualItemComponent? virtualItem) &&
-                entMan.TryGetComponent(item, out ScpHeldHandBlockerComponent? blocker) &&
-                blocker.Target == uid &&
-                blocker.Holder == virtualItem.BlockingEntity &&
+                entMan.HasComponent<ScpHeldHandBlockerComponent>(item) &&
+                expected.Contains(virtualItem.BlockingEntity) &&
                 entMan.HasComponent<UnremoveableComponent>(item))
             .Order()
             .ToArray();
@@ -2651,11 +2869,9 @@ public sealed class ScpHoldingTest
         foreach (var item in handsSystem.EnumerateHeld((uid, hands)))
         {
             if (!entMan.TryGetComponent(item, out VirtualItemComponent? virtualItem) ||
-                !entMan.TryGetComponent(item, out ScpHeldHandBlockerComponent? blocker) ||
-                blocker.Target != uid ||
-                blocker.Holder != virtualItem.BlockingEntity ||
+                !entMan.HasComponent<ScpHeldHandBlockerComponent>(item) ||
                 !entMan.HasComponent<UnremoveableComponent>(item) ||
-                !expected.Contains(blocker.Holder))
+                !expected.Contains(virtualItem.BlockingEntity))
             {
                 return false;
             }
@@ -2705,8 +2921,7 @@ public sealed class ScpHoldingTest
     {
         return handsSystem.EnumerateHeld((holder, hands)).Count(item =>
             entMan.TryGetComponent(item, out VirtualItemComponent? virtualItem) &&
-            entMan.TryGetComponent(item, out ScpHoldHandBlockerComponent? blocker) &&
-            blocker.Target == target &&
+            entMan.HasComponent<ScpHoldHandBlockerComponent>(item) &&
             virtualItem.BlockingEntity == target);
     }
 
@@ -2717,13 +2932,24 @@ public sealed class ScpHoldingTest
             virtualItem.BlockingEntity == target);
     }
 
+    private static string DescribeHolderTargetVirtualItems(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid holder, EntityUid target, HandsComponent hands)
+    {
+        var items = handsSystem.EnumerateHeld((holder, hands))
+            .Where(item =>
+                entMan.TryGetComponent(item, out VirtualItemComponent? virtualItem) &&
+                virtualItem.BlockingEntity == target)
+            .Select(item =>
+                $"{item}:client={entMan.GetComponent<MetaDataComponent>(item).NetEntity.IsClientSide()},marker={entMan.HasComponent<ScpHoldHandBlockerComponent>(item)}");
+
+        return string.Join(", ", items);
+    }
+
     private static EntityUid FindHolderHandBlocker(IEntityManager entMan, SharedHandsSystem handsSystem, EntityUid holder, EntityUid target, HandsComponent hands)
     {
         foreach (var item in handsSystem.EnumerateHeld((holder, hands)))
         {
             if (entMan.TryGetComponent(item, out VirtualItemComponent? virtualItem) &&
-                entMan.TryGetComponent(item, out ScpHoldHandBlockerComponent? blocker) &&
-                blocker.Target == target &&
+                entMan.HasComponent<ScpHoldHandBlockerComponent>(item) &&
                 virtualItem.BlockingEntity == target)
             {
                 return item;
@@ -2779,6 +3005,16 @@ public sealed class ScpHoldingTest
         await SendClientPullInput(client, entMan, timing, cursorEntity, BoundKeyState.Up);
     }
 
+    private static async Task PressClientDropKey(
+        RobustIntegrationTest.ClientIntegrationInstance client,
+        IEntityManager entMan,
+        IGameTiming timing,
+        EntityUid cursorEntity)
+    {
+        await SendClientDropInput(client, entMan, timing, cursorEntity, BoundKeyState.Down);
+        await SendClientDropInput(client, entMan, timing, cursorEntity, BoundKeyState.Up);
+    }
+
     private static async Task SendClientPullInput(
         RobustIntegrationTest.ClientIntegrationInstance client,
         IEntityManager entMan,
@@ -2800,9 +3036,35 @@ public sealed class ScpHoldingTest
         await client.WaitPost(() => inputSystem.HandleInputCommand(client.Session!, ContentKeyFunctions.TryPullObject, message));
     }
 
+    private static async Task SendClientDropInput(
+        RobustIntegrationTest.ClientIntegrationInstance client,
+        IEntityManager entMan,
+        IGameTiming timing,
+        EntityUid cursorEntity,
+        BoundKeyState state)
+    {
+        var inputManager = client.ResolveDependency<IInputManager>();
+        var funcId = inputManager.NetworkBindMap.KeyFunctionID(ContentKeyFunctions.Drop);
+        var transform = entMan.GetComponent<TransformComponent>(cursorEntity);
+        var inputSystem = client.System<Robust.Client.GameObjects.InputSystem>();
+        var message = new ClientFullInputCmdMessage(timing.CurTick, timing.TickFraction, funcId)
+        {
+            State = state,
+            Coordinates = transform.Coordinates,
+            Uid = cursorEntity,
+        };
+
+        await client.WaitPost(() => inputSystem.HandleInputCommand(client.Session!, ContentKeyFunctions.Drop, message));
+    }
+
     private static void SetSoftEscapeAvailableAt(ActiveScpHoldableComponent held, TimeSpan value)
     {
         SoftEscapeAvailableAtField.SetValue(held, value);
+    }
+
+    private static void SetHolderTarget(ActiveScpHolderComponent holder, EntityUid? value)
+    {
+        ActiveScpHolderTargetField.SetValue(holder, value);
     }
 
     private static void RaiseMoveInput(IEntityManager entMan, EntityUid uid)

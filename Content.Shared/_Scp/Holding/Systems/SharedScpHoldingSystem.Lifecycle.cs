@@ -71,6 +71,12 @@ public abstract partial class SharedScpHoldingSystem
 
     private void OnHolderStartup(Entity<ActiveScpHolderComponent> ent, ref ComponentStartup args)
     {
+        if (_timing.ApplyingState)
+        {
+            OnHolderStateRefreshed(ent);
+            return;
+        }
+
         SyncHolderState(ent);
     }
 

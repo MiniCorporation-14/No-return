@@ -25,10 +25,7 @@ public abstract partial class SharedScpHoldingSystem
         if (_activeHolderQuery.TryComp(holder.Owner, out var activeHolder) && activeHolder.Target != null)
         {
             if (activeHolder.Target.Value == target)
-            {
-                ReleaseHolderContribution(holder.Owner, target, clearIfEmpty: true);
-                return true;
-            }
+                return TryReleaseHold(holder, target);
 
             PopupHolder(holder.Owner, "scp-hold-already-holding-other");
             return false;
@@ -45,6 +42,34 @@ public abstract partial class SharedScpHoldingSystem
         SyncHeldState(held);
 
         StartHoldCooldown(holder);
+        return true;
+    }
+
+    public bool TryReleaseHold(Entity<ScpHolderComponent> holder, EntityUid target)
+    {
+        if (!CanReleaseHold(holder, target))
+            return false;
+
+        ReleaseHolderContribution(holder.Owner, target, clearIfEmpty: true);
+        return true;
+    }
+
+    public bool CanReleaseHold(Entity<ScpHolderComponent> holder, EntityUid target, bool quiet = false)
+    {
+        if (!_activeHolderQuery.TryComp(holder.Owner, out var activeHolder) ||
+            activeHolder.Target == null)
+        {
+            return false;
+        }
+
+        if (activeHolder.Target != target)
+        {
+            if (!quiet)
+                PopupHolder(holder.Owner, "scp-hold-already-holding-other");
+
+            return false;
+        }
+
         return true;
     }
 
@@ -181,11 +206,6 @@ public abstract partial class SharedScpHoldingSystem
 
         BreakOut((held.Owner, held.Comp), viaMovement, applyImmunity);
         return true;
-    }
-
-    protected bool IsFullHold(EntityUid uid)
-    {
-        return _activeHoldableFullHoldStateQuery.HasComp(uid);
     }
 
     protected void ReconcileHeldAfterState(Entity<ActiveScpHoldableComponent> held)
