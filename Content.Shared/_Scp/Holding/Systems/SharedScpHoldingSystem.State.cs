@@ -17,10 +17,20 @@ public abstract partial class SharedScpHoldingSystem
     private readonly List<EntityUid> _holdersToRemove = [];
     private readonly List<EntityUid> _holderCooldownsToApply = [];
 
+    private EntityQuery<ActiveStateScpHoldableFullHoldComponent> _activeHoldableFullHoldStateQuery;
+    private EntityQuery<ActiveScpHoldableComponent> _activeHoldableQuery;
+    private EntityQuery<ScpHolderComponent> _holderConfigQuery;
+    private EntityQuery<ActiveScpHolderComponent> _activeHolderQuery;
+    private EntityQuery<ActiveStateScpHolderSlowdownComponent> _activeHolderSlowdownStateQuery;
     private EntityQuery<BodyComponent> _bodyQuery;
 
     private void InitializeStateQueries()
     {
+        _activeHoldableFullHoldStateQuery = GetEntityQuery<ActiveStateScpHoldableFullHoldComponent>();
+        _activeHoldableQuery = GetEntityQuery<ActiveScpHoldableComponent>();
+        _holderConfigQuery = GetEntityQuery<ScpHolderComponent>();
+        _activeHolderQuery = GetEntityQuery<ActiveScpHolderComponent>();
+        _activeHolderSlowdownStateQuery = GetEntityQuery<ActiveStateScpHolderSlowdownComponent>();
         _bodyQuery = GetEntityQuery<BodyComponent>();
     }
 

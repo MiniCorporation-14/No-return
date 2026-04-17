@@ -7,7 +7,6 @@ using Content.Shared.Movement.Systems;
 using Content.Shared.StatusEffectNew;
 using Content.Shared.Whitelist;
 using Robust.Shared.Containers;
-using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
@@ -34,30 +33,19 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
     private static readonly EntProtoId GrabbedStatusEffect = "StatusEffectScpHeld";
     private readonly Dictionary<EntityUid, DoAfterId> _breakoutDoAfterIds = [];
 
-    private EntityQuery<ScpBreakoutAttemptComponent> _breakoutAttemptQuery;
-    private EntityQuery<ActiveStateScpHoldableFullHoldComponent> _activeHoldableFullHoldStateQuery;
-    private EntityQuery<PhysicsComponent> _physicsQuery;
-    private EntityQuery<ActiveScpHoldableComponent> _activeHoldableQuery;
-    private EntityQuery<ScpHolderComponent> _holderConfigQuery;
-    private EntityQuery<ActiveScpHolderComponent> _activeHolderQuery;
-    private EntityQuery<ActiveStateScpHolderSlowdownComponent> _activeHolderSlowdownStateQuery;
-
     public override void Initialize()
     {
         base.Initialize();
 
-        _breakoutAttemptQuery = GetEntityQuery<ScpBreakoutAttemptComponent>();
-        _activeHoldableFullHoldStateQuery = GetEntityQuery<ActiveStateScpHoldableFullHoldComponent>();
-        _physicsQuery = GetEntityQuery<PhysicsComponent>();
-        _activeHoldableQuery = GetEntityQuery<ActiveScpHoldableComponent>();
-        _holderConfigQuery = GetEntityQuery<ScpHolderComponent>();
-        _activeHolderQuery = GetEntityQuery<ActiveScpHolderComponent>();
-        _activeHolderSlowdownStateQuery = GetEntityQuery<ActiveStateScpHolderSlowdownComponent>();
-
         InitializeHoldQueries();
+        InitializeBreakoutAttemptQueries();
+        InitializeDragQueries();
         InitializeHandQueries();
         InitializeStateQueries();
-        SubscribeHoldingEvents();
+        InitializeLifecycleEvents();
+        InitializeBreakoutAttemptEvents();
+        InitializeDragEvents();
+        InitializeHandEvents();
         InitializeRestrictions();
     }
 

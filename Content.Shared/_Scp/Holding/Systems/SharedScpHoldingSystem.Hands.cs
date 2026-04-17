@@ -1,9 +1,10 @@
 using Content.Shared._Scp.Holding.Components;
+using Content.Shared.Hands;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction.Components;
 using Content.Shared.Inventory.VirtualItem;
-using Content.Shared.StatusEffectNew.Components;
+using Content.Shared.Throwing;
 
 namespace Content.Shared._Scp.Holding.Systems;
 
@@ -34,6 +35,13 @@ public abstract partial class SharedScpHoldingSystem
         _unremoveableQuery = GetEntityQuery<UnremoveableComponent>();
     }
 
+    private void InitializeHandEvents()
+    {
+        SubscribeLocalEvent<ActiveScpHolderComponent, BeforeThrowEvent>(OnHolderBeforeThrow);
+        SubscribeLocalEvent<ActiveScpHolderComponent, DidEquipHandEvent>(OnHolderHandsModified);
+        SubscribeLocalEvent<ScpHoldHandBlockerComponent, GettingDroppedAttemptEvent>(OnHolderBlockerDropped);
+    }
+
     private void SyncPlaceholderHands(Entity<ActiveScpHoldableComponent> held)
     {
         if (!_handsQuery.TryComp(held.Owner, out var hands))
@@ -53,7 +61,7 @@ public abstract partial class SharedScpHoldingSystem
             return;
         }
 
-        var heldHands = new Entity<HandsComponent>(held.Owner, hands).AsNullable();
+        var heldHands = (held.Owner, hands);
         DropHeldItemsForPlaceholders(heldHands);
         DeleteInvalidHeldHandBlockers(heldHands);
         EnsureHeldHandBlockers(heldHands);
@@ -153,18 +161,6 @@ public abstract partial class SharedScpHoldingSystem
 
             iconIndex++;
         }
-    }
-
-    private void SyncHeldStatusEffect(EntityUid target)
-    {
-        if (_statusEffects.HasStatusEffect(target, GrabbedStatusEffect) ||
-            !_statusEffects.CanAddStatusEffect(target, GrabbedStatusEffect))
-        {
-            return;
-        }
-
-        EnsureComp<StatusEffectContainerComponent>(target);
-        PredictedTrySpawnInContainer(GrabbedStatusEffect, target, StatusEffectContainerComponent.ContainerId, out _);
     }
 
     private void SyncHolderHandBlocker(Entity<ActiveScpHolderComponent> holder)
@@ -277,5 +273,48 @@ public abstract partial class SharedScpHoldingSystem
         {
             _virtualItem.DeleteVirtualItem(virtualItem, heldUid);
         }
+    }
+
+    private void OnHolderBeforeThrow(Entity<ActiveScpHolderComponent> ent, ref BeforeThrowEvent args)
+    {
+        if (ent.Comp.Target == null)
+            return;
+
+        if (!TryComp<ScpHoldHandBlockerComponent>(args.ItemUid, out var blocker))
+            return;
+
+        if (blocker.Target != ent.Comp.Target.Value)
+            return;
+
+        ReleaseHolderContribution(ent.Owner, ent.Comp.Target.Value, clearIfEmpty: true);
+        args.Cancelled = true;
+    }
+
+    private void OnHolderHandsModified(Entity<ActiveScpHolderComponent> ent, ref DidEquipHandEvent args)
+    {
+        if (ent.Comp.LifeStage > ComponentLifeStage.Running)
+            return;
+
+        if (ent.Comp.Target == null)
+            return;
+
+        if (!_activeHoldableQuery.HasComp(ent.Comp.Target.Value))
+            return;
+
+        SyncHolderState(ent);
+    }
+
+    private void OnHolderBlockerDropped(Entity<ScpHoldHandBlockerComponent> ent, ref GettingDroppedAttemptEvent args)
+    {
+        if (!_activeHolderQuery.TryComp(args.User, out var holder))
+            return;
+
+        if (holder.Target == null)
+            return;
+
+        if (holder.Target != ent.Comp.Target)
+            return;
+
+        ReleaseHolderContribution(args.User, ent.Comp.Target, clearIfEmpty: true);
     }
 }

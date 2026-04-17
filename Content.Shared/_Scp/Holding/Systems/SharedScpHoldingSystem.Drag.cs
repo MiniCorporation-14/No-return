@@ -1,7 +1,9 @@
 using System.Numerics;
 using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Interaction;
+using Content.Shared.Movement.Systems;
 using Robust.Shared.Physics.Components;
+using Robust.Shared.Physics.Events;
 
 namespace Content.Shared._Scp.Holding.Systems;
 
@@ -12,6 +14,21 @@ public abstract partial class SharedScpHoldingSystem
      */
 
     [Dependency] private readonly SharedTransformSystem _transform = default!;
+
+    private EntityQuery<PhysicsComponent> _physicsQuery;
+
+    private void InitializeDragQueries()
+    {
+        _physicsQuery = GetEntityQuery<PhysicsComponent>();
+    }
+
+    private void InitializeDragEvents()
+    {
+        SubscribeLocalEvent<ActiveScpHoldableComponent, AttemptMobCollideEvent>(OnHeldAttemptMobCollide);
+        SubscribeLocalEvent<ActiveScpHoldableComponent, AttemptMobTargetCollideEvent>(OnHeldAttemptMobTargetCollide);
+        SubscribeLocalEvent<ActiveScpHoldableComponent, PreventCollideEvent>(OnHeldPreventCollide);
+        SubscribeLocalEvent<ActiveScpHolderComponent, PreventCollideEvent>(OnHolderPreventCollide);
+    }
 
     private void UpdateSoftDrag(Entity<ActiveScpHoldableComponent> held, ScpHoldableComponent holdable, float maintenanceRange, float desiredDistance)
     {
@@ -123,5 +140,41 @@ public abstract partial class SharedScpHoldingSystem
 
         _physics.SetLinearVelocity(uid, Vector2.Zero, body: physics);
         _physics.SetAngularVelocity(uid, 0f, body: physics);
+    }
+
+    private static void OnHeldAttemptMobCollide(Entity<ActiveScpHoldableComponent> ent, ref AttemptMobCollideEvent args)
+    {
+        args.Cancelled = true;
+    }
+
+    private static void OnHeldAttemptMobTargetCollide(Entity<ActiveScpHoldableComponent> ent, ref AttemptMobTargetCollideEvent args)
+    {
+        args.Cancelled = true;
+    }
+
+    private void OnHeldPreventCollide(Entity<ActiveScpHoldableComponent> ent, ref PreventCollideEvent args)
+    {
+        if (args.Cancelled)
+            return;
+
+        if (_activeHolderQuery.TryComp(args.OtherEntity, out var holder) &&
+            holder.Target == ent.Owner)
+        {
+            args.Cancelled = true;
+        }
+    }
+
+    private void OnHolderPreventCollide(Entity<ActiveScpHolderComponent> ent, ref PreventCollideEvent args)
+    {
+        if (args.Cancelled)
+            return;
+
+        if (ent.Comp.Target == null)
+            return;
+
+        if (ent.Comp.Target != args.OtherEntity)
+            return;
+
+        args.Cancelled = true;
     }
 }

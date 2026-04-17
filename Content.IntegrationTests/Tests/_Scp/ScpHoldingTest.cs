@@ -22,6 +22,7 @@ using Content.Shared.Movement.Pulling.Components;
 using Content.Shared.Movement.Pulling.Systems;
 using Content.Shared.Movement.Systems;
 using Content.Shared.StatusEffectNew;
+using Content.Shared.StatusEffectNew.Components;
 using Content.Shared.Throwing;
 using Robust.Client.Input;
 using Robust.Server.Console;
@@ -82,6 +83,30 @@ public sealed class ScpHoldingTest
       components:
       - TestListener
 """;
+
+    [Test]
+    public async Task HoldAppliesStatusEffectImmediately()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var statusEffects = server.System<StatusEffectsSystem>();
+        var holding = server.System<SharedScpHoldingSystem>();
+        var map = await pair.CreateTestMap();
+
+        await server.WaitPost(() =>
+        {
+            var holder = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            var target = entMan.SpawnEntity("MobHuman", map.GridCoords);
+            StartHold(entMan, holding, holder, target);
+
+            Assert.That(statusEffects.TryGetStatusEffect(target, "StatusEffectScpHeld", out var effect), Is.True);
+            Assert.That(effect, Is.Not.Null);
+            Assert.That(entMan.GetComponent<StatusEffectComponent>(effect!.Value).Applied, Is.True);
+        });
+
+        await pair.CleanReturnAsync();
+    }
 
     [Test]
     public async Task SoftHoldBreakoutByMovementAndAlertRespectsCooldown()
