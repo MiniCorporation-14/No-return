@@ -1,6 +1,7 @@
+using Content.Shared._Scp.Holding.Systems;
 using Robust.Shared.GameStates;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Components;
 
 /// <summary>
 /// Semantic state that marks an active breakout attempt during a full hold.

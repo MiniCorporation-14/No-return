@@ -1,6 +1,7 @@
+using Content.Shared._Scp.Holding.Systems;
 using Robust.Shared.GameStates;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Components;
 
 /// <summary>
 /// Runtime slowdown state stored on an active holder while their movement is penalized.

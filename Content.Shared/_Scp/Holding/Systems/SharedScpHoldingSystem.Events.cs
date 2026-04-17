@@ -1,3 +1,4 @@
+using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Actions.Events;
 using Content.Shared.CombatMode;
 using Content.Shared.Hands;
@@ -5,10 +6,9 @@ using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Systems;
 using Content.Shared.Throwing;
-using Robust.Shared.Maths;
 using Robust.Shared.Physics.Events;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {

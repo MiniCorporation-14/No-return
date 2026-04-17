@@ -1,10 +1,11 @@
+using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Coordinates;
 using Content.Shared.Popups;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Audio;
 using Robust.Shared.Prototypes;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {

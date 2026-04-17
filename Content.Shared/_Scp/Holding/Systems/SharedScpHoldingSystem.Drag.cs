@@ -1,8 +1,9 @@
 using System.Numerics;
+using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Interaction;
 using Robust.Shared.Physics.Components;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {
@@ -82,9 +83,9 @@ public abstract partial class SharedScpHoldingSystem
         ApplyHeldVelocity(held.Owner, desiredVelocity, heldPhysics);
     }
 
-    private float GetDesiredSoftDragDistance(Entity<ScpHeldComponent> held)
+    private static float GetDesiredSoftDragDistance(float holdRange)
     {
-        return GetBaseSoftDragDistance(held.Comp.HoldRange);
+        return GetBaseSoftDragDistance(holdRange);
     }
 
     private static float GetHoldMaintenanceRange(float configuredRange, float desiredSoftDragDistance)

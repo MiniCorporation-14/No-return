@@ -1,10 +1,11 @@
+using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction.Components;
 using Content.Shared.Inventory.VirtualItem;
 using Content.Shared.StatusEffectNew.Components;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {

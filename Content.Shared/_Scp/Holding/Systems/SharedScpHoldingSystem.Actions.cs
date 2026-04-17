@@ -1,8 +1,9 @@
+using Content.Shared._Scp.Holding.Components;
 using Content.Shared.DoAfter;
 using Content.Shared.Movement.Components;
 using Robust.Shared.Physics;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {
@@ -39,13 +40,9 @@ public abstract partial class SharedScpHoldingSystem
         if (!CanToggleHold(holder, target, checkAttempt: !attemptChecked))
             return false;
 
-        var holdable = _holdableQuery.Comp(target);
-        var held = EnsureHeldState(target, holdable, out var heldCreated);
+        var held = EnsureHeldState(target);
         AddHolderContribution(holder.Owner, held);
         SyncHeldState(held);
-
-        if (heldCreated)
-            Dirty(held);
 
         StartHoldCooldown(holder);
         return true;
@@ -68,6 +65,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-not-holdable", ("target", target));
+
             return false;
         }
 
@@ -75,6 +73,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+
             return false;
         }
 
@@ -82,6 +81,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+
             return false;
         }
 
@@ -89,6 +89,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+
             return false;
         }
 
@@ -96,6 +97,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+
             return false;
         }
 
@@ -103,6 +105,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+
             return false;
         }
 
@@ -110,6 +113,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+
             return false;
         }
 
@@ -117,6 +121,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-invalid", ("target", target));
+
             return false;
         }
 
@@ -124,6 +129,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-immune", ("target", target));
+
             return false;
         }
 
@@ -131,18 +137,18 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-holder-no-free-hand", ("target", target));
+
             return false;
         }
 
         var range = holdable.HoldRange;
-        if (_heldQuery.TryComp(target, out var held))
+        if (_heldQuery.HasComp(target))
         {
-            range = held.HoldRange;
-
             if (_fullHeldQuery.HasComp(target))
             {
                 if (!quiet)
                     PopupHolder(holder.Owner, "scp-hold-target-fully-held", ("target", target));
+
                 return false;
             }
         }
@@ -151,6 +157,7 @@ public abstract partial class SharedScpHoldingSystem
         {
             if (!quiet)
                 PopupHolder(holder.Owner, "scp-hold-target-too-far", ("target", target));
+
             return false;
         }
 
@@ -212,13 +219,16 @@ public abstract partial class SharedScpHoldingSystem
         if (!_fullHeldQuery.TryComp(held.Owner, out var fullHeld))
             return false;
 
+        if (!TryGetHeldHoldable(held, out var holdable))
+            return false;
+
         if (fullHeld.StartedAt == TimeSpan.Zero)
         {
             PopupTarget(held.Owner, "scp-hold-breakout-too-early", ("seconds", 1));
             return false;
         }
 
-        var breakoutAvailableAt = fullHeld.StartedAt + held.Comp.FullHoldDelay;
+        var breakoutAvailableAt = fullHeld.StartedAt + holdable.FullHoldDelay;
         if (_timing.CurTime < breakoutAvailableAt)
         {
             var remaining = breakoutAvailableAt - _timing.CurTime;
@@ -233,7 +243,7 @@ public abstract partial class SharedScpHoldingSystem
         var doAfter = new DoAfterArgs(
             EntityManager,
             held.Owner,
-            held.Comp.FullBreakoutDuration,
+            holdable.FullBreakoutDuration,
             new ScpHoldBreakoutDoAfterEvent(viaMovement),
             held.Owner,
             target: held.Owner)
@@ -315,15 +325,15 @@ public abstract partial class SharedScpHoldingSystem
     private bool CanPassHoldAttempt(EntityUid holderUid, EntityUid targetUid)
     {
         var attempt = new ScpHoldAttemptEvent(holderUid, targetUid);
-        RaiseLocalEvent(targetUid, attempt);
-        RaiseLocalEvent(holderUid, attempt);
+        RaiseLocalEvent(targetUid, ref attempt);
+        RaiseLocalEvent(holderUid, ref attempt);
         return !attempt.Cancelled;
     }
 
     private void RaiseBreakoutEvent(Entity<ScpHeldComponent> held, bool viaMovement, bool applyImmunity)
     {
         var ev = new ScpHoldBreakoutEvent(viaMovement, _fullHeldQuery.HasComp(held.Owner), applyImmunity);
-        RaiseLocalEvent(held.Owner, ev);
+        RaiseLocalEvent(held.Owner, ref ev);
     }
 
     private void BreakOut(Entity<ScpHeldComponent> held, bool viaMovement, bool applyImmunity)

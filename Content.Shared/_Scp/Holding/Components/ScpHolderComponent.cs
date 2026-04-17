@@ -1,6 +1,7 @@
+using Content.Shared._Scp.Holding.Systems;
 using Robust.Shared.GameStates;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Components;
 
 /// <summary>
 /// Runtime contribution state stored on each active holder.

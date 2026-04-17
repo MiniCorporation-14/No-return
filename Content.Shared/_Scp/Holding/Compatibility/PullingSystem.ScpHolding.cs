@@ -1,4 +1,5 @@
-using Content.Shared._Scp.Holding;
+using Content.Shared._Scp.Holding.Components;
+using Content.Shared._Scp.Holding.Systems;
 using Content.Shared.Movement.Pulling.Components;
 
 #pragma warning disable IDE0130

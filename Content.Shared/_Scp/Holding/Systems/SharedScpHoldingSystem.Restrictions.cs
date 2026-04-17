@@ -1,7 +1,8 @@
+using Content.Shared._Scp.Holding.Components;
 using Content.Shared.Actions.Events;
 using Content.Shared.CombatMode;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {

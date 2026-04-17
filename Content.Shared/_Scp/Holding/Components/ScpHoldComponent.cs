@@ -1,7 +1,8 @@
+using Content.Shared._Scp.Holding.Systems;
 using Content.Shared.Whitelist;
 using Robust.Shared.GameStates;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Components;
 
 /// <summary>
 /// Grants the owner the ability to contribute to SCP holding.

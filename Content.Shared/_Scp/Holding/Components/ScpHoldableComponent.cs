@@ -1,14 +1,13 @@
 using Content.Shared.Whitelist;
 using Robust.Shared.Audio;
-using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 
-namespace Content.Shared._Scp.Holding;
+namespace Content.Shared._Scp.Holding.Components;
 
 /// <summary>
 /// Marks an entity as a valid target for the SCP holding mechanic and stores per-target hold tuning.
 /// </summary>
-[RegisterComponent, NetworkedComponent]
+[RegisterComponent]
 public sealed partial class ScpHoldableComponent : Component
 {
     /// <summary>
@@ -22,12 +21,6 @@ public sealed partial class ScpHoldableComponent : Component
     /// </summary>
     [DataField]
     public EntityWhitelist? HolderBlacklist;
-
-    /// <summary>
-    /// Minimum delay between successful soft breakout attempts while the hold is active.
-    /// </summary>
-    [DataField]
-    public TimeSpan SoftEscapeCooldown = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Minimum uninterrupted full hold duration before a breakout do-after may start.
