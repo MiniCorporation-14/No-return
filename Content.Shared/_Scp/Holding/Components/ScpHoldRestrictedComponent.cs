@@ -2,9 +2,9 @@ using Robust.Shared.GameStates;
 
 namespace Content.Shared._Scp.Holding.Components;
 
-[RegisterComponent, NetworkedComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class ScpHoldRestrictedComponent : Component
 {
-    [DataField]
+    [DataField, AutoNetworkedField]
     public ScpHoldStage Stage = ScpHoldStage.Full;
 }

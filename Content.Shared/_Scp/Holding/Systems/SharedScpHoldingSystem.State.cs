@@ -82,6 +82,7 @@ public abstract partial class SharedScpHoldingSystem
             held.SoftEscapeAvailableAt = _timing.CurTime;
 
         held.RequiredHolderCount = GetRequiredHolderCount(target);
+        Dirty(target, held);
         return (target, held);
     }
 
@@ -146,6 +147,7 @@ public abstract partial class SharedScpHoldingSystem
             return;
 
         held.Comp.RequiredHolderCount = GetRequiredHolderCount(held.Owner);
+        Dirty(held.Owner, held.Comp);
 
         if (held.Comp.Holders.Count == 0)
         {
