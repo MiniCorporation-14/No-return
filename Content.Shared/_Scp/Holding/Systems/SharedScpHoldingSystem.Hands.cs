@@ -145,9 +145,17 @@ public abstract partial class SharedScpHoldingSystem
     private void SyncHolderHandBlocker(Entity<ActiveScpHolderComponent> holder)
     {
         _virtualBlockersToDelete.Clear();
-        EntityUid? validBlocker = null;
         var target = holder.Comp.Target;
         var holderActive = holder.Comp.LifeStage <= ComponentLifeStage.Running;
+        var validBlockerCount = 0;
+        var requiredHolderHandCount = 0;
+
+        if (holderActive &&
+            _activeHoldableQuery.HasComp(target) &&
+            TryGetRequiredHolderHandCount(target.Value, out var resolvedRequiredHolderHandCount))
+        {
+            requiredHolderHandCount = resolvedRequiredHolderHandCount;
+        }
 
         foreach (var heldItem in _hands.EnumerateHeld(holder.Owner))
         {
@@ -161,9 +169,9 @@ public abstract partial class SharedScpHoldingSystem
 
             if (ownedBlocker && matchesCurrentTarget)
             {
-                if (validBlocker == null)
+                if (validBlockerCount < requiredHolderHandCount)
                 {
-                    validBlocker = heldItem;
+                    validBlockerCount++;
                     RemComp<UnremoveableComponent>(heldItem);
                     continue;
                 }
@@ -179,33 +187,44 @@ public abstract partial class SharedScpHoldingSystem
         }
 
         if (!holderActive ||
-            target == null ||
-            validBlocker != null)
+            target == null)
         {
             return;
         }
 
-        if (!_handsQuery.TryComp(holder.Owner, out var hands) ||
-            !_hands.TryGetEmptyHand((holder.Owner, hands), out var emptyHand))
+        if (!_handsQuery.TryComp(holder.Owner, out var hands))
         {
+            ReleaseHolderContribution(holder.Owner, target.Value, clearIfEmpty: true);
             return;
         }
 
-        if (!_virtualItem.TrySpawnVirtualItem(target.Value, holder.Owner, out var spawnedVirtualItem))
-            return;
+        while (validBlockerCount < requiredHolderHandCount)
+        {
+            if (!_hands.TryGetEmptyHand((holder.Owner, hands), out var emptyHand) ||
+                !_virtualItem.TrySpawnVirtualItem(target.Value, holder.Owner, out var spawnedVirtualItem))
+            {
+                break;
+            }
 
-        EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
-        _hands.DoPickup(holder.Owner, emptyHand, spawnedVirtualItem.Value, hands);
+            EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
+            _hands.DoPickup(holder.Owner, emptyHand, spawnedVirtualItem.Value, hands);
+            validBlockerCount++;
+        }
+
+        validBlockerCount = CountOwnedHolderHandBlockers(holder.Owner, target.Value);
+        if (validBlockerCount < requiredHolderHandCount)
+            ReleaseHolderContribution(holder.Owner, target.Value, clearIfEmpty: true);
     }
 
-    private bool HasAvailableHolderHand(EntityUid holderUid)
+    private bool HasAvailableHolderHands(EntityUid holderUid, int requiredHandCount)
     {
         return _handsQuery.TryComp(holderUid, out var hands) &&
-               _hands.TryGetEmptyHand((holderUid, hands), out _);
+               _hands.CountFreeHands((holderUid, hands)) >= requiredHandCount;
     }
 
-    private bool HasOwnedHolderHandBlocker(EntityUid holderUid, EntityUid targetUid)
+    private int CountOwnedHolderHandBlockers(EntityUid holderUid, EntityUid targetUid)
     {
+        var blockerCount = 0;
         foreach (var heldItem in _hands.EnumerateHeld(holderUid))
         {
             if (!_holdHandBlockerQuery.HasComp(heldItem) ||
@@ -215,10 +234,10 @@ public abstract partial class SharedScpHoldingSystem
                 continue;
             }
 
-            return true;
+            blockerCount++;
         }
 
-        return false;
+        return blockerCount;
     }
 
     private void RemoveHolderHandBlocker(EntityUid holderUid, Entity<VirtualItemComponent> virtualItem)
@@ -324,9 +343,12 @@ public abstract partial class SharedScpHoldingSystem
             return;
         }
 
-        if (HasOwnedHolderHandBlocker(ent.Owner, args.BlockingEntity))
+        if (!TryGetRequiredHolderHandCount(args.BlockingEntity, out var requiredHolderHandCount))
             return;
 
-        ReleaseHolderContribution(ent.Owner, args.BlockingEntity, clearIfEmpty: true);
+        if (CountOwnedHolderHandBlockers(ent.Owner, args.BlockingEntity) >= requiredHolderHandCount)
+            return;
+
+        SyncHolderState(ent);
     }
 }

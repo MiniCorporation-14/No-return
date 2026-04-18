@@ -116,6 +116,7 @@
     showInHands: false
     disableExplosionRecursion: true
   - type: ScpHoldable
+    holderHandsRequired: 2
   - type: GhostPanelAntagonistMarker
     name: ghost-panel-antagonist-scp-name
     description: ghost-panel-antagonist-scp-description

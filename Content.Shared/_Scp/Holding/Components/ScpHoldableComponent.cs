@@ -24,6 +24,12 @@ public sealed partial class ScpHoldableComponent : Component
     public EntityWhitelist? HolderBlacklist;
 
     /// <summary>
+    /// Number of hands each holder must reserve to contribute to holding this target.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public int HolderHandsRequired = 1;
+
+    /// <summary>
     /// Minimum uninterrupted full hold duration before a breakout do-after may start.
     /// </summary>
     [DataField, AutoNetworkedField]

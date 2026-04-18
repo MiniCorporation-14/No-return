@@ -51,7 +51,10 @@ public abstract partial class SharedScpHoldingSystem
         if (!_activeHoldableFullHoldStateQuery.HasComp(held.Owner))
             UpdateSoftDrag(held, holdable, dragAnchorUid, dragAnchor, maintenanceRange, desiredSoftDragDistance);
         else
+        {
+            ClearCursorMoveState(held.Owner);
             ZeroHeldVelocity(held.Owner);
+        }
 
         _holdersToRemove.Clear();
 
@@ -119,7 +122,10 @@ public abstract partial class SharedScpHoldingSystem
         }
 
         if (removed)
+        {
+            ClearCursorMoveState(targetUid);
             Dirty(targetUid, held);
+        }
 
         if (_activeHolderQuery.HasComp(holderUid))
             RemComp<ActiveScpHolderComponent>(holderUid);
@@ -177,6 +183,8 @@ public abstract partial class SharedScpHoldingSystem
 
     private void EnterFullHold(Entity<ActiveScpHoldableComponent> held, ScpHoldableComponent holdable)
     {
+        ClearCursorMoveState(held.Owner);
+
         var fullHeldCreated = !_activeHoldableFullHoldStateQuery.TryComp(held.Owner, out var fullHeld);
         fullHeld ??= EnsureComp<ActiveStateScpHoldableFullHoldComponent>(held.Owner);
 
@@ -232,6 +240,7 @@ public abstract partial class SharedScpHoldingSystem
         if (_activeHoldableQuery.TryComp(held.Owner, out var refreshed))
             held = (held.Owner, refreshed);
 
+        ClearCursorMoveState(held.Owner);
         EndBreakoutAttempt(held.Owner, cancelDoAfter: true);
 
         if (_activeHoldableFullHoldStateQuery.HasComp(held.Owner))

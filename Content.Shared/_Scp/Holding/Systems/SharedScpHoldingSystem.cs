@@ -39,11 +39,13 @@ public abstract partial class SharedScpHoldingSystem : EntitySystem
 
         InitializeHoldQueries();
         InitializeBreakoutAttemptQueries();
+        InitializeCursorMoveQueries();
         InitializeDragQueries();
         InitializeHandQueries();
         InitializeStateQueries();
         InitializeLifecycleEvents();
         InitializeBreakoutAttemptEvents();
+        InitializeCursorMoveEvents();
         InitializeDragEvents();
         InitializeHandEvents();
         InitializeRestrictions();

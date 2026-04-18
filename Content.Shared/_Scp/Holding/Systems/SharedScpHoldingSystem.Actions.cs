@@ -158,7 +158,8 @@ public abstract partial class SharedScpHoldingSystem
             return false;
         }
 
-        if (!ignoreHandAvailability && !HasAvailableHolderHand(holder))
+        var requiredHolderHandCount = GetRequiredHolderHandCount(holdable);
+        if (!ignoreHandAvailability && !HasAvailableHolderHands(holder.Owner, requiredHolderHandCount))
         {
             if (!quiet)
                 Popup(holder, "scp-hold-holder-no-free-hand", ("target", target));
@@ -190,6 +191,23 @@ public abstract partial class SharedScpHoldingSystem
             return false;
 
         return true;
+    }
+
+    protected static int GetRequiredHolderHandCount(ScpHoldableComponent holdable)
+    {
+        return Math.Max(1, holdable.HolderHandsRequired);
+    }
+
+    protected bool TryGetRequiredHolderHandCount(EntityUid targetUid, out int requiredHolderHandCount)
+    {
+        if (_holdableQuery.TryComp(targetUid, out var holdable))
+        {
+            requiredHolderHandCount = GetRequiredHolderHandCount(holdable);
+            return true;
+        }
+
+        requiredHolderHandCount = 0;
+        return false;
     }
 
     public bool TryBreakOut(Entity<ActiveScpHoldableComponent> held, bool viaMovement)

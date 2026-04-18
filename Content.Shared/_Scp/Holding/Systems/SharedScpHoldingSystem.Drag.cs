@@ -38,6 +38,12 @@ public abstract partial class SharedScpHoldingSystem
         float maintenanceRange,
         float desiredDistance)
     {
+        if (TryGetValidatedCursorMoveState(held, holdable, out var cursorMove, out var cursorHolderUid))
+        {
+            UpdateCursorMoveDrag(held, holdable, cursorHolderUid, cursorMove);
+            return;
+        }
+
         if (anchorHolder.Target != held.Owner)
             return;
 
