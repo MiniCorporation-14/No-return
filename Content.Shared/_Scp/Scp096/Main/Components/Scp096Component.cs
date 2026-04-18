@@ -162,7 +162,7 @@ public sealed partial class Scp096Component : Component
     /// Сила отталкивания удерживающих после вырывания.
     /// </summary>
     [DataField]
-    public float HoldBreakoutImpulse = 10f;
+    public float HoldBreakoutImpulse = 40f;
 
     #endregion
 

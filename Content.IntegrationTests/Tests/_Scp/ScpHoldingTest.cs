@@ -11,6 +11,8 @@ using Content.Shared._Scp.Holding.Components;
 using Content.Shared._Scp.Holding.Systems;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Part;
+using Content.Shared.Damage.Components;
+using Content.Shared.FixedPoint;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Interaction.Components;
@@ -36,6 +38,7 @@ using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 using Robust.UnitTesting;
+using Content.Shared.Stunnable;
 using Content.Shared.Whitelist;
 
 namespace Content.IntegrationTests.Tests._Scp;
@@ -85,6 +88,12 @@ public sealed class ScpHoldingTest
       components:
       - TestListener
 """;
+
+    [Test]
+    public void ActiveScpHoldableStateDoesNotStorePrimaryHolder()
+    {
+        Assert.That(typeof(ActiveScpHoldableComponent).GetField("PrimaryHolder"), Is.Null);
+    }
 
     [Test]
     public async Task HoldAppliesStatusEffectImmediately()
@@ -342,8 +351,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, target), Is.False);
-                Assert.That(held.PrimaryHolder, Is.EqualTo(holder));
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
+                Assert.That(held.Holders, Is.EqualTo(new[] { holder }));
                 Assert.That(move.Cancelled, Is.False);
                 Assert.That(collide.Cancelled, Is.True);
                 Assert.That(targetCollide.Cancelled, Is.True);
@@ -386,8 +394,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.False);
-                Assert.That(held.PrimaryHolder, Is.EqualTo(clientHolder));
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
+                Assert.That(held.Holders, Is.EqualTo(new[] { clientHolder }));
                 Assert.That(distance, Is.GreaterThan(0.18f));
                 Assert.That(distance, Is.LessThan(0.55f));
                 Assert.That(collide.Cancelled, Is.True);
@@ -1215,6 +1222,76 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
+    public async Task Scp096FullBreakoutAffectsAllHoldersAndThrowsOverlappingHoldersApart()
+    {
+        await using var pair = await PoolManager.GetServerClient(new PoolSettings { Fresh = true });
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var holding = server.System<SharedScpHoldingSystem>();
+        var physics = server.System<SharedPhysicsSystem>();
+        var transform = server.System<SharedTransformSystem>();
+        var map = await pair.CreateTestMap();
+
+        EntityUid holderOne = default;
+        EntityUid holderTwo = default;
+        EntityUid target = default;
+
+        await server.WaitPost(() =>
+        {
+            holderOne = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            holderTwo = entMan.SpawnEntity(HolderPrototype, map.GridCoords);
+            target = entMan.SpawnEntity("Scp096", map.GridCoords);
+
+            var holdable = entMan.GetComponent<ScpHoldableComponent>(target);
+            holdable.FullHoldDelay = TimeSpan.Zero;
+            holdable.FullBreakoutDuration = TimeSpan.Zero;
+
+            StartHold(entMan, holding, holderOne, target);
+            StartHold(entMan, holding, holderTwo, target);
+        });
+        await server.WaitRunTicks(2);
+
+        await server.WaitAssertion(() =>
+        {
+            Assert.That(HasFullHold(entMan, target), Is.True);
+        });
+
+        await server.WaitPost(() =>
+        {
+            transform.SetCoordinates(holderOne, map.GridCoords);
+            transform.SetCoordinates(holderTwo, map.GridCoords);
+            transform.SetCoordinates(target, map.GridCoords);
+            RaiseMoveInput(entMan, target);
+        });
+        await server.WaitRunTicks(4);
+
+        await server.WaitAssertion(() =>
+        {
+            var holderOneDamage = entMan.GetComponent<DamageableComponent>(holderOne);
+            var holderTwoDamage = entMan.GetComponent<DamageableComponent>(holderTwo);
+            var holderOneVelocity = physics.GetMapLinearVelocity(holderOne);
+            var holderTwoVelocity = physics.GetMapLinearVelocity(holderTwo);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(entMan.HasComponent<ActiveScpHoldableComponent>(target), Is.False);
+                Assert.That(entMan.HasComponent<ActiveStateScpHoldableFullHoldComponent>(target), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHolderComponent>(holderOne), Is.False);
+                Assert.That(entMan.HasComponent<ActiveScpHolderComponent>(holderTwo), Is.False);
+                Assert.That(entMan.HasComponent<StunnedComponent>(holderOne), Is.True);
+                Assert.That(entMan.HasComponent<StunnedComponent>(holderTwo), Is.True);
+                Assert.That(holderOneDamage.TotalDamage, Is.GreaterThan(FixedPoint2.Zero));
+                Assert.That(holderTwoDamage.TotalDamage, Is.GreaterThan(FixedPoint2.Zero));
+                Assert.That(MathF.Abs(holderOneVelocity.X), Is.GreaterThan(1f));
+                Assert.That(MathF.Abs(holderTwoVelocity.X), Is.GreaterThan(1f));
+                Assert.That(MathF.Sign(holderOneVelocity.X), Is.EqualTo(-MathF.Sign(holderTwoVelocity.X)));
+            });
+        });
+
+        await pair.CleanReturnAsync();
+    }
+
+    [Test]
     public async Task FullBreakoutRestoresMovementOnServerAndClient()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings
@@ -1715,8 +1792,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, target), Is.False);
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
-                Assert.That(held.PrimaryHolder, Is.EqualTo(serverPlayer));
+                Assert.That(held.Holders, Is.EqualTo(new[] { serverPlayer }));
                 Assert.That(distance, Is.GreaterThan(0.18f));
                 Assert.That(distance, Is.LessThan(0.55f));
                 Assert.That(puller.Pulling, Is.Null);
@@ -1738,8 +1814,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.False);
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
-                Assert.That(held.PrimaryHolder, Is.EqualTo(clientPlayer));
+                Assert.That(held.Holders, Is.EqualTo(new[] { clientPlayer }));
                 Assert.That(distance, Is.GreaterThan(0.18f));
                 Assert.That(distance, Is.LessThan(0.55f));
                 Assert.That(puller.Pulling, Is.Null);
@@ -2171,7 +2246,7 @@ public sealed class ScpHoldingTest
     }
 
     [Test]
-    public async Task ClientPrimaryReassignmentKeepsCustomDragAndReconcilesCleanly()
+    public async Task ClientAnchorReassignmentKeepsCustomDragAndReconcilesCleanly()
     {
         await using var pair = await PoolManager.GetServerClient(new PoolSettings
         {
@@ -2225,8 +2300,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(sEntMan, target), Is.False);
-                Assert.That(held.Holders, Has.Count.EqualTo(2));
-                Assert.That(held.PrimaryHolder, Is.EqualTo(serverPlayer));
+                Assert.That(held.Holders, Is.EqualTo(new[] { serverPlayer, holderTwo }));
                 Assert.That(distance, Is.GreaterThan(0.18f));
                 Assert.That(distance, Is.LessThan(0.5f));
                 Assert.That(contacts, Does.Not.Contain(target));
@@ -2255,8 +2329,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.False);
-                Assert.That(held.Holders, Has.Count.EqualTo(2));
-                Assert.That(held.PrimaryHolder, Is.EqualTo(clientPlayer));
+                Assert.That(held.Holders, Is.EqualTo(new[] { clientPlayer, clientHolderTwo }));
                 Assert.That(distance, Is.GreaterThan(0.18f));
                 Assert.That(distance, Is.LessThan(0.5f));
                 Assert.That(contacts, Does.Not.Contain(clientTarget));
@@ -2285,8 +2358,7 @@ public sealed class ScpHoldingTest
 
             Assert.Multiple(() =>
             {
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
-                Assert.That(held.PrimaryHolder, Is.EqualTo(holderTwo));
+                Assert.That(held.Holders, Is.EqualTo(new[] { holderTwo }));
                 Assert.That(distance, Is.GreaterThan(0.18f));
                 Assert.That(distance, Is.LessThan(0.55f));
                 Assert.That(contacts, Does.Not.Contain(target));
@@ -2306,8 +2378,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(cEntMan, clientTarget), Is.False);
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
-                Assert.That(held.PrimaryHolder, Is.EqualTo(clientHolderTwo));
+                Assert.That(held.Holders, Is.EqualTo(new[] { clientHolderTwo }));
                 Assert.That(distance, Is.GreaterThan(0.18f));
                 Assert.That(distance, Is.LessThan(0.7f));
                 Assert.That(contacts, Does.Not.Contain(clientTarget));
@@ -2544,7 +2615,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(entMan, target), Is.False);
-                Assert.That(held.PrimaryHolder, Is.EqualTo(holderOne));
+                Assert.That(held.Holders, Is.EqualTo(new[] { holderOne, holderTwo }));
                 Assert.That(holderOnePuller.Pulling, Is.Null);
                 Assert.That(holderTwoPuller.Pulling, Is.Null);
                 Assert.That(pullable.Puller, Is.Null);
@@ -2568,8 +2639,7 @@ public sealed class ScpHoldingTest
             Assert.Multiple(() =>
             {
                 Assert.That(HasFullHold(entMan, target), Is.False);
-                Assert.That(held.Holders, Has.Count.EqualTo(1));
-                Assert.That(held.PrimaryHolder, Is.EqualTo(holderTwo));
+                Assert.That(held.Holders, Is.EqualTo(new[] { holderTwo }));
                 Assert.That(holderOnePuller.Pulling, Is.Null);
                 Assert.That(holderTwoPuller.Pulling, Is.Null);
                 Assert.That(pullable.Puller, Is.Null);

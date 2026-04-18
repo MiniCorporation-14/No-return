@@ -18,16 +18,10 @@ public sealed partial class ActiveScpHoldableComponent : Component
     public TimeSpan SoftEscapeAvailableAt;
 
     /// <summary>
-    /// Ordered holder list used for reassignment and contribution counting.
+    /// Ordered holder list used for reassignment, contribution counting, and drag-anchor selection.
     /// </summary>
     [AutoNetworkedField, ViewVariables]
     public List<EntityUid> Holders = [];
-
-    /// <summary>
-    /// Current primary holder used as the soft hold drag anchor.
-    /// </summary>
-    [AutoNetworkedField, ViewVariables]
-    public EntityUid? PrimaryHolder;
 
     /// <summary>
     /// Required contributor count for entering full hold.

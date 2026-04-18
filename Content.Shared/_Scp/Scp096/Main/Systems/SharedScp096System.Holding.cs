@@ -3,6 +3,7 @@ using Content.Shared._Scp.Holding;
 using Content.Shared._Scp.Holding.Components;
 using Content.Shared._Scp.Holding.Systems;
 using Content.Shared._Scp.Scp096.Main.Components;
+using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
 
 namespace Content.Shared._Scp.Scp096.Main.Systems;
@@ -37,9 +38,21 @@ public abstract partial class SharedScp096System
             return;
 
         var scpPosition = _transform.GetWorldPosition(ent.Owner);
-        foreach (var holderUid in held.Holders)
+        var holderCount = held.Holders.Count;
+        if (holderCount == 0)
+            return;
+
+        var holders = new (EntityUid HolderUid, Vector2 Position)[holderCount];
+        for (var i = 0; i < holderCount; i++)
         {
-            ApplyHoldBreakoutEffects(ent, holderUid, scpPosition);
+            var holderUid = held.Holders[i];
+            holders[i] = (holderUid, _transform.GetWorldPosition(holderUid));
+        }
+
+        for (var i = 0; i < holderCount; i++)
+        {
+            var holder = holders[i];
+            ApplyHoldBreakoutEffects(ent, holder.HolderUid, holder.Position, scpPosition, i, holderCount);
         }
     }
 
@@ -55,16 +68,34 @@ public abstract partial class SharedScp096System
         _holding.TryForceBreakOut((uid, (ActiveScpHoldableComponent?) null));
     }
 
-    private void ApplyHoldBreakoutEffects(Entity<Scp096Component> ent, EntityUid holderUid, Vector2 scpPosition)
+    private void ApplyHoldBreakoutEffects(
+        Entity<Scp096Component> ent,
+        EntityUid holderUid,
+        Vector2 holderPosition,
+        Vector2 scpPosition,
+        int holderIndex,
+        int holderCount)
     {
         _damageable.TryChangeDamage(holderUid, ent.Comp.HoldBreakoutDamage, origin: ent.Owner);
         _stun.TryUpdateParalyzeDuration(holderUid, ent.Comp.HoldBreakoutParalyzeTime);
 
-        var direction = _transform.GetWorldPosition(holderUid) - scpPosition;
-        direction = direction.LengthSquared() < 0.001f
-            ? Vector2.UnitY
-            : Vector2.Normalize(direction);
+        if (!TryComp<PhysicsComponent>(holderUid, out var physics))
+            return;
 
-        _physics.ApplyLinearImpulse(holderUid, direction * ent.Comp.HoldBreakoutImpulse);
+        var direction = GetHoldBreakoutDirection(holderPosition, scpPosition, holderIndex, holderCount);
+        _physics.ApplyLinearImpulse(holderUid, direction * physics.Mass * ent.Comp.HoldBreakoutImpulse, body: physics);
+    }
+
+    private static Vector2 GetHoldBreakoutDirection(Vector2 holderPosition, Vector2 scpPosition, int holderIndex, int holderCount)
+    {
+        var direction = holderPosition - scpPosition;
+        if (direction.LengthSquared() >= 0.001f)
+            return Vector2.Normalize(direction);
+
+        if (holderCount <= 0)
+            return Vector2.UnitX;
+
+        var angle = 2f * MathF.PI * holderIndex / holderCount;
+        return new Vector2(MathF.Cos(angle), MathF.Sin(angle));
     }
 }

@@ -30,28 +30,27 @@ public abstract partial class SharedScpHoldingSystem
         SubscribeLocalEvent<ActiveScpHolderComponent, PreventCollideEvent>(OnHolderPreventCollide);
     }
 
-    private void UpdateSoftDrag(Entity<ActiveScpHoldableComponent> held, ScpHoldableComponent holdable, float maintenanceRange, float desiredDistance)
+    private void UpdateSoftDrag(
+        Entity<ActiveScpHoldableComponent> held,
+        ScpHoldableComponent holdable,
+        EntityUid dragAnchor,
+        ActiveScpHolderComponent anchorHolder,
+        float maintenanceRange,
+        float desiredDistance)
     {
-        if (held.Comp.PrimaryHolder == null)
+        if (anchorHolder.Target != held.Owner)
             return;
 
-        var primaryHolder = held.Comp.PrimaryHolder.Value;
-        if (!_activeHolderQuery.TryComp(primaryHolder, out var holder))
+        if (!_container.IsInSameOrNoContainer(dragAnchor, held.Owner))
             return;
 
-        if (holder.Target != held.Owner)
-            return;
-
-        if (!_container.IsInSameOrNoContainer(primaryHolder, held.Owner))
-            return;
-
-        if (!_interaction.InRangeUnobstructed(primaryHolder, held.Owner, maintenanceRange))
+        if (!_interaction.InRangeUnobstructed(dragAnchor, held.Owner, maintenanceRange))
             return;
 
         if (!_physicsQuery.TryComp(held.Owner, out var heldPhysics))
             return;
 
-        var holderCoords = _transform.GetMapCoordinates(primaryHolder);
+        var holderCoords = _transform.GetMapCoordinates(dragAnchor);
         var heldCoords = _transform.GetMapCoordinates(held.Owner);
 
         if (holderCoords.MapId != heldCoords.MapId)
@@ -59,11 +58,11 @@ public abstract partial class SharedScpHoldingSystem
 
         var offset = heldCoords.Position - holderCoords.Position;
         var distance = offset.Length();
-        var holderVelocity = _physicsQuery.TryComp(primaryHolder, out var holderPhysics)
+        var holderVelocity = _physicsQuery.TryComp(dragAnchor, out var holderPhysics)
             ? holderPhysics.LinearVelocity
             : Vector2.Zero;
         var velocityDirectionThresholdSquared = holdable.SoftDragVelocityDirectionThreshold * holdable.SoftDragVelocityDirectionThreshold;
-        var direction = GetSoftDragDirection(primaryHolder, holdable, holderVelocity, offset, distance, velocityDirectionThresholdSquared);
+        var direction = GetSoftDragDirection(dragAnchor, holdable, holderVelocity, offset, distance, velocityDirectionThresholdSquared);
         var desiredPosition = holderCoords.Position + direction * desiredDistance;
         var correction = desiredPosition - heldCoords.Position;
         var correctionDistance = correction.Length();
