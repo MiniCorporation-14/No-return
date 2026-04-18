@@ -16,7 +16,7 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
 
     protected override void OnHeldStateShutdown(Entity<ActiveScpHoldableComponent> held)
     {
-        foreach (var holderUid in held.Comp.Holders)
+        foreach (var holderUid in held.Comp.Holders.ToArray())
         {
             RemComp<ActiveScpHolderComponent>(holderUid);
         }
