@@ -1,7 +1,11 @@
 using Content.Shared._Scp.Holding.Components;
+using Content.Shared.Coordinates;
 using Content.Shared.DoAfter;
 using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Systems;
+using Robust.Shared.Audio;
+using Robust.Shared.Audio.Systems;
+using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Scp.Holding.Systems;
 
@@ -10,6 +14,8 @@ public abstract partial class SharedScpHoldingSystem
     /*
      * Breakout-attempt query cache, event routing, semantic state, and do-after handle tracking.
      */
+
+    [Dependency] private readonly SharedAudioSystem _audio = default!;
 
     private EntityQuery<ScpBreakoutAttemptComponent> _breakoutAttemptQuery;
 
@@ -64,14 +70,14 @@ public abstract partial class SharedScpHoldingSystem
 
     private void OnBreakoutDoAfter(Entity<ActiveScpHoldableComponent> ent, ref ScpHoldBreakoutDoAfterEvent args)
     {
-        EndBreakoutAttempt(ent.Owner, cancelDoAfter: false);
+        EndBreakoutAttempt(ent, cancelDoAfter: false);
 
         if (args.Handled)
             return;
 
         if (args.Cancelled)
         {
-            Popup(ent, "scp-hold-breakout-interrupted");
+            _popup.PopupClient(Loc.GetString("scp-hold-breakout-interrupted"), ent);
             return;
         }
 
@@ -81,15 +87,15 @@ public abstract partial class SharedScpHoldingSystem
 
     private void OnBreakoutAttemptStartup(Entity<ScpBreakoutAttemptComponent> ent, ref ComponentStartup args)
     {
-        if (!_activeHoldableQuery.TryComp(ent.Owner, out var held))
+        if (!_activeHoldableQuery.TryComp(ent, out var held))
             return;
 
-        ShowBreakoutAttemptFeedback((ent.Owner, held));
+        ShowBreakoutAttemptFeedback((ent, held));
     }
 
     private void OnBreakoutAttemptShutdown(Entity<ScpBreakoutAttemptComponent> ent, ref ComponentShutdown args)
     {
-        if (!_breakoutDoAfterIds.Remove(ent.Owner, out var doAfterId))
+        if (!_breakoutDoAfterIds.Remove(ent, out var doAfterId))
             return;
 
         CancelBreakoutAttemptDoAfter(doAfterId);
@@ -121,5 +127,40 @@ public abstract partial class SharedScpHoldingSystem
             return false;
 
         return (args.OldMovement & pressedButton) == MoveButtons.None;
+    }
+
+    private void ShowBreakoutAttemptFeedback(Entity<ActiveScpHoldableComponent> held)
+    {
+        if (!_timing.IsFirstTimePredicted)
+            return;
+
+        if (!TryComp<ScpHoldableComponent>(held, out var holdable))
+            return;
+
+        foreach (var holderUid in held.Comp.Holders)
+        {
+            if (!TryComp<ActiveScpHolderComponent>(holderUid, out var holder))
+                continue;
+
+            if (holder.Target != held)
+                continue;
+
+            SpawnBreakoutAttemptEffect(holderUid, holdable.BreakoutAttemptEffect);
+        }
+
+        PlayBreakoutAttemptSound(held, holdable.BreakoutAttemptSound);
+    }
+
+    private void SpawnBreakoutAttemptEffect(EntityUid holderUid, EntProtoId? effect)
+    {
+        if (effect == null)
+            return;
+
+        PredictedSpawnAttachedTo(effect.Value, holderUid.ToCoordinates());
+    }
+
+    private void PlayBreakoutAttemptSound(EntityUid targetUid, SoundSpecifier? sound)
+    {
+        _audio.PlayPredicted(sound, targetUid, targetUid);
     }
 }

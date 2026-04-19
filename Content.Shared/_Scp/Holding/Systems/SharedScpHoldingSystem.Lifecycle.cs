@@ -48,24 +48,24 @@ public abstract partial class SharedScpHoldingSystem
         ValidateAllActions(ent.Owner);
     }
 
-    private static void OnFullHeldUpdateCanMove(Entity<ActiveStateScpHoldableFullHoldComponent> ent, ref UpdateCanMoveEvent args)
+    private void OnFullHeldUpdateCanMove(Entity<ActiveStateScpHoldableFullHoldComponent> ent, ref UpdateCanMoveEvent args)
     {
         args.Cancel();
     }
 
     private void OnFullHeldStartup(Entity<ActiveStateScpHoldableFullHoldComponent> ent, ref ComponentStartup args)
     {
-        if (_activeHoldableQuery.TryComp(ent.Owner, out var held))
-            SyncPlaceholderHands((ent.Owner, held));
+        if (_activeHoldableQuery.TryComp(ent, out var held))
+            SyncPlaceholderHands((ent, held));
 
-        ZeroHeldVelocity(ent.Owner);
-        _actionBlocker.UpdateCanMove(ent.Owner);
+        ZeroHeldVelocity(ent);
+        _actionBlocker.UpdateCanMove(ent);
     }
 
     private void OnFullHeldRemove(Entity<ActiveStateScpHoldableFullHoldComponent> ent, ref ComponentRemove args)
     {
-        DeleteHeldHandBlockers(ent.Owner);
-        _actionBlocker.UpdateCanMove(ent.Owner);
+        DeleteHeldHandBlockers(ent);
+        _actionBlocker.UpdateCanMove(ent);
     }
 
     private void OnHolderStartup(Entity<ActiveScpHolderComponent> ent, ref ComponentStartup args)
@@ -79,20 +79,20 @@ public abstract partial class SharedScpHoldingSystem
     private void OnHolderShutdown(Entity<ActiveScpHolderComponent> ent, ref ComponentShutdown args)
     {
         ent.Comp.Target = null;
-        DeleteHolderHandBlockers(ent.Owner);
+        DeleteHolderHandBlockers(ent);
 
         if (!_timing.ApplyingState)
-            RemComp<ActiveStateScpHolderSlowdownComponent>(ent.Owner);
+            RemComp<ActiveStateScpHolderSlowdownComponent>(ent);
     }
 
     private void OnHolderSlowdownRemove(Entity<ActiveStateScpHolderSlowdownComponent> ent, ref ComponentRemove args)
     {
-        _movement.RefreshMovementSpeedModifiers(ent.Owner);
+        _movement.RefreshMovementSpeedModifiers(ent);
     }
 
     private void OnHolderSlowdownAfterState(Entity<ActiveStateScpHolderSlowdownComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        _movement.RefreshMovementSpeedModifiers(ent.Owner);
+        _movement.RefreshMovementSpeedModifiers(ent);
     }
 
     private void OnHolderSlowdownRefreshMoveSpeed(Entity<ActiveStateScpHolderSlowdownComponent> ent, ref RefreshMovementSpeedModifiersEvent args)

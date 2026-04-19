@@ -74,7 +74,7 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
 
     private void OnHolderAfterState(Entity<ActiveScpHolderComponent> ent, ref AfterAutoHandleStateEvent args)
     {
-        if (_player.LocalEntity != ent.Owner)
+        if (_player.LocalEntity != ent)
             return;
 
         ReconcileLocalHolderState(ent);
@@ -85,7 +85,7 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         if (!_timing.ApplyingState)
             return;
 
-        ReconcileLocalHolderBlocker(ent.Owner);
+        ReconcileLocalHolderBlocker(ent);
     }
 
     private void OnBlockerEquipped(Entity<ScpHoldHandBlockerComponent> ent, ref GotEquippedHandEvent args)
@@ -93,7 +93,7 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         if (!_timing.ApplyingState)
             return;
 
-        ReconcileLocalHolderBlocker(ent.Owner, args.User);
+        ReconcileLocalHolderBlocker(ent, args.User);
     }
 
     private void OnUpdateHeldPredicted(Entity<ActiveScpHoldableComponent> ent, ref UpdateIsPredictedEvent args)
@@ -101,13 +101,13 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         if (_player.LocalEntity is not { Valid: true } local)
             return;
 
-        if (ent.Owner == local)
-        {
-            args.IsPredicted = true;
-            return;
-        }
+        if ((EntityUid) ent == local)
+            {
+                args.IsPredicted = true;
+                return;
+            }
 
-        if (HasComp<ActiveStateScpHoldableCursorMoveComponent>(ent.Owner))
+        if (HasComp<ActiveStateScpHoldableCursorMoveComponent>(ent))
         {
             args.BlockPrediction = true;
             return;
@@ -115,7 +115,7 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
 
         if (_activeHolderQuery.TryComp(local, out var localHolder))
         {
-            if (localHolder.Target == ent.Owner)
+            if (localHolder.Target == ent)
             {
                 args.IsPredicted = true;
                 return;
@@ -139,7 +139,7 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
     {
         _physics.UpdateIsPredicted(held);
 
-        if (HasComp<ActiveStateScpHoldableFullHoldComponent>(held.Owner))
+        if (HasComp<ActiveStateScpHoldableFullHoldComponent>(held))
             SyncPlaceholderHands(held);
     }
 
@@ -200,7 +200,7 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         if (holder.Comp.Target == null)
             return;
 
-        if (!_handsQuery.TryComp(holder.Owner, out var hands))
+        if (!_handsQuery.TryComp(holder, out var hands))
             return;
 
         var target = holder.Comp.Target.Value;
@@ -211,7 +211,9 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         _authoritativeBlockers.Clear();
         _predictedBlockers.Clear();
 
-        foreach (var heldItem in _hands.EnumerateHeld((holder.Owner, hands)))
+        Entity<HandsComponent?> holderHands = (holder, hands);
+
+        foreach (var heldItem in _hands.EnumerateHeld(holderHands))
         {
             if (!_virtualItemQuery.TryComp(heldItem, out var virtualItem))
                 continue;
@@ -245,14 +247,14 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         var currentPredictedBlockerCount = Math.Min(_predictedBlockers.Count, requiredPredictedBlockerCount);
         while (currentPredictedBlockerCount < requiredPredictedBlockerCount)
         {
-            if (!_hands.TryGetEmptyHand((holder.Owner, hands), out var emptyHand))
+            if (!_hands.TryGetEmptyHand(holderHands, out var emptyHand))
                 break;
 
-            if (!_virtualItem.TrySpawnVirtualItem(target, holder.Owner, out var spawnedVirtualItem))
+            if (!_virtualItem.TrySpawnVirtualItem(target, holder, out var spawnedVirtualItem))
                 break;
 
             EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
-            _hands.DoPickup(holder.Owner, emptyHand, spawnedVirtualItem.Value, hands);
+            _hands.DoPickup(holder, emptyHand, spawnedVirtualItem.Value, hands);
             currentPredictedBlockerCount++;
         }
     }

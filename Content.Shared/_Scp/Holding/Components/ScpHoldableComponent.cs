@@ -131,12 +131,12 @@ public sealed partial class ScpHoldableComponent : Component
     /// Lower values make the target heavier to move.
     /// </summary>
     [DataField, AutoNetworkedField]
-    public float HolderWalkModifier = 0.5f;
+    public float HolderWalkModifier = 0.7f;
 
     /// <summary>
     /// Sprint speed modifier applied to holders while they move this target.
     /// Lower values make the target heavier to move.
     /// </summary>
     [DataField, AutoNetworkedField]
-    public float HolderSprintModifier = 0.5f;
+    public float HolderSprintModifier = 0.7f;
 }

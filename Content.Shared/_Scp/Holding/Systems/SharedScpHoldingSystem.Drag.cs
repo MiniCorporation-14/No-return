@@ -44,7 +44,7 @@ public abstract partial class SharedScpHoldingSystem
             return;
         }
 
-        if (anchorHolder.Target != held.Owner)
+        if (anchorHolder.Target != held)
             return;
 
         if (!_container.IsInSameOrNoContainer(dragAnchor, held.Owner))
@@ -53,11 +53,11 @@ public abstract partial class SharedScpHoldingSystem
         if (!_interaction.InRangeUnobstructed(dragAnchor, held.Owner, maintenanceRange))
             return;
 
-        if (!_physicsQuery.TryComp(held.Owner, out var heldPhysics))
+        if (!_physicsQuery.TryComp(held, out var heldPhysics))
             return;
 
         var holderCoords = _transform.GetMapCoordinates(dragAnchor);
-        var heldCoords = _transform.GetMapCoordinates(held.Owner);
+        var heldCoords = _transform.GetMapCoordinates(held);
 
         if (holderCoords.MapId != heldCoords.MapId)
             return;
@@ -92,7 +92,7 @@ public abstract partial class SharedScpHoldingSystem
                 desiredVelocity += correctionDirection * awaySpeed * holdable.SoftDragAwayVelocityStrength;
         }
 
-        ApplyHeldVelocity(held.Owner, desiredVelocity, heldPhysics, holdable);
+        ApplyHeldVelocity(held, desiredVelocity, heldPhysics, holdable);
     }
 
     private static float GetDesiredSoftDragDistance(ScpHoldableComponent holdable)
@@ -163,7 +163,7 @@ public abstract partial class SharedScpHoldingSystem
             return;
 
         if (_activeHolderQuery.TryComp(args.OtherEntity, out var holder) &&
-            holder.Target == ent.Owner)
+            holder.Target == ent)
         {
             args.Cancelled = true;
         }

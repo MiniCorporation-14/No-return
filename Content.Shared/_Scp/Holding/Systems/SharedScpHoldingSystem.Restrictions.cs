@@ -81,7 +81,7 @@ public abstract partial class SharedScpHoldingSystem
         return stage switch
         {
             ScpHoldStage.Soft => true,
-            ScpHoldStage.Full => _activeHoldableFullHoldStateQuery.HasComp(held.Owner),
+            ScpHoldStage.Full => _activeHoldableFullHoldStateQuery.HasComp(held),
             _ => false,
         };
     }

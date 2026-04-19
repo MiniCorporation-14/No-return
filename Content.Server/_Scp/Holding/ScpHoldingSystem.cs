@@ -24,13 +24,13 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
 
     private void OnHoldShutdown(Entity<ScpHolderComponent> ent, ref ComponentShutdown args)
     {
-        if (!TryComp<ActiveScpHolderComponent>(ent.Owner, out var holder))
+        if (!TryComp<ActiveScpHolderComponent>(ent, out var holder))
             return;
 
         if (holder.Target == null)
             return;
 
-        ReleaseHolderContribution(ent.Owner, holder.Target.Value, clearIfEmpty: true);
+        ReleaseHolderContribution(ent, holder.Target.Value, clearIfEmpty: true);
     }
 
     private void OnHandCountChanged(Entity<ActiveScpHoldableComponent> ent, ref HandCountChangedEvent args)
