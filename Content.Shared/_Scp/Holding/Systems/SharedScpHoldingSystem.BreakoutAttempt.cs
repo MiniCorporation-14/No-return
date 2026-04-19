@@ -1,11 +1,8 @@
 using Content.Shared._Scp.Holding.Components;
-using Content.Shared.Coordinates;
+using Content.Shared._Scp.Other.WorldAlert;
 using Content.Shared.DoAfter;
 using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Systems;
-using Robust.Shared.Audio;
-using Robust.Shared.Audio.Systems;
-using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Scp.Holding.Systems;
 
@@ -15,7 +12,7 @@ public abstract partial class SharedScpHoldingSystem
      * Breakout-attempt query cache, event routing, semantic state, and do-after handle tracking.
      */
 
-    [Dependency] private readonly SharedAudioSystem _audio = default!;
+    [Dependency] private readonly WorldAlertSystem _worldAlert = default!;
 
     private EntityQuery<ScpBreakoutAttemptComponent> _breakoutAttemptQuery;
 
@@ -64,8 +61,7 @@ public abstract partial class SharedScpHoldingSystem
         if (args.Handled)
             return;
 
-        args.Handled = true;
-        TryBreakOut(ent, viaMovement: false);
+        args.Handled = TryBreakOut(ent, viaMovement: false);
     }
 
     private void OnBreakoutDoAfter(Entity<ActiveScpHoldableComponent> ent, ref ScpHoldBreakoutDoAfterEvent args)
@@ -139,28 +135,16 @@ public abstract partial class SharedScpHoldingSystem
 
         foreach (var holderUid in held.Comp.Holders)
         {
-            if (!TryComp<ActiveScpHolderComponent>(holderUid, out var holder))
+            if (!_activeHolderQuery.TryComp(holderUid, out var holder))
                 continue;
 
             if (holder.Target != held)
                 continue;
 
-            SpawnBreakoutAttemptEffect(holderUid, holdable.BreakoutAttemptEffect);
+            var settings = Comp<ScpHolderComponent>(holderUid).BreakoutAttemptAlertSettings;
+            _worldAlert.TrySpawnAlert(holderUid, settings);
         }
 
-        PlayBreakoutAttemptSound(held, holdable.BreakoutAttemptSound);
-    }
-
-    private void SpawnBreakoutAttemptEffect(EntityUid holderUid, EntProtoId? effect)
-    {
-        if (effect == null)
-            return;
-
-        PredictedSpawnAttachedTo(effect.Value, holderUid.ToCoordinates());
-    }
-
-    private void PlayBreakoutAttemptSound(EntityUid targetUid, SoundSpecifier? sound)
-    {
-        _audio.PlayPredicted(sound, targetUid, targetUid);
+        _worldAlert.TrySpawnAlert(held, holdable.BreakoutAttemptAlertSettings);
     }
 }

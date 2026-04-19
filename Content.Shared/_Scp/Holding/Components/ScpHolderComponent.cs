@@ -1,5 +1,7 @@
 using Content.Shared._Scp.Holding.Systems;
+using Content.Shared._Scp.Other.WorldAlert;
 using Content.Shared.Whitelist;
+using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
 
 namespace Content.Shared._Scp.Holding.Components;
@@ -34,4 +36,13 @@ public sealed partial class ScpHolderComponent : Component
     /// </summary>
     [DataField, AutoNetworkedField]
     public TimeSpan HoldActionCooldown = TimeSpan.FromSeconds(1);
+
+    [DataField, AutoNetworkedField]
+    public WorldAlertSettings BreakoutAttemptAlertSettings = new()
+    {
+        Prototype = "WhistleExclamation",
+        Sound = new SoundCollectionSpecifier("storageRustle",
+            AudioParams.Default.WithVolume(-2f).WithMaxDistance(4f).WithVariation(0.15f)),
+        DirectSound = true,
+    };
 }

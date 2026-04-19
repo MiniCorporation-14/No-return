@@ -1,7 +1,7 @@
+using Content.Shared._Scp.Other.WorldAlert;
 using Content.Shared.Whitelist;
 using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
-using Robust.Shared.Prototypes;
 
 namespace Content.Shared._Scp.Holding.Components;
 
@@ -48,17 +48,16 @@ public sealed partial class ScpHoldableComponent : Component
     public TimeSpan PostBreakoutImmunity = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Optional effect prototype spawned on each holder when a full-hold breakout attempt starts.
+    /// Optional visual and audio feedback played when a full-hold breakout attempt starts.
     /// </summary>
     [DataField, AutoNetworkedField]
-    public EntProtoId? BreakoutAttemptEffect = "WhistleExclamation";
-
-    /// <summary>
-    /// Optional sound played from the held target when a full-hold breakout attempt starts.
-    /// </summary>
-    [DataField, AutoNetworkedField]
-    public SoundSpecifier? BreakoutAttemptSound = new SoundCollectionSpecifier("storageRustle",
-        AudioParams.Default.WithVolume(-2f).WithMaxDistance(4f).WithVariation(0.15f));
+    public WorldAlertSettings BreakoutAttemptAlertSettings = new()
+    {
+        Prototype = "WorldAlertHandcuffs",
+        Sound = new SoundCollectionSpecifier("storageRustle",
+            AudioParams.Default.WithVolume(-2f).WithMaxDistance(4f).WithVariation(0.15f)),
+        DirectSound = true,
+    };
 
     /// <summary>
     /// Maximum unobstructed range allowed between holder and target.
