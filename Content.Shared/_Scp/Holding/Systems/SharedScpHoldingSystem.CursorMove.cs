@@ -2,21 +2,15 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared._Scp.Holding.Components;
 using Robust.Shared.Map;
+using Robust.Shared.Physics.Components;
 
 namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {
     /*
-     * Cursor-move input validation, runtime state, and movement update helpers.
+     * Cursor-move input validation, per-holder cursor intent, and cursor-based movement helpers.
      */
-
-    private EntityQuery<ActiveStateScpHoldableCursorMoveComponent> _activeHoldableCursorMoveQuery;
-
-    private void InitializeCursorMoveQueries()
-    {
-        _activeHoldableCursorMoveQuery = GetEntityQuery<ActiveStateScpHoldableCursorMoveComponent>();
-    }
 
     private void InitializeCursorMoveEvents()
     {
@@ -31,10 +25,10 @@ public abstract partial class SharedScpHoldingSystem
         if (activeHolder.Target == null)
             return false;
 
-        if (!CanMoveHeldToCursor(holderUid, cursorCoords, out var held, out var clampedCoords))
+        if (!CanMoveHeldToCursor(holderUid, cursorCoords, out _, out var clampedCoords))
             return false;
 
-        SetCursorMoveState(held.Value, holderUid, clampedCoords, active: true);
+        SetHolderCursorMoveState((holderUid, activeHolder), clampedCoords, active: true);
         return true;
     }
 
@@ -45,7 +39,6 @@ public abstract partial class SharedScpHoldingSystem
         out EntityCoordinates clampedCoords,
         bool quiet = false)
     {
-        _ = quiet;
         held = null;
         clampedCoords = EntityCoordinates.Invalid;
 
@@ -59,9 +52,6 @@ public abstract partial class SharedScpHoldingSystem
             return false;
 
         if (!heldComponent.Holders.Contains(holderUid))
-            return false;
-
-        if (_activeHoldableFullHoldStateQuery.HasComp(heldUid))
             return false;
 
         held = (heldUid, heldComponent);
@@ -81,73 +71,108 @@ public abstract partial class SharedScpHoldingSystem
         return TryClampHeldCursorMoveTargetCoordinates(holderUid, cursorCoords, maintenanceRange, out clampedCoords);
     }
 
-    private bool TryGetValidatedCursorMoveState(
+    private bool TryGetHolderCursorDesiredVelocity(
+        Entity<ActiveScpHolderComponent> holder,
         Entity<ActiveScpHoldableComponent> held,
         ScpHoldableComponent holdable,
-        [NotNullWhen(true)] out ActiveStateScpHoldableCursorMoveComponent? cursorMove,
-        out EntityUid holderUid)
+        float maintenanceRange,
+        PhysicsComponent heldPhysics,
+        out Vector2 desiredVelocity)
     {
-        cursorMove = null;
-        holderUid = default;
+        desiredVelocity = Vector2.Zero;
 
-        if (!_activeHoldableCursorMoveQuery.TryComp(held, out var moveState))
+        if (!TryGetValidatedHolderCursorMoveState(holder, held, maintenanceRange, out var targetCoordinates))
             return false;
 
-        if (!moveState.TargetCoordinates.IsValid(EntityManager))
+        var targetCoords = _transform.ToMapCoordinates(targetCoordinates);
+        var heldCoords = _transform.GetMapCoordinates(held);
+
+        if (targetCoords.MapId != heldCoords.MapId)
         {
-            ClearCursorMoveState(held);
+            ClearHolderCursorMoveState(holder);
             return false;
         }
 
-        if (_activeHoldableFullHoldStateQuery.HasComp(held))
+        var correction = targetCoords.Position - heldCoords.Position;
+        var correctionDistance = correction.Length();
+
+        if (!holder.Comp.CursorMoveActive && correctionDistance > holdable.SoftDragSettleTolerance)
         {
-            ClearCursorMoveState(held);
+            holder.Comp.CursorMoveActive = true;
+            Dirty(holder);
+        }
+
+        if (correctionDistance <= holdable.SoftDragSettleTolerance)
+        {
+            if (holder.Comp.CursorMoveActive)
+            {
+                holder.Comp.CursorMoveActive = false;
+                Dirty(holder);
+            }
+
+            return true;
+        }
+
+        var correctionDirection = correction / correctionDistance;
+        var correctionSpeed = Math.Min(
+            correctionDistance / GetSoftDragCatchUpTime(holdable),
+            holdable.SoftDragMaximumCorrectionSpeed);
+
+        desiredVelocity = correctionDirection * correctionSpeed;
+
+        var relativeVelocity = heldPhysics.LinearVelocity;
+        var awaySpeed = MathF.Max(0f, -Vector2.Dot(relativeVelocity, correctionDirection));
+        if (awaySpeed > 0f)
+            desiredVelocity += correctionDirection * awaySpeed * holdable.SoftDragAwayVelocityStrength;
+
+        return true;
+    }
+
+    private bool TryGetValidatedHolderCursorMoveState(
+        Entity<ActiveScpHolderComponent> holder,
+        Entity<ActiveScpHoldableComponent> held,
+        float maintenanceRange,
+        out EntityCoordinates targetCoordinates)
+    {
+        targetCoordinates = EntityCoordinates.Invalid;
+
+        if (holder.Comp.Target != held)
+        {
+            ClearHolderCursorMoveState(holder);
             return false;
         }
 
-        if (!_activeHolderQuery.TryComp(moveState.Holder, out var holder))
+        if (!held.Comp.Holders.Contains(holder.Owner))
         {
-            ClearCursorMoveState(held);
+            ClearHolderCursorMoveState(holder);
             return false;
         }
 
-        if (holder.Target != held)
+        if (!holder.Comp.CursorTargetCoordinates.IsValid(EntityManager))
+            return false;
+
+        if (!_container.IsInSameOrNoContainer(holder.Owner, held.Owner))
         {
-            ClearCursorMoveState(held);
+            ClearHolderCursorMoveState(holder);
             return false;
         }
 
-        if (!held.Comp.Holders.Contains(moveState.Holder))
-        {
-            ClearCursorMoveState(held);
-            return false;
-        }
-
-        if (!_container.IsInSameOrNoContainer(moveState.Holder, held.Owner))
-        {
-            ClearCursorMoveState(held);
-            return false;
-        }
-
-        var desiredSoftDragDistance = GetDesiredSoftDragDistance(holdable);
-        var maintenanceRange = GetHoldMaintenanceRange(holdable, desiredSoftDragDistance);
-        var holderCoords = _transform.GetMapCoordinates(moveState.Holder);
-        var targetCoords = _transform.ToMapCoordinates(moveState.TargetCoordinates);
+        var holderCoords = _transform.GetMapCoordinates(holder.Owner);
+        var targetCoords = _transform.ToMapCoordinates(holder.Comp.CursorTargetCoordinates);
 
         if (holderCoords.MapId != targetCoords.MapId)
         {
-            ClearCursorMoveState(held);
+            ClearHolderCursorMoveState(holder);
             return false;
         }
 
         if ((targetCoords.Position - holderCoords.Position).LengthSquared() > maintenanceRange * maintenanceRange)
         {
-            ClearCursorMoveState(held);
+            ClearHolderCursorMoveState(holder);
             return false;
         }
 
-        cursorMove = moveState;
-        holderUid = moveState.Holder;
+        targetCoordinates = holder.Comp.CursorTargetCoordinates;
         return true;
     }
 
@@ -179,92 +204,47 @@ public abstract partial class SharedScpHoldingSystem
         return clampedCoords.IsValid(EntityManager);
     }
 
-    private void SetCursorMoveState(
-        Entity<ActiveScpHoldableComponent> held,
-        EntityUid holderUid,
+    private void SetHolderCursorMoveState(
+        Entity<ActiveScpHolderComponent> holder,
         EntityCoordinates targetCoordinates,
         bool active)
     {
-        var cursorMove = EnsureComp<ActiveStateScpHoldableCursorMoveComponent>(held);
-        if (cursorMove.Holder == holderUid &&
-            cursorMove.TargetCoordinates == targetCoordinates &&
-            cursorMove.Active == active)
+        if (holder.Comp.CursorTargetCoordinates == targetCoordinates
+            && holder.Comp.CursorMoveActive == active)
         {
             return;
         }
 
-        cursorMove.Holder = holderUid;
-        cursorMove.TargetCoordinates = targetCoordinates;
-        cursorMove.Active = active;
-        Dirty(held, cursorMove);
+        holder.Comp.CursorTargetCoordinates = targetCoordinates;
+        holder.Comp.CursorMoveActive = active;
+        Dirty(holder);
     }
 
-    private void ClearCursorMoveState(EntityUid heldUid)
+    private void ClearHolderCursorMoveState(EntityUid holderUid)
     {
-        if (_activeHoldableCursorMoveQuery.HasComp(heldUid))
-            RemComp<ActiveStateScpHoldableCursorMoveComponent>(heldUid);
+        if (_activeHolderQuery.TryComp(holderUid, out var holder))
+            ClearHolderCursorMoveState((holderUid, holder));
     }
 
-    private void UpdateCursorMoveDrag(
-        Entity<ActiveScpHoldableComponent> held,
-        ScpHoldableComponent holdable,
-        EntityUid holderUid,
-        ActiveStateScpHoldableCursorMoveComponent cursorMove)
+    private void ClearHolderCursorMoveState(Entity<ActiveScpHolderComponent> holder)
     {
-        if (!_physicsQuery.TryComp(held, out var heldPhysics))
-            return;
-
-        if (!_container.IsInSameOrNoContainer(holderUid, held.Owner))
+        if (holder.Comp.CursorTargetCoordinates == EntityCoordinates.Invalid
+            && !holder.Comp.CursorMoveActive)
         {
-            ClearCursorMoveState(held);
             return;
         }
 
-        var targetCoords = _transform.ToMapCoordinates(cursorMove.TargetCoordinates);
-        var heldCoords = _transform.GetMapCoordinates(held);
+        holder.Comp.CursorTargetCoordinates = EntityCoordinates.Invalid;
+        holder.Comp.CursorMoveActive = false;
+        Dirty(holder);
+    }
 
-        if (targetCoords.MapId != heldCoords.MapId)
+    private void ClearHeldCursorMoveStates(Entity<ActiveScpHoldableComponent> held)
+    {
+        foreach (var holderUid in held.Comp.Holders)
         {
-            ClearCursorMoveState(held);
-            return;
+            ClearHolderCursorMoveState(holderUid);
         }
-
-        var correction = targetCoords.Position - heldCoords.Position;
-        var correctionDistance = correction.Length();
-
-        if (!cursorMove.Active && correctionDistance > holdable.SoftDragSettleTolerance)
-        {
-            cursorMove.Active = true;
-            Dirty(held, cursorMove);
-        }
-
-        Vector2 desiredVelocity;
-        if (correctionDistance <= holdable.SoftDragSettleTolerance)
-        {
-            if (cursorMove.Active)
-            {
-                cursorMove.Active = false;
-                Dirty(held, cursorMove);
-            }
-
-            desiredVelocity = Vector2.Zero;
-        }
-        else
-        {
-            var correctionDirection = correction / correctionDistance;
-            var correctionSpeed = Math.Min(
-                correctionDistance / GetSoftDragCatchUpTime(holdable),
-                holdable.SoftDragMaximumCorrectionSpeed);
-
-            desiredVelocity = correctionDirection * correctionSpeed;
-
-            var relativeVelocity = heldPhysics.LinearVelocity;
-            var awaySpeed = MathF.Max(0f, -Vector2.Dot(relativeVelocity, correctionDirection));
-            if (awaySpeed > 0f)
-                desiredVelocity += correctionDirection * awaySpeed * holdable.SoftDragAwayVelocityStrength;
-        }
-
-        ApplyHeldVelocity(held, desiredVelocity, heldPhysics, holdable);
     }
 
     private void OnHolderMove(Entity<ActiveScpHolderComponent> ent, ref MoveEvent args)
@@ -281,6 +261,6 @@ public abstract partial class SharedScpHoldingSystem
             return;
         }
 
-        ClearCursorMoveState(ent.Comp.Target.Value);
+        ClearHolderCursorMoveState(ent);
     }
 }

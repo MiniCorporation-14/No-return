@@ -1,5 +1,6 @@
 using Content.Shared._Scp.Holding.Systems;
 using Robust.Shared.GameStates;
+using Robust.Shared.Map;
 
 namespace Content.Shared._Scp.Holding.Components;
 
@@ -15,4 +16,16 @@ public sealed partial class ActiveScpHolderComponent : Component
     /// </summary>
     [AutoNetworkedField, ViewVariables]
     public EntityUid? Target;
+
+    /// <summary>
+    /// Per-holder cursor target used to contribute cursor-driven movement without a global leader.
+    /// </summary>
+    [AutoNetworkedField, ViewVariables]
+    public EntityCoordinates CursorTargetCoordinates = EntityCoordinates.Invalid;
+
+    /// <summary>
+    /// True while this holder is still actively pulling the held target toward its stored cursor target.
+    /// </summary>
+    [AutoNetworkedField, ViewVariables]
+    public bool CursorMoveActive;
 }

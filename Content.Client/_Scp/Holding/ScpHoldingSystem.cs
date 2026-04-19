@@ -1,14 +1,17 @@
-using System.Numerics;
 using Content.Client.Hands.Systems;
 using Content.Client.Inventory;
 using Content.Shared._Scp.Holding.Components;
 using Content.Shared._Scp.Holding.Systems;
 using Content.Shared.Hands;
 using Content.Shared.Hands.Components;
+using Content.Shared.Input;
 using Content.Shared.Inventory.VirtualItem;
 using Robust.Client.Physics;
 using Robust.Client.Player;
+using Robust.Shared.Input.Binding;
+using Robust.Shared.Map;
 using Robust.Shared.Physics.Components;
+using Robust.Shared.Player;
 using Robust.Shared.Timing;
 
 namespace Content.Client._Scp.Holding;
@@ -35,6 +38,10 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
     {
         base.Initialize();
 
+        CommandBinds.Builder
+            .Bind(ContentKeyFunctions.MovePulledObject, new PointerInputCmdHandler(OnMoveHeldToCursor))
+            .Register<ScpHoldingSystem>();
+
         _handsQuery = GetEntityQuery<HandsComponent>();
         _holdableQuery = GetEntityQuery<ScpHoldableComponent>();
         _blockerQuery = GetEntityQuery<ScpHoldHandBlockerComponent>();
@@ -46,6 +53,12 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         SubscribeLocalEvent<ScpHoldHandBlockerComponent, ComponentStartup>(OnBlockerStartup);
         SubscribeLocalEvent<ScpHoldHandBlockerComponent, GotEquippedHandEvent>(OnBlockerEquipped);
         SubscribeLocalEvent<ActiveScpHoldableComponent, UpdateIsPredictedEvent>(OnUpdateHeldPredicted);
+    }
+
+    public override void Shutdown()
+    {
+        base.Shutdown();
+        CommandBinds.Unregister<ScpHoldingSystem>();
     }
 
     public override void Update(float frameTime)
@@ -101,15 +114,9 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
         if (_player.LocalEntity is not { Valid: true } local)
             return;
 
-        if ((EntityUid) ent == local)
-            {
-                args.IsPredicted = true;
-                return;
-            }
-
-        if (HasComp<ActiveStateScpHoldableCursorMoveComponent>(ent))
+        if (ent.Owner == local)
         {
-            args.BlockPrediction = true;
+            args.IsPredicted = true;
             return;
         }
 
@@ -133,6 +140,15 @@ public sealed partial class ScpHoldingSystem : SharedScpHoldingSystem
 
         if (ent.Comp.Holders.Count > 0)
             args.BlockPrediction = true;
+    }
+
+    private bool OnMoveHeldToCursor(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
+    {
+        if (_player.LocalEntity is not { Valid: true } local)
+            return false;
+
+        TryMoveHeldToCursor(local, coords);
+        return false;
     }
 
     private void ReconcileHeldAfterState(Entity<ActiveScpHoldableComponent> held)

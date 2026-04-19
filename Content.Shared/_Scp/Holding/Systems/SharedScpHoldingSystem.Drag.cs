@@ -10,7 +10,7 @@ namespace Content.Shared._Scp.Holding.Systems;
 public abstract partial class SharedScpHoldingSystem
 {
     /*
-     * Drag-local dependencies, soft-drag movement, and helper calculations.
+     * Drag-local dependencies, aggregate holder movement, and helper calculations.
      */
 
     [Dependency] private readonly SharedTransformSystem _transform = default!;
@@ -33,66 +33,95 @@ public abstract partial class SharedScpHoldingSystem
     private void UpdateSoftDrag(
         Entity<ActiveScpHoldableComponent> held,
         ScpHoldableComponent holdable,
-        EntityUid dragAnchor,
-        ActiveScpHolderComponent anchorHolder,
         float maintenanceRange,
         float desiredDistance)
     {
-        if (TryGetValidatedCursorMoveState(held, holdable, out var cursorMove, out var cursorHolderUid))
-        {
-            UpdateCursorMoveDrag(held, holdable, cursorHolderUid, cursorMove);
-            return;
-        }
-
-        if (anchorHolder.Target != held)
-            return;
-
-        if (!_container.IsInSameOrNoContainer(dragAnchor, held.Owner))
-            return;
-
-        if (!_interaction.InRangeUnobstructed(dragAnchor, held.Owner, maintenanceRange))
-            return;
-
         if (!_physicsQuery.TryComp(held, out var heldPhysics))
             return;
 
-        var holderCoords = _transform.GetMapCoordinates(dragAnchor);
-        var heldCoords = _transform.GetMapCoordinates(held);
+        var aggregateDesiredVelocity = Vector2.Zero;
+        var contributingHolderCount = 0;
+
+        foreach (var holderUid in held.Comp.Holders)
+        {
+            if (!_activeHolderQuery.TryComp(holderUid, out var holder))
+                continue;
+
+            if (holder.Target != held)
+                continue;
+
+            Vector2 desiredVelocity;
+            if (!TryGetHolderCursorDesiredVelocity((holderUid, holder), held, holdable, maintenanceRange, heldPhysics, out desiredVelocity) &&
+                !TryGetHolderMovementDesiredVelocity((holderUid, holder), held, holdable, maintenanceRange, desiredDistance, heldPhysics, out desiredVelocity))
+            {
+                continue;
+            }
+
+            aggregateDesiredVelocity += desiredVelocity;
+            contributingHolderCount++;
+        }
+
+        if (contributingHolderCount == 0)
+        {
+            ZeroHeldVelocity(held);
+            return;
+        }
+
+        ApplyHeldVelocity(held, aggregateDesiredVelocity / contributingHolderCount, heldPhysics, holdable);
+    }
+
+    private bool TryGetHolderMovementDesiredVelocity(
+        Entity<ActiveScpHolderComponent> holder,
+        Entity<ActiveScpHoldableComponent> held,
+        ScpHoldableComponent holdable,
+        float maintenanceRange,
+        float desiredDistance,
+        PhysicsComponent heldPhysics,
+        out Vector2 desiredVelocity)
+    {
+        desiredVelocity = Vector2.Zero;
+
+        if (!_container.IsInSameOrNoContainer(holder.Owner, held.Owner))
+            return false;
+
+        if (!_interaction.InRangeUnobstructed(holder.Owner, held.Owner, maintenanceRange))
+            return false;
+
+        var holderCoords = _transform.GetMapCoordinates(holder.Owner);
+        var heldCoords = _transform.GetMapCoordinates(held.Owner);
 
         if (holderCoords.MapId != heldCoords.MapId)
-            return;
+            return false;
 
         var offset = heldCoords.Position - holderCoords.Position;
         var distance = offset.Length();
-        var holderVelocity = _physicsQuery.TryComp(dragAnchor, out var holderPhysics)
+        var holderVelocity = _physicsQuery.TryComp(holder, out var holderPhysics)
             ? holderPhysics.LinearVelocity
             : Vector2.Zero;
         var velocityDirectionThresholdSquared = holdable.SoftDragVelocityDirectionThreshold * holdable.SoftDragVelocityDirectionThreshold;
-        var direction = GetSoftDragDirection(dragAnchor, holdable, holderVelocity, offset, distance, velocityDirectionThresholdSquared);
+        var direction = GetSoftDragDirection(holder.Owner, holdable, holderVelocity, offset, distance, velocityDirectionThresholdSquared);
         var desiredPosition = holderCoords.Position + direction * desiredDistance;
         var correction = desiredPosition - heldCoords.Position;
         var correctionDistance = correction.Length();
 
-        Vector2 desiredVelocity;
         if (correctionDistance <= holdable.SoftDragSettleTolerance)
         {
             desiredVelocity = holderVelocity.LengthSquared() > velocityDirectionThresholdSquared
                 ? holderVelocity
                 : Vector2.Zero;
-        }
-        else
-        {
-            var correctionDirection = correction / correctionDistance;
-            var correctionSpeed = Math.Min(correctionDistance / GetSoftDragCatchUpTime(holdable), holdable.SoftDragMaximumCorrectionSpeed);
-            desiredVelocity = holderVelocity + correctionDirection * correctionSpeed;
-
-            var relativeVelocity = heldPhysics.LinearVelocity - holderVelocity;
-            var awaySpeed = MathF.Max(0f, -Vector2.Dot(relativeVelocity, correctionDirection));
-            if (awaySpeed > 0f)
-                desiredVelocity += correctionDirection * awaySpeed * holdable.SoftDragAwayVelocityStrength;
+            return true;
         }
 
-        ApplyHeldVelocity(held, desiredVelocity, heldPhysics, holdable);
+        var correctionDirection = correction / correctionDistance;
+        var correctionSpeed = Math.Min(correctionDistance / GetSoftDragCatchUpTime(holdable), holdable.SoftDragMaximumCorrectionSpeed);
+        desiredVelocity = holderVelocity + correctionDirection * correctionSpeed;
+
+        var relativeVelocity = heldPhysics.LinearVelocity - holderVelocity;
+        var awaySpeed = MathF.Max(0f, -Vector2.Dot(relativeVelocity, correctionDirection));
+        if (awaySpeed > 0f)
+            desiredVelocity += correctionDirection * awaySpeed * holdable.SoftDragAwayVelocityStrength;
+
+        return true;
     }
 
     private static float GetDesiredSoftDragDistance(ScpHoldableComponent holdable)

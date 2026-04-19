@@ -58,7 +58,6 @@ public abstract partial class SharedScpHoldingSystem
         if (_activeHoldableQuery.TryComp(ent, out var held))
             SyncPlaceholderHands((ent, held));
 
-        ZeroHeldVelocity(ent);
         _actionBlocker.UpdateCanMove(ent);
     }
 
