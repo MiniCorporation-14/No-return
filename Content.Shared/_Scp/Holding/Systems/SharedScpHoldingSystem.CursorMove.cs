@@ -12,6 +12,8 @@ public abstract partial class SharedScpHoldingSystem
      * Cursor-move input validation, per-holder cursor intent, and cursor-based movement helpers.
      */
 
+    private const float CursorMoveCancelMovementDistance = 0.005f;
+
     private void InitializeCursorMoveEvents()
     {
         SubscribeLocalEvent<ActiveScpHolderComponent, MoveEvent>(OnHolderMove);
@@ -25,10 +27,10 @@ public abstract partial class SharedScpHoldingSystem
         if (activeHolder.Target == null)
             return false;
 
-        if (!CanMoveHeldToCursor(holderUid, cursorCoords, out _, out var clampedCoords))
+        if (!CanMoveHeldToCursor(holderUid, cursorCoords, out _, out var targetCoords))
             return false;
 
-        SetHolderCursorMoveState((holderUid, activeHolder), clampedCoords, active: true);
+        SetHolderCursorMoveState((holderUid, activeHolder), targetCoords, active: true);
         return true;
     }
 
@@ -36,11 +38,11 @@ public abstract partial class SharedScpHoldingSystem
         EntityUid holderUid,
         EntityCoordinates cursorCoords,
         [NotNullWhen(true)] out Entity<ActiveScpHoldableComponent>? held,
-        out EntityCoordinates clampedCoords,
+        out EntityCoordinates targetCoords,
         bool quiet = false)
     {
         held = null;
-        clampedCoords = EntityCoordinates.Invalid;
+        targetCoords = EntityCoordinates.Invalid;
 
         if (!_activeHolderQuery.TryComp(holderUid, out var holder))
             return false;
@@ -68,7 +70,7 @@ public abstract partial class SharedScpHoldingSystem
         if (!_interaction.InRangeUnobstructed(holderUid, heldUid, maintenanceRange))
             return false;
 
-        return TryClampHeldCursorMoveTargetCoordinates(holderUid, cursorCoords, maintenanceRange, out clampedCoords);
+        return TryNormalizeHeldCursorMoveTargetCoordinates(holderUid, cursorCoords, out targetCoords);
     }
 
     private bool TryGetHolderCursorDesiredVelocity(
@@ -84,6 +86,7 @@ public abstract partial class SharedScpHoldingSystem
         if (!TryGetValidatedHolderCursorMoveState(holder, held, maintenanceRange, out var targetCoordinates))
             return false;
 
+        var holderCoords = _transform.GetMapCoordinates(holder);
         var targetCoords = _transform.ToMapCoordinates(targetCoordinates);
         var heldCoords = _transform.GetMapCoordinates(held);
 
@@ -113,13 +116,16 @@ public abstract partial class SharedScpHoldingSystem
             return true;
         }
 
-        var correctionDirection = correction / correctionDistance;
-        var correctionSpeed = Math.Min(
-            correctionDistance / GetSoftDragCatchUpTime(holdable),
-            holdable.SoftDragMaximumCorrectionSpeed);
+        desiredVelocity = GetHolderCursorCorrectionVelocity(
+            holderCoords.Position,
+            heldCoords.Position,
+            targetCoords.Position,
+            holdable);
 
-        desiredVelocity = correctionDirection * correctionSpeed;
+        if (desiredVelocity == Vector2.Zero)
+            return true;
 
+        var correctionDirection = Vector2.Normalize(desiredVelocity);
         var relativeVelocity = heldPhysics.LinearVelocity;
         var awaySpeed = MathF.Max(0f, -Vector2.Dot(relativeVelocity, correctionDirection));
         if (awaySpeed > 0f)
@@ -157,32 +163,91 @@ public abstract partial class SharedScpHoldingSystem
             return false;
         }
 
-        var holderCoords = _transform.GetMapCoordinates(holder.Owner);
-        var targetCoords = _transform.ToMapCoordinates(holder.Comp.CursorTargetCoordinates);
-
-        if (holderCoords.MapId != targetCoords.MapId)
+        if (!TryClampHeldCursorMoveTargetCoordinates(
+                holder.Owner,
+                holder.Comp.CursorTargetCoordinates,
+                maintenanceRange,
+                out targetCoordinates))
         {
             ClearHolderCursorMoveState(holder);
             return false;
         }
 
-        if ((targetCoords.Position - holderCoords.Position).LengthSquared() > maintenanceRange * maintenanceRange)
-        {
-            ClearHolderCursorMoveState(holder);
-            return false;
-        }
-
-        targetCoordinates = holder.Comp.CursorTargetCoordinates;
         return true;
     }
 
-    private bool TryClampHeldCursorMoveTargetCoordinates(
+    private Vector2 GetHolderCursorCorrectionVelocity(
+        Vector2 holderPosition,
+        Vector2 heldPosition,
+        Vector2 targetPosition,
+        ScpHoldableComponent holdable)
+    {
+        var correction = targetPosition - heldPosition;
+        var correctionDistance = correction.Length();
+        if (correctionDistance <= holdable.SoftDragSettleTolerance)
+            return Vector2.Zero;
+
+        var currentOffset = heldPosition - holderPosition;
+        var desiredOffset = targetPosition - holderPosition;
+        var currentDistance = currentOffset.Length();
+        var desiredDistance = desiredOffset.Length();
+
+        if (currentDistance <= holdable.SoftDragSettleTolerance ||
+            desiredDistance <= holdable.SoftDragSettleTolerance)
+        {
+            return GetDirectCursorCorrectionVelocity(correction, correctionDistance, holdable);
+        }
+
+        var catchUpTime = GetSoftDragCatchUpTime(holdable);
+        var currentDirection = currentOffset / currentDistance;
+        var desiredDirection = desiredOffset / desiredDistance;
+        var cross = currentDirection.X * desiredDirection.Y - currentDirection.Y * desiredDirection.X;
+        var dot = Math.Clamp(Vector2.Dot(currentDirection, desiredDirection), -1f, 1f);
+        var angleDelta = MathF.Atan2(cross, dot);
+
+        var tangentDirection = cross >= 0f
+            ? new Vector2(-currentDirection.Y, currentDirection.X)
+            : new Vector2(currentDirection.Y, -currentDirection.X);
+
+        var tangentialSpeed = Math.Min(
+            MathF.Abs(angleDelta) * MathF.Max(currentDistance, desiredDistance) / catchUpTime,
+            holdable.SoftDragMaximumCorrectionSpeed);
+
+        var radialSpeed = Math.Clamp(
+            (desiredDistance - currentDistance) / catchUpTime,
+            -holdable.SoftDragMaximumCorrectionSpeed,
+            holdable.SoftDragMaximumCorrectionSpeed);
+
+        var correctionVelocity = tangentDirection * tangentialSpeed + currentDirection * radialSpeed;
+        var maximumSpeedSquared = holdable.SoftDragMaximumCorrectionSpeed * holdable.SoftDragMaximumCorrectionSpeed;
+        if (correctionVelocity.LengthSquared() > maximumSpeedSquared)
+            correctionVelocity = Vector2.Normalize(correctionVelocity) * holdable.SoftDragMaximumCorrectionSpeed;
+
+        return correctionVelocity;
+    }
+
+    private Vector2 GetDirectCursorCorrectionVelocity(
+        Vector2 correction,
+        float correctionDistance,
+        ScpHoldableComponent holdable)
+    {
+        if (correctionDistance <= 0f)
+            return Vector2.Zero;
+
+        var correctionDirection = correction / correctionDistance;
+        var correctionSpeed = Math.Min(
+            correctionDistance / GetSoftDragCatchUpTime(holdable),
+            holdable.SoftDragMaximumCorrectionSpeed);
+
+        return correctionDirection * correctionSpeed;
+    }
+
+    private bool TryNormalizeHeldCursorMoveTargetCoordinates(
         EntityUid holderUid,
         EntityCoordinates cursorCoords,
-        float maintenanceRange,
-        out EntityCoordinates clampedCoords)
+        out EntityCoordinates normalizedCoords)
     {
-        clampedCoords = EntityCoordinates.Invalid;
+        normalizedCoords = EntityCoordinates.Invalid;
 
         if (!cursorCoords.IsValid(EntityManager))
             return false;
@@ -193,6 +258,23 @@ public abstract partial class SharedScpHoldingSystem
         if (holderCoords.MapId != cursorMapCoords.MapId)
             return false;
 
+        normalizedCoords = _transform.ToCoordinates(cursorMapCoords);
+        return normalizedCoords.IsValid(EntityManager);
+    }
+
+    private bool TryClampHeldCursorMoveTargetCoordinates(
+        EntityUid holderUid,
+        EntityCoordinates cursorCoords,
+        float maintenanceRange,
+        out EntityCoordinates clampedCoords)
+    {
+        clampedCoords = EntityCoordinates.Invalid;
+
+        if (!TryNormalizeHeldCursorMoveTargetCoordinates(holderUid, cursorCoords, out var normalizedCoords))
+            return false;
+
+        var holderCoords = _transform.GetMapCoordinates(holderUid);
+        var cursorMapCoords = _transform.ToMapCoordinates(normalizedCoords);
         var offset = cursorMapCoords.Position - holderCoords.Position;
         var distance = offset.Length();
         var clampedPosition = cursorMapCoords.Position;
@@ -252,11 +334,12 @@ public abstract partial class SharedScpHoldingSystem
         if (_timing.ApplyingState)
             return;
 
-        if (ent.Comp.Target == null)
+        if (ent.Comp.Target == null || ent.Comp.CursorTargetCoordinates == EntityCoordinates.Invalid)
             return;
 
         if (args.NewPosition.EntityId == args.OldPosition.EntityId &&
-            (args.NewPosition.Position - args.OldPosition.Position).LengthSquared() <= 0f)
+            (args.NewPosition.Position - args.OldPosition.Position).LengthSquared() <
+            CursorMoveCancelMovementDistance * CursorMoveCancelMovementDistance)
         {
             return;
         }

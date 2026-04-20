@@ -187,8 +187,14 @@ public abstract partial class SharedScpHoldingSystem
             return false;
         }
 
-        if (checkAttempt && !CanPassHoldAttempt(holder, target))
-            return false;
+        if (checkAttempt)
+        {
+            if (!CanPassPullAttempt(holder.Owner, target))
+                return false;
+
+            if (!CanPassHoldAttempt(holder, target))
+                return false;
+        }
 
         return true;
     }
@@ -212,6 +218,9 @@ public abstract partial class SharedScpHoldingSystem
 
     public bool TryBreakOut(Entity<ActiveScpHoldableComponent> held, bool viaMovement)
     {
+        if (IsBreakoutBlockedByCuffs(held))
+            return false;
+
         return _activeHoldableFullHoldStateQuery.HasComp(held)
             ? TryStartFullBreakout(held, viaMovement)
             : TrySoftBreakOut(held, viaMovement);

@@ -18,7 +18,9 @@ public sealed partial class ActiveScpHolderComponent : Component
     public EntityUid? Target;
 
     /// <summary>
-    /// Per-holder cursor target used to contribute cursor-driven movement without a global leader.
+    /// Raw per-holder desired cursor target in world space.
+    /// Each tick it is clamped relative to the holder's current position,
+    /// so far clicks keep their direction even if the holder moves.
     /// </summary>
     [AutoNetworkedField, ViewVariables]
     public EntityCoordinates CursorTargetCoordinates = EntityCoordinates.Invalid;

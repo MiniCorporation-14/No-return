@@ -61,6 +61,12 @@ public abstract partial class SharedScpHoldingSystem
         if (args.Handled)
             return;
 
+        if (TryRedirectBreakoutAlertToUncuff(ent, args.User))
+        {
+            args.Handled = true;
+            return;
+        }
+
         args.Handled = TryBreakOut(ent, viaMovement: false);
     }
 
@@ -76,6 +82,9 @@ public abstract partial class SharedScpHoldingSystem
             _popup.PopupClient(Loc.GetString("scp-hold-breakout-interrupted"), ent);
             return;
         }
+
+        if (IsBreakoutBlockedByCuffs(ent))
+            return;
 
         BreakOut(ent, args.ViaMovement, applyImmunity: true);
         args.Handled = true;
@@ -100,6 +109,9 @@ public abstract partial class SharedScpHoldingSystem
     private void OnHeldMoveInput(Entity<ActiveScpHoldableComponent> ent, ref MoveInputEvent args)
     {
         if (!IsBreakoutMovementPress(args))
+            return;
+
+        if (IsBreakoutBlockedByCuffs(ent))
             return;
 
         TryBreakOut(ent, viaMovement: true);
