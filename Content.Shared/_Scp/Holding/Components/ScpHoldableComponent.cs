@@ -138,4 +138,11 @@ public sealed partial class ScpHoldableComponent : Component
     /// </summary>
     [DataField, AutoNetworkedField]
     public float HolderSprintModifier = 0.7f;
+
+    /// <summary>
+    /// Optional speed modifier applied only while the held target is moved toward the cursor.
+    /// If not set, <see cref="HolderSprintModifier"/> is used.
+    /// </summary>
+    [DataField, AutoNetworkedField]
+    public float? CursorMoveSpeedModifier;
 }

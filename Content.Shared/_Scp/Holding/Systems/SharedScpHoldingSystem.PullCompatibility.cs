@@ -5,6 +5,11 @@ namespace Content.Shared._Scp.Holding.Systems;
 
 public abstract partial class SharedScpHoldingSystem
 {
+    public bool CanRedirectPullToScpHold(EntityUid pullerUid, EntityUid pullableUid)
+    {
+        return _holderConfigQuery.HasComp(pullerUid) && _holdableQuery.HasComp(pullableUid);
+    }
+
     private bool CanPassPullAttempt(EntityUid holderUid, EntityUid targetUid)
     {
         if (!_actionBlocker.CanInteract(holderUid, targetUid))

@@ -10,15 +10,11 @@ public sealed partial class PullingSystem
     [Dependency] private readonly SharedScpHoldingSystem _scpHolding = default!;
 
     private EntityQuery<PullableComponent> _pullableQuery;
-    private EntityQuery<ScpHolderComponent> _scpHolderConfigQuery;
-    private EntityQuery<ScpHoldableComponent> _scpHoldableQuery;
     private EntityQuery<ActiveScpHolderComponent> _scpActiveHolderQuery;
 
     private void InitializeScpHolding()
     {
         _pullableQuery = GetEntityQuery<PullableComponent>();
-        _scpHolderConfigQuery = GetEntityQuery<ScpHolderComponent>();
-        _scpHoldableQuery = GetEntityQuery<ScpHoldableComponent>();
         _scpActiveHolderQuery = GetEntityQuery<ActiveScpHolderComponent>();
     }
 
@@ -35,12 +31,10 @@ public sealed partial class PullingSystem
     {
         success = false;
 
-        if (!_scpHolderConfigQuery.TryComp(pullerUid, out var holdComp) ||
-            !_scpHoldableQuery.HasComp(pullableUid))
-        {
+        if (!_scpHolding.CanRedirectPullToScpHold(pullerUid, pullableUid))
             return false;
-        }
 
+        var holdComp = Comp<ScpHolderComponent>(pullerUid);
         var holder = (pullerUid, holdComp);
 
         if (_scpActiveHolderQuery.TryComp(pullerUid, out var activeHolder) &&

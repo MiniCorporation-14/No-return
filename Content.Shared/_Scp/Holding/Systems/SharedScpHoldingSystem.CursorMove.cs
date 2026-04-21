@@ -127,6 +127,7 @@ public abstract partial class SharedScpHoldingSystem
         if (awaySpeed > 0f)
             desiredVelocity += correctionDirection * awaySpeed * holdable.SoftDragAwayVelocityStrength;
 
+        desiredVelocity = ApplyCursorMoveSpeedModifier(desiredVelocity, holdable);
         return true;
     }
 
@@ -236,6 +237,18 @@ public abstract partial class SharedScpHoldingSystem
             holdable.SoftDragMaximumCorrectionSpeed);
 
         return correctionDirection * correctionSpeed;
+    }
+
+    private static Vector2 ApplyCursorMoveSpeedModifier(Vector2 desiredVelocity, ScpHoldableComponent holdable)
+    {
+        if (desiredVelocity == Vector2.Zero)
+            return desiredVelocity;
+
+        var speedModifier = Math.Max(0f, holdable.CursorMoveSpeedModifier ?? holdable.HolderSprintModifier);
+        if (MathF.Abs(speedModifier - 1f) <= 0.0001f)
+            return desiredVelocity;
+
+        return desiredVelocity * speedModifier;
     }
 
     private bool TryNormalizeHeldCursorMoveTargetCoordinates(
