@@ -100,35 +100,25 @@ public abstract partial class SharedScpHoldingSystem
 
     protected void ReleaseHolderContribution(EntityUid holderUid, EntityUid targetUid, bool clearIfEmpty)
     {
-        if (!_activeHoldableQuery.TryComp(targetUid, out var held))
+        if (!_activeHoldableQuery.TryComp(targetUid, out var holdable))
             return;
 
-        var removed = false;
-        for (var i = held.Holders.Count - 1; i >= 0; i--)
-        {
-            if (held.Holders[i] != holderUid)
-                continue;
+        if (!holdable.Holders.Remove(holderUid))
+            return;
 
-            held.Holders.RemoveAt(i);
-            removed = true;
-        }
+        DirtyField(targetUid, holdable, nameof(ActiveScpHoldableComponent.Holders));
+        RemComp<ActiveScpHolderComponent>(holderUid);
 
-        if (removed)
-            Dirty(targetUid, held);
-
-        if (_activeHolderQuery.HasComp(holderUid))
-            RemComp<ActiveScpHolderComponent>(holderUid);
-        else if (_activeHolderSlowdownStateQuery.HasComp(holderUid))
-            RemComp<ActiveStateScpHolderSlowdownComponent>(holderUid);
-
-        if (held.Holders.Count == 0)
+        var ent = (targetUid, holdable);
+        if (holdable.Holders.Count == 0)
         {
             if (clearIfEmpty)
-                ClearHoldState((targetUid, held), applyImmunity: false);
+                ClearHoldState(ent, applyImmunity: false);
+
             return;
         }
 
-        SyncHeldState((targetUid, held));
+        SyncHeldState(ent);
     }
 
     protected void SyncHeldState(Entity<ActiveScpHoldableComponent> held)
@@ -300,6 +290,6 @@ public abstract partial class SharedScpHoldingSystem
             return;
 
         holder.Comp.Target = target;
-        Dirty(holder);
+        DirtyField(holder, holder.Comp, nameof(ActiveScpHolderComponent.Target));
     }
 }

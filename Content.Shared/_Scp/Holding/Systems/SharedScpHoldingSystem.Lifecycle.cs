@@ -77,7 +77,6 @@ public abstract partial class SharedScpHoldingSystem
 
     private void OnHolderShutdown(Entity<ActiveScpHolderComponent> ent, ref ComponentShutdown args)
     {
-        ent.Comp.Target = null;
         DeleteHolderHandBlockers(ent);
 
         if (!_timing.ApplyingState)

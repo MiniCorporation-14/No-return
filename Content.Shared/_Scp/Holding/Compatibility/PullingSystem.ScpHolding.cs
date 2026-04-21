@@ -22,10 +22,18 @@ public sealed partial class PullingSystem
         _scpActiveHolderQuery = GetEntityQuery<ActiveScpHolderComponent>();
     }
 
+    /// <summary>
+    /// Attempts to consume a pull request by redirecting it into SCP holding.
+    /// Returns <see langword="true"/> when the pull attempt was handled, even if it was rejected.
+    /// The <paramref name="success"/> output indicates whether the redirect actually succeeded.
+    /// This includes the paths that validate via <see cref="SharedScpHoldingSystem.CanToggleHold"/>,
+    /// stop existing pulls via <c>TryStopPull</c>, and finally toggle the hold via
+    /// <see cref="SharedScpHoldingSystem.TryToggleHold(Content.Shared._Scp.Holding.Components.ScpHolderComponent, EntityUid, bool)"/>.
+    /// </summary>
     private bool TryRedirectPullToScpHold(EntityUid pullerUid, EntityUid pullableUid,
-        PullerComponent pullerComp, PullableComponent pullableComp, out bool result)
+        PullerComponent pullerComp, PullableComponent pullableComp, out bool success)
     {
-        result = false;
+        success = false;
 
         if (!_scpHolderConfigQuery.TryComp(pullerUid, out var holdComp) ||
             !_scpHoldableQuery.HasComp(pullableUid))
@@ -38,7 +46,7 @@ public sealed partial class PullingSystem
         if (_scpActiveHolderQuery.TryComp(pullerUid, out var activeHolder) &&
             activeHolder.Target != null)
         {
-            result = _scpHolding.TryToggleHold(holder, pullableUid);
+            success = _scpHolding.TryToggleHold(holder, pullableUid);
             return true;
         }
 
@@ -61,7 +69,7 @@ public sealed partial class PullingSystem
             return true;
         }
 
-        result = _scpHolding.TryToggleHold(holder, pullableUid, attemptChecked: true);
+        success = _scpHolding.TryToggleHold(holder, pullableUid, attemptChecked: true);
         return true;
     }
 }

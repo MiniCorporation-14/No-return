@@ -1,4 +1,5 @@
 using Content.Shared._Scp.Holding.Components;
+using Content.Shared._Scp.Helpers;
 using Content.Shared.Hands;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
@@ -18,8 +19,7 @@ public abstract partial class SharedScpHoldingSystem
     [Dependency] private readonly SharedVirtualItemSystem _virtualItem = default!;
 
     private readonly List<EntityUid> _placeholderIcons = [];
-    private readonly List<Entity<VirtualItemComponent>> _virtualBlockersToDelete = [];
-
+    private readonly HashSet<EntityUid> _holdersSuppressingVirtualItemSync = [];
     private EntityQuery<HandsComponent> _handsQuery;
     private EntityQuery<VirtualItemComponent> _virtualItemQuery;
     private EntityQuery<ScpHeldHandBlockerComponent> _heldHandBlockerQuery;
@@ -100,7 +100,7 @@ public abstract partial class SharedScpHoldingSystem
 
     private void DeleteInvalidHeldHandBlockers(Entity<HandsComponent?> held)
     {
-        _virtualBlockersToDelete.Clear();
+        using var virtualBlockersToDelete = ListPoolEntity<VirtualItemComponent>.Rent();
 
         foreach (var heldItem in _hands.EnumerateHeld(held))
         {
@@ -111,10 +111,10 @@ public abstract partial class SharedScpHoldingSystem
                 continue;
 
             if (!IsValidHeldHandBlocker(virtualItem))
-                _virtualBlockersToDelete.Add((heldItem, virtualItem));
+                virtualBlockersToDelete.Value.Add((heldItem, virtualItem));
         }
 
-        foreach (var virtualItem in _virtualBlockersToDelete)
+        foreach (var virtualItem in virtualBlockersToDelete.Value)
         {
             _virtualItem.DeleteVirtualItem(virtualItem, held);
         }
@@ -131,12 +131,8 @@ public abstract partial class SharedScpHoldingSystem
         while (_hands.TryGetEmptyHand(held, out var emptyHand))
         {
             var holderUid = _placeholderIcons[iconIndex % _placeholderIcons.Count];
-            if (!_virtualItem.TrySpawnVirtualItem(holderUid, held, out var virtualItem))
+            if (!TryPickupHeldHandBlockerVirtualItem(holderUid, held, emptyHand))
                 break;
-
-            EnsureComp<UnremoveableComponent>(virtualItem.Value);
-            EnsureComp<ScpHeldHandBlockerComponent>(virtualItem.Value);
-            _hands.DoPickup(held, emptyHand, virtualItem.Value, held.Comp);
 
             iconIndex++;
         }
@@ -144,27 +140,25 @@ public abstract partial class SharedScpHoldingSystem
 
     private void SyncHolderHandBlocker(Entity<ActiveScpHolderComponent> holder)
     {
-        _virtualBlockersToDelete.Clear();
+        using var virtualBlockersToDelete = ListPoolEntity<VirtualItemComponent>.Rent();
         var target = holder.Comp.Target;
-        var holderActive = holder.Comp.LifeStage <= ComponentLifeStage.Running;
         var validBlockerCount = 0;
         var requiredHolderHandCount = 0;
 
-        if (holderActive
+        if (target != null
             && _activeHoldableQuery.HasComp(target)
             && TryGetRequiredHolderHandCount(target.Value, out var resolvedRequiredHolderHandCount))
         {
             requiredHolderHandCount = resolvedRequiredHolderHandCount;
         }
 
-        foreach (var heldItem in _hands.EnumerateHeld((EntityUid) holder))
+        foreach (var heldItem in _hands.EnumerateHeld(holder.Owner))
         {
             if (!_virtualItemQuery.TryComp(heldItem, out var virtualItem))
                 continue;
 
             var ownedBlocker = _holdHandBlockerQuery.HasComp(heldItem);
-            var matchesCurrentTarget = holderActive
-                                       && target != null
+            var matchesCurrentTarget = target != null
                                        && virtualItem.BlockingEntity == target.Value;
 
             if (ownedBlocker && matchesCurrentTarget)
@@ -178,15 +172,15 @@ public abstract partial class SharedScpHoldingSystem
             }
 
             if (ownedBlocker)
-                _virtualBlockersToDelete.Add((heldItem, virtualItem));
+                virtualBlockersToDelete.Value.Add((heldItem, virtualItem));
         }
 
-        foreach (var virtualItem in _virtualBlockersToDelete)
+        foreach (var virtualItem in virtualBlockersToDelete.Value)
         {
             RemoveHolderHandBlocker(holder, virtualItem);
         }
 
-        if (!holderActive || target == null)
+        if (target == null)
             return;
 
         if (!_handsQuery.TryComp(holder, out var hands))
@@ -202,11 +196,8 @@ public abstract partial class SharedScpHoldingSystem
             if (!_hands.TryGetEmptyHand(holderHands, out var emptyHand))
                 break;
 
-            if (!_virtualItem.TrySpawnVirtualItem(target.Value, holder, out var spawnedVirtualItem))
+            if (!TryPickupHolderHandBlockerVirtualItem(target.Value, holderHands, emptyHand))
                 break;
-
-            EnsureComp<ScpHoldHandBlockerComponent>(spawnedVirtualItem.Value);
-            _hands.DoPickup(holder, emptyHand, spawnedVirtualItem.Value, hands);
             validBlockerCount++;
         }
 
@@ -241,21 +232,69 @@ public abstract partial class SharedScpHoldingSystem
         return blockerCount;
     }
 
+    private bool TryPickupHeldHandBlockerVirtualItem(
+        EntityUid blockingEntity,
+        Entity<HandsComponent?> user,
+        string handId)
+    {
+        if (!_virtualItem.TrySpawnVirtualItem(blockingEntity, user, out var virtualItemUid))
+            return false;
+
+        EnsureComp<UnremoveableComponent>(virtualItemUid.Value);
+        EnsureComp<ScpHeldHandBlockerComponent>(virtualItemUid.Value);
+        _hands.DoPickup(user, handId, virtualItemUid.Value, user.Comp);
+
+        if (_hands.TryGetHeldItem(user, handId, out var heldItem) && heldItem == virtualItemUid.Value)
+            return true;
+
+        DeleteFailedHandBlockerVirtualItem(virtualItemUid.Value);
+        return false;
+    }
+
+    private bool TryPickupHolderHandBlockerVirtualItem(
+        EntityUid blockingEntity,
+        Entity<HandsComponent?> user,
+        string handId)
+    {
+        if (!_virtualItem.TrySpawnVirtualItem(blockingEntity, user, out var virtualItemUid))
+            return false;
+
+        EnsureComp<ScpHoldHandBlockerComponent>(virtualItemUid.Value);
+        _hands.DoPickup(user, handId, virtualItemUid.Value, user.Comp);
+
+        if (_hands.TryGetHeldItem(user, handId, out var heldItem) && heldItem == virtualItemUid.Value)
+            return true;
+
+        DeleteFailedHandBlockerVirtualItem(virtualItemUid.Value);
+        return false;
+    }
+
+    private void DeleteFailedHandBlockerVirtualItem(EntityUid virtualItemUid)
+    {
+        QueueDel(virtualItemUid);
+    }
+
     private void RemoveHolderHandBlocker(EntityUid holderUid, Entity<VirtualItemComponent> virtualItem)
     {
-        if (_handsQuery.TryComp(holderUid, out var hands) &&
-            _hands.IsHolding((holderUid, hands), virtualItem, out var hand))
+        var addedSuppression = _holdersSuppressingVirtualItemSync.Add(holderUid);
+
+        if (_handsQuery.TryComp(holderUid, out var hands)
+            && _hands.IsHolding((holderUid, hands), virtualItem, out var hand))
         {
             _hands.DoDrop((holderUid, hands), hand, doDropInteraction: false, log: false);
-            return;
+        }
+        else
+        {
+            _virtualItem.DeleteVirtualItem(virtualItem, holderUid);
         }
 
-        _virtualItem.DeleteVirtualItem(virtualItem, holderUid);
+        if (addedSuppression)
+            _holdersSuppressingVirtualItemSync.Remove(holderUid);
     }
 
     private void DeleteHolderHandBlockers(EntityUid holderUid)
     {
-        _virtualBlockersToDelete.Clear();
+        using var virtualBlockersToDelete = ListPoolEntity<VirtualItemComponent>.Rent();
 
         foreach (var heldItem in _hands.EnumerateHeld(holderUid))
         {
@@ -265,10 +304,10 @@ public abstract partial class SharedScpHoldingSystem
             if (!_virtualItemQuery.TryComp(heldItem, out var virtualItem))
                 continue;
 
-            _virtualBlockersToDelete.Add((heldItem, virtualItem));
+            virtualBlockersToDelete.Value.Add((heldItem, virtualItem));
         }
 
-        foreach (var virtualItem in _virtualBlockersToDelete)
+        foreach (var virtualItem in virtualBlockersToDelete.Value)
         {
             RemoveHolderHandBlocker(holderUid, virtualItem);
         }
@@ -276,18 +315,18 @@ public abstract partial class SharedScpHoldingSystem
 
     private void DeleteHeldHandBlockers(EntityUid heldUid)
     {
-        _virtualBlockersToDelete.Clear();
+        using var virtualBlockersToDelete = ListPoolEntity<VirtualItemComponent>.Rent();
 
         foreach (var heldItem in _hands.EnumerateHeld(heldUid))
         {
             if (_heldHandBlockerQuery.HasComp(heldItem) &&
                 _virtualItemQuery.TryComp(heldItem, out var virtualItem))
             {
-                _virtualBlockersToDelete.Add((heldItem, virtualItem));
+                virtualBlockersToDelete.Value.Add((heldItem, virtualItem));
             }
         }
 
-        foreach (var virtualItem in _virtualBlockersToDelete)
+        foreach (var virtualItem in virtualBlockersToDelete.Value)
         {
             _virtualItem.DeleteVirtualItem(virtualItem, heldUid);
         }
@@ -342,6 +381,12 @@ public abstract partial class SharedScpHoldingSystem
     private void OnHolderVirtualItemDeleted(Entity<ActiveScpHolderComponent> ent, ref VirtualItemDeletedEvent args)
     {
         if (_timing.ApplyingState)
+            return;
+
+        if (_holdersSuppressingVirtualItemSync.Contains(ent))
+            return;
+
+        if (TerminatingOrDeleted(ent))
             return;
 
         if (ent.Comp.Target == null || ent.Comp.Target != args.BlockingEntity)

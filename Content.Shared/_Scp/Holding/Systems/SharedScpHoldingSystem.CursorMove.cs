@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared._Scp.Holding.Components;
 using Robust.Shared.Map;
@@ -27,7 +26,7 @@ public abstract partial class SharedScpHoldingSystem
         if (activeHolder.Target == null)
             return false;
 
-        if (!CanMoveHeldToCursor(holderUid, cursorCoords, out _, out var targetCoords))
+        if (!CanMoveHeldToCursor(holderUid, cursorCoords, out var targetCoords))
             return false;
 
         SetHolderCursorMoveState((holderUid, activeHolder), targetCoords, active: true);
@@ -37,11 +36,8 @@ public abstract partial class SharedScpHoldingSystem
     private bool CanMoveHeldToCursor(
         EntityUid holderUid,
         EntityCoordinates cursorCoords,
-        [NotNullWhen(true)] out Entity<ActiveScpHoldableComponent>? held,
-        out EntityCoordinates targetCoords,
-        bool quiet = false)
+        out EntityCoordinates targetCoords)
     {
-        held = null;
         targetCoords = EntityCoordinates.Invalid;
 
         if (!_activeHolderQuery.TryComp(holderUid, out var holder))
@@ -56,9 +52,9 @@ public abstract partial class SharedScpHoldingSystem
         if (!heldComponent.Holders.Contains(holderUid))
             return false;
 
-        held = (heldUid, heldComponent);
+        var held = (heldUid, heldComponent);
 
-        if (!TryGetHeldHoldable(held.Value, out var holdable))
+        if (!TryGetHeldHoldable(held, out var holdable))
             return false;
 
         if (!_container.IsInSameOrNoContainer(holderUid, heldUid))
@@ -102,7 +98,7 @@ public abstract partial class SharedScpHoldingSystem
         if (!holder.Comp.CursorMoveActive && correctionDistance > holdable.SoftDragSettleTolerance)
         {
             holder.Comp.CursorMoveActive = true;
-            Dirty(holder);
+            DirtyField(holder, holder.Comp, nameof(ActiveScpHolderComponent.CursorMoveActive));
         }
 
         if (correctionDistance <= holdable.SoftDragSettleTolerance)
@@ -110,7 +106,7 @@ public abstract partial class SharedScpHoldingSystem
             if (holder.Comp.CursorMoveActive)
             {
                 holder.Comp.CursorMoveActive = false;
-                Dirty(holder);
+                DirtyField(holder, holder.Comp, nameof(ActiveScpHolderComponent.CursorMoveActive));
             }
 
             return true;
@@ -291,15 +287,22 @@ public abstract partial class SharedScpHoldingSystem
         EntityCoordinates targetCoordinates,
         bool active)
     {
-        if (holder.Comp.CursorTargetCoordinates == targetCoordinates
-            && holder.Comp.CursorMoveActive == active)
-        {
+        var targetChanged = holder.Comp.CursorTargetCoordinates != targetCoordinates;
+        var activeChanged = holder.Comp.CursorMoveActive != active;
+        if (!targetChanged && !activeChanged)
             return;
+
+        if (targetChanged)
+        {
+            holder.Comp.CursorTargetCoordinates = targetCoordinates;
+            DirtyField(holder, holder.Comp, nameof(ActiveScpHolderComponent.CursorTargetCoordinates));
         }
 
-        holder.Comp.CursorTargetCoordinates = targetCoordinates;
-        holder.Comp.CursorMoveActive = active;
-        Dirty(holder);
+        if (activeChanged)
+        {
+            holder.Comp.CursorMoveActive = active;
+            DirtyField(holder, holder.Comp, nameof(ActiveScpHolderComponent.CursorMoveActive));
+        }
     }
 
     private void ClearHolderCursorMoveState(EntityUid holderUid)
@@ -310,15 +313,22 @@ public abstract partial class SharedScpHoldingSystem
 
     private void ClearHolderCursorMoveState(Entity<ActiveScpHolderComponent> holder)
     {
-        if (holder.Comp.CursorTargetCoordinates == EntityCoordinates.Invalid
-            && !holder.Comp.CursorMoveActive)
-        {
+        var targetChanged = holder.Comp.CursorTargetCoordinates != EntityCoordinates.Invalid;
+        var activeChanged = holder.Comp.CursorMoveActive;
+        if (!targetChanged && !activeChanged)
             return;
+
+        if (targetChanged)
+        {
+            holder.Comp.CursorTargetCoordinates = EntityCoordinates.Invalid;
+            DirtyField(holder, holder.Comp, nameof(ActiveScpHolderComponent.CursorTargetCoordinates));
         }
 
-        holder.Comp.CursorTargetCoordinates = EntityCoordinates.Invalid;
-        holder.Comp.CursorMoveActive = false;
-        Dirty(holder);
+        if (activeChanged)
+        {
+            holder.Comp.CursorMoveActive = false;
+            DirtyField(holder, holder.Comp, nameof(ActiveScpHolderComponent.CursorMoveActive));
+        }
     }
 
     private void ClearHeldCursorMoveStates(Entity<ActiveScpHoldableComponent> held)

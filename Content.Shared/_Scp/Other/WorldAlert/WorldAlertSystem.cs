@@ -7,10 +7,10 @@ namespace Content.Shared._Scp.Other.WorldAlert;
 
 public sealed class WorldAlertSystem : EntitySystem
 {
-    private const float DefaultLifetimeSeconds = 1f;
-
     [Dependency] private readonly SharedAudioSystem _audio = default!;
     [Dependency] private readonly INetManager _net = default!;
+
+    private const float DefaultLifetimeSeconds = 1f;
 
     public bool TrySpawnAlert(EntityUid target, WorldAlertSettings settings, EntityUid? soundReceiver = null)
     {
@@ -31,12 +31,11 @@ public sealed class WorldAlertSystem : EntitySystem
 
     private void EnsureTimedDespawn(EntityUid uid, TimeSpan? lifetime)
     {
-        if (HasComp<TimedDespawnComponent>(uid))
-            return;
-
         var despawn = EnsureComp<TimedDespawnComponent>(uid);
-        despawn.Lifetime = lifetime.HasValue
-            ? (float) lifetime.Value.TotalSeconds
-            : DefaultLifetimeSeconds;
+
+        if (lifetime.HasValue)
+            despawn.Lifetime = (float)lifetime.Value.TotalSeconds;
+        else if (despawn.Lifetime < DefaultLifetimeSeconds)
+            despawn.Lifetime = DefaultLifetimeSeconds;
     }
 }

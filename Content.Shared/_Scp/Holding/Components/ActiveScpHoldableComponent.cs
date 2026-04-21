@@ -7,7 +7,7 @@ namespace Content.Shared._Scp.Holding.Components;
 /// <summary>
 /// Runtime state stored on a target while at least one holder is contributing.
 /// </summary>
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true), AutoGenerateComponentPause]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState(true, true), AutoGenerateComponentPause]
 [Access(typeof(SharedScpHoldingSystem))]
 public sealed partial class ActiveScpHoldableComponent : Component
 {

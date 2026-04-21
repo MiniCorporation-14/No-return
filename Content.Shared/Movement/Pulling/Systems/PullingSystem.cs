@@ -530,8 +530,8 @@ public sealed partial class PullingSystem : EntitySystem
             return true;
 
         // Fire added start - redirect scp-hold-capable pull attempts into the hold flow
-        if (TryRedirectPullToScpHold(pullerUid, pullableUid, pullerComp, pullableComp, out var holdResult))
-            return holdResult;
+        if (TryRedirectPullToScpHold(pullerUid, pullableUid, pullerComp, pullableComp, out var holdSuccess))
+            return holdSuccess;
         // Fire added end
 
         if (!CanPull(pullerUid, pullableUid))

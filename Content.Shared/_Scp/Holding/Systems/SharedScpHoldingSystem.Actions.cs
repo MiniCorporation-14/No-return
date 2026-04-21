@@ -27,7 +27,7 @@ public abstract partial class SharedScpHoldingSystem
             if (activeHolder.Target.Value == target)
                 return TryReleaseHold(holder, target);
 
-            _popup.PopupClient("scp-hold-already-holding-other", holder);
+            _popup.PopupClient(Loc.GetString("scp-hold-already-holding-other"), holder);
             return false;
         }
 
@@ -65,7 +65,7 @@ public abstract partial class SharedScpHoldingSystem
         if (activeHolder.Target != target)
         {
             if (!quiet)
-                _popup.PopupClient("scp-hold-already-holding-other", holder);
+                _popup.PopupClient(Loc.GetString("scp-hold-already-holding-other"), holder);
 
             return false;
         }
@@ -235,7 +235,7 @@ public abstract partial class SharedScpHoldingSystem
         return true;
     }
 
-    public void SyncHolderState(Entity<ActiveScpHolderComponent> holder)
+    private void SyncHolderState(Entity<ActiveScpHolderComponent> holder)
     {
         SyncHolderHandBlocker(holder);
     }
@@ -262,7 +262,7 @@ public abstract partial class SharedScpHoldingSystem
 
         if (fullHeld.StartedAt == TimeSpan.Zero)
         {
-            _popup.PopupClient(Loc.GetString("scp-hold-breakout-too-early", ("seconds", 1)), held);
+            _popup.PopupClient(Loc.GetString("scp-hold-breakout-not-ready"), held);
             return false;
         }
 
@@ -336,7 +336,7 @@ public abstract partial class SharedScpHoldingSystem
         if (!_holderConfigQuery.TryComp(holderUid, out var hold))
             return;
 
-        var cooldownEnd = _timing.CurTime + TimeSpan.FromTicks(hold.HoldActionCooldown.Ticks * 2);
+        var cooldownEnd = _timing.CurTime + hold.HoldActionCooldown * 2;
         if (hold.HoldAvailableAt != null && hold.HoldAvailableAt.Value >= cooldownEnd)
             return;
 

@@ -7,6 +7,7 @@ scp-hold-target-too-far = You are too far away to hold {THE($target)}.
 scp-hold-holder-no-free-hand = You need enough free hands to grab {THE($target)}.
 scp-hold-holder-action-on-cooldown = You can grab again in {$seconds} s.
 scp-hold-breakout-too-early = You can try to break free in {$seconds} s.
+scp-hold-breakout-not-ready = You cannot start breaking free yet.
 scp-hold-breakout-start = You start trying to break free.
 scp-hold-breakout-interrupted = Your breakout attempt was interrupted.
 scp-hold-action-restricted = You cannot do that while being held.
