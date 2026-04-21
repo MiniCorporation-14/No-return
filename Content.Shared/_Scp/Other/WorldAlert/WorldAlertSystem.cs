@@ -21,10 +21,15 @@ public sealed class WorldAlertSystem : EntitySystem
         EnsureTimedDespawn(alert, settings.Lifetime);
 
         soundReceiver ??= target;
-        if (settings.DirectSound && _net.IsServer)
-            _audio.PlayEntity(settings.Sound, target, soundReceiver.Value);
+        if (settings.DirectSound)
+        {
+            if (_net.IsServer)
+                _audio.PlayEntity(settings.Sound, target, soundReceiver.Value);
+        }
         else
+        {
             _audio.PlayPredicted(settings.Sound, target, soundReceiver.Value);
+        }
 
         return true;
     }
