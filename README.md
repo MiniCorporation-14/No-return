@@ -1,6 +1,6 @@
 <div class="header" align="center">
 
-# 🛟 NO RETURN - SS14 + SCP 🛟
+# 🛟 NO RETURN - SS14 🛟
 ![GitHub Pull Requests](https://github.com/MiniCorporation-14/No-return/pulls)
 </div>
 
