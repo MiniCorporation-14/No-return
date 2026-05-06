@@ -1,58 +1,28 @@
 <div class="header" align="center">
 
-# 🔥 SCP: Project Fire - SS14 + SCP 🔥
-
-![GitHub commit activity](https://img.shields.io/github/commit-activity/y/space-sunrise/fire-station)
-![GitHub Issues](https://img.shields.io/github/issues/space-sunrise/fire-station)
-![GitHub Pull Requests](https://img.shields.io/github/issues-pr-closed/space-sunrise/fire-station)
+# 🛟 NO RETURN - SS14 + SCP 🛟
+![GitHub Pull Requests](https://github.com/MiniCorporation-14/No-return/pulls)
 </div>
 
 ---
-
-**SCP: Project Fire - первый проект в Space Station 14, перенесший тематику Фонда SCP в рамки станции.** Первый запуск проекта состоялся в далеком 2023ем году. А текущий перезапуск 2.0 перевернул положение дел, расширив механики SCP в десятки раз. <br>
-
-Множество новых объектов, механики исследования, новые измерения, роли и карты. SCP: Project Fire уникальный проект, аналогов которому не существует.
-
 🌐 **Read this in other languages:**
 
 - 🇺🇸 [English](README.en.md)
 - 🇷🇺 [Русский](README.md)
 
----
-
-<img width="1106" height="790" alt="image" src="https://github.com/user-attachments/assets/ccf3ae59-36d5-4d6a-8473-cb590bd3b10e" />
-
----
-
-## 🚨 Особенности нашего билда 🚨
-
-📢 Полный редизайн с заменой всего ванильного контента — всё своё; <br>
-╰ 🕯️Мрак, тревога, стальные стены — мы реально заморочились над хоррор-вайбом;
-
->🔗 Реализованы играбельные объекты: SCP-106, SCP-939, SCP-173, SCP-049, SCP-096, SCP-999! <br>
->🛡️ Полностью новые лорные роли. Ассистенты остались на космической станции! <br>
->🗺️ Используются собственные карты комплексов SCP на планете, без космоса! <br>
->🔊 Уникальная система аудио-эффектов для погружения в атмосферу комплекса. У нас есть эхо! <br>
->🩸 Никаких вульп и фелинидов, в комплексе работают только люди! <br>
->👁️ Система моргания, прямо как в SCP:CB! <br>
->🎧 Больше 100 амбиентных треков, заменяющие стандартные! <br>
 
 ## 💛 Помощь проекту 💛
 
 Любой человек имеет право помочь в разработке сервера и предложить свое изменение создав PR. <br>
-Команда Мейнтейнеров Fire Station может работать с разработчиками **на русском и английском языках**. Желающие помочь проекту имеют право открывать PR или issue на любом из этих языков.
+Команда Мейнтейнеров Mini-14 может работать с разработчиками **на русском и английском языках**. Желающие помочь проекту имеют право открывать PR или issue на любом из этих языков.
 
 Для дополнительной помощи в ознакомлении с проектом перейдите в наш дискорд <br>
 
-[![Discord](https://img.shields.io/discord/1051873590301184031?label=Discord&logo=discord&logoColor=white)](https://discord.gg/m4xAE2rxQx)
+[![Discord](https://img.shields.io/discord/1051873590301184031?label=Discord&logo=discord&logoColor=white)](https://discord.gg/gwrAhjFfA6)
 
 ## ♻ Запуск локального сервера ♻
 
 Следуйте [этому руководству](https://github.com/space-sunrise/fire-station/discussions/345) и у вас все получится
-
-## 📄 Документация 📄
-
-У нас имеется своя документация, включающая дизайн-документы механик -> [читать тут](https://github.com/space-sunrise/fire-station/discussions/categories/%D0%B3%D0%B5%D0%B9%D0%BC%D0%B4%D0%B8%D0%B7%D0%B0%D0%B9%D0%BD)
 
 ## 📉 Активность проекта 📉
 
