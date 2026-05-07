@@ -1,5 +1,5 @@
-defaultWindowTitle: Fire Station
-windowIconSet: /Textures/_Scp/Logo/icon
-splashLogo: /Textures/_Scp/loading_screen.png # Fire-Station Edit
+defaultWindowTitle: No Return
+windowIconSet: /Textures/_NoReturn/Logo/icon
+splashLogo: /Textures/_NoReturn/loading_screen.png # No Return Edit
 
 # PJB PLEASE
