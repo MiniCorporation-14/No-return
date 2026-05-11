@@ -201,7 +201,7 @@ public sealed partial class SunriseCCVars : CVars
         CVarDef.Create("infolinks.replays", "https://t.me/ss14_replays", CVar.SERVER | CVar.REPLICATED);
 
     public static readonly CVarDef<string> ServerName =
-        CVarDef.Create("lobby.server_name", "Sunrise Station", CVar.SERVER | CVar.REPLICATED);
+        CVarDef.Create("lobby.server_name", "Mini-14", CVar.SERVER | CVar.REPLICATED);
 
     /*
      * Planet Prison
@@ -221,7 +221,7 @@ public sealed partial class SunriseCCVars : CVars
      */
 
     public static readonly CVarDef<string> RoadmapId = // Fire edit
-        CVarDef.Create("roadmap.id", "FireStationRoadmap");
+        CVarDef.Create("roadmap.id", "Mini14Roadmap");
 
     /**
      * Lobby Changelog

@@ -1,6 +1,14 @@
 roadmap-launch-server-name = Server launch
 roadmap-add-popular-scp-name = Adding popular SCP objects
 roadmap-add-popular-scp-description = Adding cult SCP objects: SCP-173, SCP-049, SCP-096, SCP-939, SCP-106, SCP-999
+roadmap-add-popular-Z-name = Adding Z-objects from the No Return universe
+roadmap-add-popular-Z-description = Adding many Z-objects for studying and more
+roadmap-add-GenSystem-name = Creating a Gen-system for studies
+roadmap-add-GenSystem-description = Adding a gen-system that lets you give your friend a vulpine tail
+roadmap-add-MoreMaps-name = Adding many maps
+roadmap-add-MoreMaps-description = Adding a whole lot of map varieties
+roadmap-add-MoreMechanics-name = Adding many mechanics
+roadmap-add-MoreMechanics-description = Adding a whole lot of mechanics for the No Return server
 roadmap-create-first-map-name = Creating the SCP Delta map
 roadmap-create-first-map-description = Creating the first playable map for the Fire Station build. A modified Delta Station, including SCP research inside the station's Science Department
 roadmap-basic-research-system-name = Basic SCP object research system
