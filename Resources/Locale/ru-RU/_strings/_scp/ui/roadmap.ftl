@@ -1,6 +1,14 @@
 roadmap-launch-server-name = Запуск сервера
 roadmap-add-popular-scp-name = Добавление популярных SCP объектов
 roadmap-add-popular-scp-description = Добавление ставших культовыми SCP объектов: SCP-173, SCP-049, SCP-096, SCP-939, SCP-106, SCP-999
+roadmap-add-popular-Z-name = Добавление объектов Z из лора No Return
+roadmap-add-popular-Z-description = Добавление множество объектов Z, для изучения и многого другого
+roadmap-add-GenSystem-name = Создание Ген-системы для изучений
+roadmap-add-GenSystem-description = Добавление ген-системы, с помощью которой можно будет дать своему другу хвост вульпы
+roadmap-add-MoreMaps-name = Добавление множество карт
+roadmap-add-MoreMaps-description = Добавление оооочень много разновидностей карт
+roadmap-add-MoreMechanics-name = Добавление множества Механик
+roadmap-add-MoreMechanics-description = Добавление оооочень много механик для сервера NoReturn
 roadmap-create-first-map-name = Создание карты SCP Delta
 roadmap-create-first-map-description = Создание первой играбельной карты для билда Fire Station. Модифицированная Delta Station, включающая исследования SCP внутри Научного отдела станции
 roadmap-basic-research-system-name = Базовая система исследований SCP объектов
