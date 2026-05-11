@@ -1,0 +1,112 @@
+# By sillyarum, 11.05.2026
+# John Grace plushies. They can play his theme when used. Credits: Grace, music: Roblox, Grace
+
+# Black version john grace plushies.
+
+- type: entity
+  parent: BasePlushie
+  id: PlushieBlackJohnGrace
+  name: Обыкновенный Джон Грейс
+  description: Джон Грейс в виде плюшей игрушки. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/BlackJohn.rsi
+    state: JohnGrace
+  - type: UseDelay
+    delay: 120.0
+  - type: EmitSoundOnUse
+    sound:
+      path: /Audio/_Mini14/JohnGraceTheme.ogg
+
+- type: entity
+  parent: BasePlushie
+  id: PlushieBlackJohnGraceKrest
+  name: Джон Грейс с крестовидными глазами
+  description: Джон Грейс в виде плюшей игрушки, у него глаза крестиками. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/BlackJohn.rsi
+    state: Johngracelover
+  - type: UseDelay
+    delay: 120.0
+  - type: EmitSoundOnUse
+    sound:
+      path: /Audio/_Mini14/JohnGraceTheme.ogg
+
+- type: entity
+  parent: BasePlushie
+  id: PlushieBlackJohnGraceDear
+  name: Джон Грейс с красными частицами в глазах
+  description: Джон Грейс в виде плюшей игрушки, как будто он в стиле нового года. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/BlackJohn.rsi
+    state: dear
+  - type: UseDelay
+    delay: 120.0
+  - type: EmitSoundOnUse
+    sound:
+      path: /Audio/_Mini14/Jinglebells2009.ogg
+
+
+# White version john grace plushies.
+
+- type: entity
+  parent: BasePlushie
+  id: PlushiejohngraceReprieve
+  name: Помилованный Джон Грейс 
+  description: Помилованный Джон Грейс в виде плюшей игрушки. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/WhiteJohn.rsi
+    state: johngracereprieve
+  - type: UseDelay
+    delay: 120.0
+  - type: EmitSoundOnUse
+    sound:
+      path: /Audio/_Mini14/ULTRASONIC.ogg
+
+- type: entity
+  parent: BasePlushie
+  id: PlushiejohngraceReprievecross
+  name: Помилованный Джон Грейс с крестом
+  description: Помилованный Джон Грейс, с крестом в виде плюшей игрушки. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/WhiteJohn.rsi
+    state: cross
+  - type: UseDelay
+    delay: 120.0
+  - type: EmitSoundOnUse
+    sound:
+      path: /Audio/_Mini14/ULTRASONIC.ogg
+
+- type: entity
+  parent: BasePlushie
+  id: PlushiejohngraceReprievevioleteyes
+  name: Помилованный Джон Грейс с фиолетовыми частицами в глазах
+  description: Помилованный Джон Грейс, с фиолетовыми частицами в глазах, в виде плюшей игрушки. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/WhiteJohn.rsi
+    state: 2
+  - type: UseDelay
+    delay: 120.0
+  - type: EmitSoundOnUse
+    sound:
+      path: /Audio/_Mini14/ULTRASONIC.ogg
+
+- type: entity
+  parent: BasePlushie
+  id: PlushiejohngraceReprievecrosseye
+  name: Помилованный Джон Грейс с крестовидными глазами
+  description: Помилованный Джон Грейс, с крестовидными глазами, в виде плюшей игрушки. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/WhiteJohn.rsi
+    state: 3
+  - type: UseDelay
+    delay: 120.0
+  - type: EmitSoundOnUse
+    sound:
+      path: /Audio/_Mini14/ULTRASONIC.ogg

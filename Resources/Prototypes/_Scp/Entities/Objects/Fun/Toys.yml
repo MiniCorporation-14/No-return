@@ -1,0 +1,14 @@
+- type: entity
+  parent: BasePlushie
+  id: PlushieBlackJohnGrace
+  name: Обыкновенный Джон Грейс
+  description: Джон Грейс в виде плюшей игрушки. Он может исполнять свою тему, когда его используют.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Grace/BlackJohn.rsi
+    state: JohnGrace
+  - type: UseDelay
+    delay: 120.0
+  - type: Audio
+    soundOnUse:
+      path: /Audio/_Mini14/JohnGraceTheme.ogg
