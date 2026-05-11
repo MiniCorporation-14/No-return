@@ -1,0 +1,11 @@
+# Мантии сервера NoReturn
+- type: entity
+  parent: ClothingNeckBase
+  id: ClothingNeckMantleGNO
+  name: Мантия ГНО
+  description: Величественная мантия, украшенная эмблемой ГНО. Идеально подходит для тех, кто хочет выглядеть внушительно и загадочно.
+  components:
+    - type: Sprite
+      sprite: _NoReturn/Clothing/Neck/Mantles/GNOMantle.rsi
+    - type: Clothing
+      sprite: _NoReturn/Clothing/Neck/Mantles/GNOMantle.rsi
