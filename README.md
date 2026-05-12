@@ -1,13 +1,12 @@
 <div class="header" align="center">
 
-# 🛟 NO RETURN - SS14 🛟
+# 🛟 NO RETURN - SS14 🛟  Fork Fire Station
 ![GitHub Pull Requests](https://github.com/MiniCorporation-14/No-return/pulls)
 </div>
 
 ---
 🌐 **Read this in other languages:**
 
-- 🇺🇸 [English](README.en.md)
 - 🇷🇺 [Русский](README.md)
 
 
@@ -18,7 +17,7 @@
 
 Для дополнительной помощи в ознакомлении с проектом перейдите в наш дискорд <br>
 
-[![Discord](https://img.shields.io/discord/1051873590301184031?label=Discord&logo=discord&logoColor=white)](https://discord.gg/gwrAhjFfA6)
+[![Discord](https://img.shields.io/discord/1051873590301184031?label=Discord&logo=discord&logoColor=white)](https://discord.gg/minigroupcorp)
 
 ## ♻ Запуск локального сервера ♻
 
@@ -32,9 +31,8 @@
 
 <div class="header" align="center">
 
-[![Discord](https://img.shields.io/discord/1051873590301184031?label=Discord&logo=discord&logoColor=white)](https://discord.gg/m4xAE2rxQx)
-[![Wiki](https://img.shields.io/badge/Wiki-Fire%20Station%20Wiki-red)](https://fire.station.wiki.shizainc.com/) <br>
-[![GitHub](https://img.shields.io/github/stars/space-sunrise/fire-station?style=social)](https://github.com/space-sunrise/fire-station)
+[![Discord](https://img.shields.io/discord/1051873590301184031?label=Discord&logo=discord&logoColor=white)](https://discord.gg/minigroupcorp) <br>
+[![GitHub](https://img.shields.io/github/stars/space-sunrise/fire-station?style=social)](https://github.com/space-sunrise/fire-station) - Официальный гит
 ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/space-sunrise/fire-station?utm_source=oss&utm_medium=github&utm_campaign=space-sunrise%2Ffire-station&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 </div>
 
