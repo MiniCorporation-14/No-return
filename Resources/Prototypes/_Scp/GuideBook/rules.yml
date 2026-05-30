@@ -1,6 +1,6 @@
 ﻿- type: guideEntry
-  id: FireStationRuleset
+  id: Mini14Ruleset
   name: guide-entry-rules
   ruleEntry: true
   priority: 10
-  text: "/ServerInfo/_Scp/Guidebook/ServerRules/FireStationRules.xml"
+  text: "/ServerInfo/_Mini14/Guidebook/ServerRules/Mini14.xml"

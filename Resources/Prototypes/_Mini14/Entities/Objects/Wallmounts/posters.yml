@@ -1,0 +1,32 @@
+- type: entity
+  parent: PosterBase
+  id: PosterOhShitMan
+  name: "Ох черт, я забыл что-то важное" 
+  description: "Странный постер с не менее странным мужчиной. На нем изображен мужчина, который.. Который? Но, что-то в этом постере вызывает чувство тревоги."
+  suffix: MINI
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Structures/Wallmounts/posters/posters.rsi
+    state: ohshitman
+
+- type: entity
+  parent: PosterBase
+  id: PosterBoykisser
+  name: "Странный постер с котом"
+  description: "Странный постер с не менее странным котом. На нем изображен кот, который.. Танцует? Но, что-то в этом постере вызывает чувство симпатии, а так же он вам кого-то напоминает.. Может.. Boykisser? пфф, что за бред..."
+  suffix: MINI
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Structures/Wallmounts/posters/posters.rsi
+    state: boykisser
+
+- type: entity
+  parent: PosterBase
+  id: Poster2323
+  name: "Странный постер"
+  description: "Странный постер, судя по всему логотип какой-то организации, но какой? Что это значит? Но, что-то в этом постере вызывает чувство тревоги."
+  suffix: MINI
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Structures/Wallmounts/posters/posters.rsi
+    state: 2323
