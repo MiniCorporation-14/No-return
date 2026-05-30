@@ -1,0 +1,76 @@
+
+# Спрайты для оперативников 
+
+
+- type: entity
+  parent: [ BaseCentcommContraband, ClothingUniformBase ]
+  id: ClothingUniformJumpsuitMINIChaplain
+  name: Комбинезон оперативника
+  suffix: MINI
+  description: Специальный костюм для оперативников, разработанный для обеспечения максимальной защиты и мобильности в экстремальных условиях.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_chaplain.rsi
+  - type: Clothing
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_chaplain.rsi
+
+- type: entity
+  parent: [ BaseCentcommContraband, ClothingUniformBase ]
+  id: ClothingUniformJumpsuitMiniEngineer
+  name: Комбинезон инженерного оперативника
+  suffix: MINI
+  description: Специальный костюм для инженерных оперативников, разработанный для обеспечения максимальной защиты и мобильности в экстремальных условиях.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_engineer.rsi
+  - type: Clothing
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_engineer.rsi
+
+- type: entity
+  parent: [ BaseCentcommContraband, ClothingUniformBase ]
+  id: ClothingUniformJumpsuitMINIJanitor
+  name: Комбинезон уборщика-оперативника
+  suffix: MINI
+  description: Специальный костюм для уборщиков-оперативников, разработанный для обеспечения максимальной защиты и мобильности в экстремальных условиях.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_janitor.rsi
+  - type: Clothing
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_janitor.rsi
+
+- type: entity
+  parent: [ BaseCentcommContraband, ClothingUniformBase ]
+  id: ClothingUniformJumpsuitMINILeader
+  name: Комбинезон главного оперативника
+  suffix: MINI
+  description: Специальный костюм для главных оперативников, разработанный для обеспечения максимальной защиты и мобильности в экстремальных условиях.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_leader.rsi
+  - type: Clothing
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_leader.rsi
+
+
+- type: entity
+  parent: [ BaseCentcommContraband, ClothingUniformBase ]
+  id: ClothingUniformJumpsuitMiniMedic
+  name: Комбинезон медицинского оперативника
+  suffix: MINI
+  description: Специальный костюм для медицинских оперативников, разработанный для обеспечения максимальной защиты и мобильности в экстремальных условиях.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_medic.rsi
+  - type: Clothing
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_medic.rsi
+
+- type: entity
+  parent: [ BaseCentcommContraband, ClothingUniformBase ]
+  id: ClothingUniformJumpsuitMiniSecurity
+  name: Комбинезон оперативника
+  suffix: MINI
+  description: Специальный костюм для оперативников, разработанный для обеспечения максимальной защиты и мобильности в экстремальных условиях.
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_security.rsi
+  - type: Clothing
+    sprite: _NoReturn/Clothing/Uniform/Jumpsuit/ert_security.rsi
