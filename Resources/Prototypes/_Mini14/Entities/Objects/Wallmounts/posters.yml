@@ -19,3 +19,14 @@
   - type: Sprite
     sprite: _NoReturn/Structures/Wallmounts/posters/posters.rsi
     state: boykisser
+
+- type: entity
+  parent: PosterBase
+  id: Poster2323
+  name: "Странный постер"
+  description: "Странный постер, судя по всему логотип какой-то организации, но какой? Что это значит? Но, что-то в этом постере вызывает чувство тревоги."
+  suffix: MINI
+  components:
+  - type: Sprite
+    sprite: _NoReturn/Structures/Wallmounts/posters/posters.rsi
+    state: 2323
