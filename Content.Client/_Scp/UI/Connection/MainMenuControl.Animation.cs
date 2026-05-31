@@ -19,7 +19,7 @@ public sealed partial class MainMenuControl
     [Dependency] private readonly IResourceCache _resource = default!;
     [Dependency] private readonly IPrototypeManager _prototype = default!;
 
-    private const string AnimationId = "DeepFacility";
+    private const string AnimationId = "SunnyPtl";
 
     private RSI.State? _animationState;
     private float _animationTime;
