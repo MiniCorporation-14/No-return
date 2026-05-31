@@ -15,7 +15,7 @@ public sealed partial class LauncherConnectingGui
 {
     [Dependency] private readonly IResourceCache _resource = default!;
 
-    private const string AnimationId = "DeepFacility";
+    private const string AnimationId = "SunnyPtl";
 
     private RSI.State? _animationState;
     private float _animationTime;

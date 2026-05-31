@@ -1,15 +1,24 @@
-﻿- type: lobbyBackgroundPreset
-  id: ScpAnimations
+﻿#- type: lobbyBackgroundPreset
+#  id: ScpAnimations
+#  whitelistAnimations:
+#  - Scp049
+#  - Scp096
+#  - Scp173
+#  - Camera
+#  - Foundation
+#  - Mtf
+# - DeepFacility
+#  - Logo
+#  - PC
+#  - RedGuy
+#  - Screen
+#  - WorldMap
+
+- type: lobbyBackgroundPreset
+  id: Mini14Animations
   whitelistAnimations:
-  - Scp049
-  - Scp096
-  - Scp173
-  - Camera
-  - Foundation
-  - Mtf
-  - DeepFacility
-  - Logo
-  - PC
-  - RedGuy
-  - Screen
-  - WorldMap
+  - SunnyPtl
+  - EveningSun2
+  - EveningSun1
+  - IslandEvening
+  - Monolith
